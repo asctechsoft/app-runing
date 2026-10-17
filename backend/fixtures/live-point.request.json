@@ -4,5 +4,6 @@
   "lon": 106.7044,
   "accuracyM": 6.2,
   "distanceM": 1850.3,
-  "elapsedMs": 600000
+  "elapsedMs": 600000,
+  "status": "active"
 }

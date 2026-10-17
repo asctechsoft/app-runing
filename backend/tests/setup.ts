@@ -21,6 +21,8 @@ Object.assign(process.env, {
   BCRYPT_ROUNDS: "4",
   RATE_LIMIT_AUTH_PER_MIN: "10000",
   RATE_LIMIT_SOCIAL_PER_MIN: "10000",
+  RATE_LIMIT_LOOKUP_PER_HOUR: "10000",
+  RATE_LIMIT_FEEDBACK_PER_HOUR: "10000",
   LOG_SILENT: "1",
   PUBLIC_BASE_URL: "http://test.local",
   APP_LINK_BASE: "stride://auth",

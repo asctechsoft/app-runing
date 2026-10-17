@@ -96,12 +96,18 @@ class StepRepository {
     );
   }
 
-  Future<List<StepDay>> range(String ownerId, DateTime from, DateTime toExclusive, {required bool hasPermission}) async {
+  Future<List<StepDay>> range(
+    String ownerId,
+    DateTime from,
+    DateTime toExclusive, {
+    required bool hasPermission,
+    List<StepSource> priority = defaultSourcePriority,
+  }) async {
     final out = <StepDay>[];
     final today = _clock.nowLocal();
     for (var d = DateTime(from.year, from.month, from.day); d.isBefore(toExclusive); d = DateTime(d.year, d.month, d.day + 1)) {
       if (d.isAfter(today)) break; // ngày tương lai không có bar
-      out.add(await day(ownerId, d, hasPermission: hasPermission));
+      out.add(await day(ownerId, d, hasPermission: hasPermission, priority: priority));
     }
     return out;
   }

@@ -27,7 +27,10 @@ Repo hiện chỉ chứa tài liệu đặc tả và ảnh UI; **chưa có sourc
 Framework mobile, backend, nhà cung cấp bản đồ, auth chưa được chọn. **Không tự giả định Flutter/React Native/native hay gán phiên bản thư viện**; chọn stack qua ADR (task A02) trước khi code.
 
 ## Lệnh
-Chưa có. Cập nhật mục này (build, test, lint, chạy app) khi stack được chốt.
+Stack đã chốt trong `docs/adr/0001-stack.md` (Flutter + Next.js/Prisma + OSM).
+- Mobile (`mobile/`): `flutter pub get`, `flutter analyze`, `flutter test`, `dart format -l 160 lib test`, `flutter run --dart-define=STRIDE_ENV=dev`.
+- Backend (`backend/`): `npm ci`, `npm run dev` (cổng 3001), `npm run lint`, `npx tsc --noEmit`, `npm test`, `npx prisma migrate dev`, `npm run seed` (chỉ dev).
+- Máy dev có Kaspersky từng cách ly `dart.exe`: nếu `dart.exe is not recognized`, xóa `flutter/bin/cache/engine-dart-sdk.stamp` rồi chạy `flutter --version`; nếu `pub get` thất bại trong sandbox, đặt `PUB_CACHE` sang thư mục ghi được.
 
 ## Harness / cách làm việc với Claude
 - Tài liệu và UI viết tiếng Việt; trả lời và comment nghiệp vụ bằng tiếng Việt, tên code/identifier bằng tiếng Anh.

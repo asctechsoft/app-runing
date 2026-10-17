@@ -60,5 +60,6 @@ class SettingsRepository {
 
   Future<void> kvSet(String ownerId, String key, String? value) async {
     await _db.db.insert('kv', {'owner_id': ownerId, 'key': key, 'value': value}, conflictAlgorithm: ConflictAlgorithm.replace);
+    _changes.add(ownerId);
   }
 }

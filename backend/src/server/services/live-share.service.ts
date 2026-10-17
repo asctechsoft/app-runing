@@ -24,6 +24,7 @@ function toDto(s: LiveShare & { viewers?: LiveShareViewer[] }, opts: { owner: bo
     stoppedAt: s.stoppedAt?.getTime() ?? null,
     active: isActive(s),
     lastPoint: s.lastPointJson ? (JSON.parse(s.lastPointJson) as unknown) : null,
+    lastStatus: s.lastStatus,
     lastUpdateAt: s.lastUpdateAt?.getTime() ?? null,
     ...(opts.owner && { viewerIds: (s.viewers ?? []).map((v) => v.userId) }),
   };
@@ -65,11 +66,15 @@ export const liveShareService = {
   },
 
   async publishPoint(userId: string, id: string, raw: unknown) {
-    const point = livePointSchema.parse(raw);
+    const { status, ...point } = livePointSchema.parse(raw);
     const share = await liveShareRepository.findOwned(userId, id);
     if (!share) throw notFound("Live share");
     if (!isActive(share)) throw conflict("live_share_ended", "Live share has ended");
-    const updated = await liveShareRepository.update(id, { lastPointJson: JSON.stringify(point), lastUpdateAt: new Date() });
+    const updated = await liveShareRepository.update(id, {
+      lastPointJson: JSON.stringify(point),
+      lastUpdateAt: new Date(),
+      ...(status !== undefined && { lastStatus: status }),
+    });
     return toDto(updated, { owner: true });
   },
 

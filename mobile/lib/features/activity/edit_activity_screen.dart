@@ -118,7 +118,14 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
       setState(() => _saving = true);
       final repo = ref.read(activityRepositoryProvider);
       try {
-        await repo.updateMetadata(a, title: _title.text.trim(), feeling: _feeling, clearFeeling: _feeling == null, notes: _notes.text.trim(), privacy: _privacy);
+        await repo.updateMetadata(
+          a,
+          title: _title.text.trim(),
+          feeling: _feeling,
+          clearFeeling: _feeling == null,
+          notes: _notes.text.trim(),
+          privacy: _privacy,
+        );
         for (final id in _removed) {
           await repo.removeAttachment(a.ownerId, id);
         }

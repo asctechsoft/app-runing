@@ -120,4 +120,13 @@ export const livePointSchema = z.object({
   accuracyM: z.number().min(0).max(10_000).nullable().optional(),
   distanceM: z.number().min(0).max(1_000_000).nullable().optional(),
   elapsedMs: z.number().int().min(0).nullable().optional(),
+  status: z.enum(["active", "paused"]).optional(),
+});
+
+// ---- Users lookup / feedback
+export const userLookupQuery = z.object({ email: z.string().trim().toLowerCase().email().max(254) });
+export const feedbackSchema = z.object({
+  message: z.string().trim().min(1).max(4000),
+  diagnostics: z.string().max(8000).optional(),
+  appVersion: z.string().trim().max(40).optional(),
 });

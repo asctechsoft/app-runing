@@ -36,8 +36,8 @@ export function rateLimiter(): MemoryRateLimiter {
   return g.__strideLimiter;
 }
 
-async function enforce(key: string, limit: number) {
-  const r = await rateLimiter().consume(key, limit, 60_000);
+async function enforce(key: string, limit: number, windowMs = 60_000) {
+  const r = await rateLimiter().consume(key, limit, windowMs);
   if (!r.allowed) throw tooManyRequests(Math.ceil(r.retryAfterMs / 1000));
 }
 
@@ -46,6 +46,16 @@ export async function limitAuth(route: string, ip: string, identity?: string) {
   const limit = intEnv("RATE_LIMIT_AUTH_PER_MIN", 10);
   await enforce(`auth:${route}:ip:${ip}`, limit);
   if (identity) await enforce(`auth:${route}:id:${identity.toLowerCase()}`, limit);
+}
+
+/** Tra cứu người dùng theo email là vector dò tài khoản: giới hạn theo user mỗi giờ. */
+export async function limitUserLookup(userId: string) {
+  await enforce(`lookup:${userId}`, intEnv("RATE_LIMIT_LOOKUP_PER_HOUR", 20), 3_600_000);
+}
+
+/** Feedback: theo user nếu đã đăng nhập, ngược lại theo IP. */
+export async function limitFeedback(identity: string) {
+  await enforce(`feedback:${identity}`, intEnv("RATE_LIMIT_FEEDBACK_PER_HOUR", 10), 3_600_000);
 }
 
 /** Giới hạn hành động xã hội theo người dùng (post, comment, cheer, report). */

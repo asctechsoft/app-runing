@@ -35,3 +35,23 @@ Mọi nút gắn với flag tắt phải **ẩn**, không hiển thị disabled 
 - Tiêu chí record: chỉ công nhận toàn buổi có distance ≥ mốc; fastest 1 km/5 km từ split nội suy trong segment liên tục (không qua gap/pause).
 - Chính sách giữ dữ liệu sau xóa tài khoản (đề xuất: xóa cứng trong 30 ngày).
 - Danh sách thiết bị test thật (A03/A04/Q04).
+
+## Trạng thái (cập nhật 2026-10-18)
+
+Đã có code + test tự động (mobile 337 test, backend 59 test; analyze/lint/type-check sạch):
+A01 A02 A05 (tài liệu), B01–B06, C01–C06, D01–D04, E01–E06, F01–F04, G01–G10, H01–H06, I01–I07, J01–J06, K01–K03, L01–L04, M01–M07, N01 (cơ bản), Q01–Q03 (phần tự động).
+
+**Chưa kiểm chứng — bắt buộc trên máy thật trước G0/G2:**
+- A03/F05: đếm bước foreground/background, reboot, đứng yên, sai lệch so với đếm tay.
+- A04/G05/Q04: ghi GPS khi khóa màn hình, cuộc gọi, tiết kiệm pin, OS kill app; chất lượng lọc GPS và ngưỡng auto pause.
+- L02: ghép nối cảm biến nhịp tim BLE thật.
+- Dialog quyền hệ thống, thông báo nhắc, share sheet, image picker, TTS; iOS build (cần macOS).
+- Đăng nhập/sync với backend staging thật (mới test bằng mock HTTP và test tích hợp backend riêng).
+
+**Chưa làm / hoãn:**
+- K04 giáo án (flag `workout.plans` tắt), Health Connect/HealthKit (flag `steps.health` tắt), Apple/Google sign-in (flag tắt).
+- Backend: mailer production, S3 storage, rate limiter/job queue phân tán (Redis), chuyển PostgreSQL + sửa cursor sync đồng thời.
+- UI club: duyệt yêu cầu, phân quyền, tạo sự kiện; danh sách route đã lưu; export toàn tài khoản từ màn chi tiết.
+- Chuỗi UI qua localization key (J03): string hiện nằm trong code tiếng Anh, chưa tách ARB.
+- N02/N03 (giám sát, backup), N04 (web admin, P2), Q05–Q07, R01–R05 (phát hành).
+- Logo: đang dùng wordmark dựng lại từ mockup; cần asset logo đã duyệt.

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/network/api_client.dart';
 import '../../core/permissions/permission_coordinator.dart';
 import '../../core/providers.dart';
 import '../../core/theme/tokens.dart';
@@ -27,6 +28,28 @@ class SystemShareService implements ProfileShareService {
 }
 
 final profileShareProvider = Provider<ProfileShareService>((ref) => SystemShareService());
+
+enum FeedbackResult { sent, unavailable }
+
+/// Gửi feedback lên `POST /feedback` (J06). [FeedbackResult.unavailable] khi build không có server,
+/// mất mạng hoặc server cũ chưa có endpoint → UI chuyển sang share sheet. Lỗi khác (422/429...) ném ApiException.
+class FeedbackSender {
+  FeedbackSender(this._api);
+  final ApiClient _api;
+
+  Future<FeedbackResult> send({required String message, String? diagnostics, required String appVersion}) async {
+    if (!_api.configured) return FeedbackResult.unavailable;
+    try {
+      await _api.post('/feedback', body: {'message': message, 'diagnostics': ?diagnostics, 'appVersion': appVersion});
+      return FeedbackResult.sent;
+    } on ApiException catch (e) {
+      if (e.isNetwork || e.isNotFound) return FeedbackResult.unavailable;
+      rethrow;
+    }
+  }
+}
+
+final feedbackSenderProvider = Provider<FeedbackSender>((ref) => FeedbackSender(ref.watch(apiClientProvider)));
 
 String _platformName() {
   if (kIsWeb) return 'web';
@@ -68,7 +91,7 @@ Future<String> collectDiagnostics(WidgetRef ref) async {
   );
 }
 
-/// Help (J06): hướng dẫn GPS/bước/pin, phản hồi (qua share sheet — chưa có endpoint feedback), chẩn đoán.
+/// Help (J06): hướng dẫn GPS/bước/pin, phản hồi (POST /feedback, share sheet khi không có server), chẩn đoán.
 class HelpScreen extends ConsumerStatefulWidget {
   const HelpScreen({super.key});
 
@@ -105,15 +128,26 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
       return;
     }
     try {
-      final body = _includeDiagnostics ? '$text\n\n---\n${await collectDiagnostics(ref)}' : text;
+      final diagnostics = _includeDiagnostics ? await collectDiagnostics(ref) : null;
+      final result = await ref.read(feedbackSenderProvider).send(message: text, diagnostics: diagnostics, appVersion: profileAppVersion);
+      if (!mounted) return;
+      if (result == FeedbackResult.sent) {
+        _feedback.clear();
+        showStrideSnack(context, 'Feedback sent. Thank you!');
+        return;
+      }
+      // Không gửi được lên server: để người dùng tự chọn app gửi (không báo "đã gửi" khi chưa chắc).
+      final body = diagnostics == null ? text : '$text\n\n---\n$diagnostics';
       final shared = await ref.read(profileShareProvider).shareText(body, subject: 'STRIDE feedback');
       if (!mounted) return;
       if (shared) {
         _feedback.clear();
         showStrideSnack(context, 'Feedback handed to the app you chose');
       }
+    } on ApiException catch (e) {
+      if (mounted) showStrideSnack(context, e.status == 429 ? 'Too many messages. Try again later.' : 'Couldn’t send feedback. Try again.', isError: true);
     } catch (_) {
-      if (mounted) showStrideSnack(context, 'Couldn’t open sharing. Copy diagnostics instead.', isError: true);
+      if (mounted) showStrideSnack(context, 'Couldn’t send feedback. Copy diagnostics instead.', isError: true);
     }
   });
 
@@ -212,7 +246,7 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
                   onChanged: (v) => setState(() => _includeDiagnostics = v),
                 ),
                 const Gap(8),
-                PrimaryButton(label: 'Share feedback', icon: Icons.ios_share, onPressed: _shareFeedback),
+                PrimaryButton(label: 'Send feedback', icon: Icons.send_outlined, onPressed: _shareFeedback),
               ],
             ),
           ),

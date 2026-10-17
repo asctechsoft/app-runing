@@ -133,6 +133,24 @@ function revisionConflict(row: ActivityRow, code = "revision_conflict", message 
 }
 
 const FINISHED = new Set(["saved", "discarded"]);
+const OPEN_STATUSES = new Set(["recording", "paused"]);
+const METADATA_FIELDS = ["title", "feeling", "notes", "privacy", "shareRoute", "goal", "workoutExecutionId"] as const;
+
+function rawActivity(raw: unknown): Record<string, unknown> {
+  const a = raw && typeof raw === "object" ? (raw as { activity?: unknown }).activity : undefined;
+  return a && typeof a === "object" ? (a as Record<string, unknown>) : {};
+}
+
+/** Trường metadata client không gửi (hoặc gửi null) => giữ giá trị server. Số đo luôn theo client. */
+function mergeMetadata(server: NormalizedBody, client: NormalizedBody, rawClient: Record<string, unknown>): NormalizedBody {
+  const merged: NormalizedBody = { ...client };
+  for (const f of METADATA_FIELDS) {
+    if (rawClient[f] === undefined || rawClient[f] === null) {
+      (merged as Record<string, unknown>)[f] = server[f];
+    }
+  }
+  return merged;
+}
 
 async function afterChange(userId: string, row: ActivityRow) {
   // Tính lại challenge (từ đầu => không cộng trùng khi retry) và dừng live share khi hoạt động kết thúc.
@@ -164,19 +182,30 @@ export const activityService = {
         }
         const existing = (await activityRepository.findOwned(userId, id, { includeDeleted: true }, tx))!;
         if (existing.deletedAt) throw revisionConflict(existing, "activity_deleted", "Activity was deleted");
-        const sameContent = existing.contentHash === hashBody(body);
-        if (input.expectedRevision === undefined) {
-          // Retry của lần tạo đầu tiên (cùng nội dung) => idempotent, không tăng revision.
-          if (sameContent) return { row: existing, created: false, changed: false };
-          throw revisionConflict(existing, "revision_required", "expectedRevision is required to update an existing activity");
+        // Quy tắc chấp nhận bản client cho hoạt động đã tồn tại (xem README "Upsert hoạt động"):
+        //  (a) expectedRevision == revision hiện tại => thay toàn bộ bằng bản client;
+        //  (b) bản server còn ở trạng thái chưa kết thúc (recording/paused) — ví dụ plugin live tạo trước khi
+        //      sync đẩy lên — => chấp nhận dù thiếu/lệch expectedRevision, nhưng giữ metadata server cho trường
+        //      metadata mà client bỏ trống (không gửi hoặc null) để không mất dữ liệu;
+        //  (c) còn lại: cùng nội dung => idempotent; khác => 409 kèm bản server.
+        let target = body;
+        const revisionMatches = input.expectedRevision === existing.revision;
+        if (!revisionMatches && OPEN_STATUSES.has(existing.status)) {
+          target = mergeMetadata(bodyFromRow(existing), body, rawActivity(raw));
         }
-        if (input.expectedRevision !== existing.revision) throw revisionConflict(existing);
+        const sameContent = existing.contentHash === hashBody(target);
         if (sameContent) return { row: existing, created: false, changed: false };
+        if (!revisionMatches && !OPEN_STATUSES.has(existing.status)) {
+          if (input.expectedRevision === undefined) {
+            throw revisionConflict(existing, "revision_required", "expectedRevision is required to update an existing activity");
+          }
+          throw revisionConflict(existing);
+        }
         const n = await activityRepository.updateAtRevision(
           userId,
           id,
           existing.revision,
-          { ...toColumns(body), revision: existing.revision + 1 },
+          { ...toColumns(target), revision: existing.revision + 1 },
           tx,
         );
         if (n === 0) throw revisionConflict(existing);

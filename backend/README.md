@@ -37,7 +37,8 @@ npm 12 chặn install script mặc định; `package.json#allowScripts` đã cho
 
 Xem `.env.example`. Không commit `.env`. Biến chính: `DATABASE_URL`, `JWT_SECRET`, `PUBLIC_BASE_URL` (dựng URL ký số
 upload/download), `APP_LINK_BASE` (link trong email), `STORAGE_DIR`, `MAILER_DRIVER` (`console` | `memory`),
-`JOB_RUNNER` (`inline` | `manual`), `RATE_LIMIT_AUTH_PER_MIN`, `RATE_LIMIT_SOCIAL_PER_MIN`, `BCRYPT_ROUNDS` (mặc định 12).
+`JOB_RUNNER` (`inline` | `manual`), `RATE_LIMIT_AUTH_PER_MIN`, `RATE_LIMIT_SOCIAL_PER_MIN`,
+`RATE_LIMIT_LOOKUP_PER_HOUR` (20), `RATE_LIMIT_FEEDBACK_PER_HOUR` (10), `BCRYPT_ROUNDS` (mặc định 12).
 
 ## Đổi sang PostgreSQL
 
@@ -80,6 +81,19 @@ tests/                            vitest gọi trực tiếp route handler thậ
 - Tài nguyên không thuộc người gọi luôn trả **404** (kể cả id thật), không phải 403.
 - `fixtures/*.json`: mẫu request/response; `tests/fixtures.test.ts` kiểm tra fixture request khớp schema server.
 
+## Upsert hoạt động (PUT /activities/{id} và sync push)
+
+Plugin live trên mobile có thể tạo hoạt động (`recording`) trước khi sync engine đẩy bản cuối. Quy tắc với hoạt
+động đã tồn tại của chính người gọi:
+
+1. `expectedRevision` bằng revision hiện tại => thay toàn bộ bằng bản client.
+2. Bản server còn `recording` hoặc `paused` => chấp nhận bản client dù thiếu/lệch `expectedRevision`. Để không mất
+   metadata: với `title, feeling, notes, privacy, shareRoute, goal, workoutExecutionId`, nếu client **không gửi khóa**
+   hoặc gửi `null` thì giữ giá trị server. Số đo (quãng đường, thời gian, pace, bước, calo) luôn theo client.
+3. Ngược lại (đã `saved`/`discarded`/...): cùng nội dung => 200 không đổi; khác => 409 kèm bản server.
+
+Tombstone luôn thắng (409 `activity_deleted`); id thuộc người khác => 404.
+
 ## Checklist đã làm
 
 | ID | Nội dung | Ghi chú |
@@ -98,6 +112,9 @@ tests/                            vitest gọi trực tiếp route handler thậ
 | J04 | Mặc định `onlyMe`; người khác chỉ xem khi privacy cho phép + cùng club đã duyệt + không chặn nhau; không lộ tọa độ đầu/cuối trừ khi `shareRoute` | |
 | M01–M07 | Clubs (tìm theo text/khu vực/lat-lon box, tham gia không trùng, duyệt/từ chối, vai trò, rời), feed (post theo privacy, comment, cheer, xóa bài mình, report, block hai chiều, rate limit theo user), sự kiện (owner/mod tạo, tzId, nơi tập trung do người tổ chức nhập, RSVP), challenges (tiến độ tính ở server theo tz challenge, tính lại khi sửa/xóa, không cộng trùng, huy hiệu, leaderboard opt-in), routes (tìm, polyline + attribution, lưu), live sharing (viewer chỉ định, TTL, dừng khi hoạt động kết thúc, 404 sau hết hạn) | |
 | Notifications | Inbox: danh sách, đánh dấu đã đọc | |
+| Users lookup | `GET /users/lookup?email=` trả `{id, displayName}` cho tài khoản active + đã xác minh + không chặn nhau; 404 `user_not_found` đồng nhất; 20/giờ/user | Dùng chọn người xem live share |
+| Feedback | `POST /feedback` (auth tùy chọn), diagnostics qua `redactText()` trước khi lưu, rate limit theo user/IP | |
+| Live status | Point live nhận `status: active/paused`, lưu `lastStatus`, trả cho người xem | |
 | N01 (cơ bản) | zod cho mọi input, giới hạn body/upload, `redact()` cho log (token, mật khẩu, lat/lon), header an toàn | |
 
 ## Giới hạn / chưa làm

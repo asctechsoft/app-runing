@@ -453,6 +453,8 @@ model LiveShare {
   stoppedAt     DateTime?
   stopReason    String?
   lastPointJson String?
+  // active | paused (do client gửi kèm point gần nhất)
+  lastStatus    String?
   lastUpdateAt  DateTime?
 
   viewers LiveShareViewer[]
@@ -467,4 +469,16 @@ model LiveShareViewer {
 
   @@id([liveShareId, userId])
   @@index([userId])
+}
+
+// Phản hồi người dùng. ownerId null nếu gửi khi chưa đăng nhập. diagnostics đã qua redact trước khi lưu.
+model Feedback {
+  id          String   @id
+  ownerId     String?
+  message     String
+  diagnostics String?
+  appVersion  String?
+  createdAt   DateTime @default(now())
+
+  @@index([ownerId])
 }

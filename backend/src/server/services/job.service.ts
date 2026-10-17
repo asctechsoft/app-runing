@@ -10,6 +10,7 @@ import { challengeRepository, liveShareRepository, routeRepository } from "@/ser
 import { idempotencyRepository } from "@/server/repositories/idempotency.repository";
 import { jobRepository } from "@/server/repositories/job.repository";
 import { attachmentRepository, trackChunkRepository, trackRepository } from "@/server/repositories/media.repository";
+import { feedbackRepository } from "@/server/repositories/feedback.repository";
 import { notificationRepository } from "@/server/repositories/notification.repository";
 import { goalRepository, profileRepository } from "@/server/repositories/profile.repository";
 import {
@@ -126,6 +127,7 @@ async function deleteAccountData(userId: string, jobId: string) {
     await changeLogRepository.deleteForUser(userId, tx);
     await idempotencyRepository.deleteForUser(userId, tx);
     await notificationRepository.deleteAllOwned(userId, tx);
+    await feedbackRepository.deleteAllOwned(userId, tx);
     await postRepository.deleteAllForUser(userId, tx);
     await eventRepository.deleteAllForUser(userId, tx);
     await membershipRepository.deleteAllForUser(userId, tx);

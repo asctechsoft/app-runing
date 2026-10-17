@@ -14,7 +14,16 @@ void main() {
   group('session state machine (C05)', () {
     test('luồng chuẩn', () {
       var s = SessionPhase.idle;
-      for (final a in [SessionAction.open, SessionAction.start, SessionAction.countdownDone, SessionAction.pause, SessionAction.resume, SessionAction.pause, SessionAction.finish, SessionAction.save]) {
+      for (final a in [
+        SessionAction.open,
+        SessionAction.start,
+        SessionAction.countdownDone,
+        SessionAction.pause,
+        SessionAction.resume,
+        SessionAction.pause,
+        SessionAction.finish,
+        SessionAction.save,
+      ]) {
         s = transition(s, a);
       }
       expect(s, SessionPhase.saved);
@@ -155,7 +164,12 @@ void main() {
 
     test('múi giờ +7 dời giờ địa phương', () {
       final start = DateTime.utc(2026, 10, 17, 1); // 08:00 giờ +7
-      final d = aggregateDay(dateKey: '2026-10-17', samples: [s(StepSource.phoneSensor, start, start.add(const Duration(minutes: 30)), 500)], offsetMin: 420, hasPermission: true);
+      final d = aggregateDay(
+        dateKey: '2026-10-17',
+        samples: [s(StepSource.phoneSensor, start, start.add(const Duration(minutes: 30)), 500)],
+        offsetMin: 420,
+        hasPermission: true,
+      );
       expect(d.hourly![8], 500);
     });
 
@@ -183,7 +197,13 @@ void main() {
 
     test('chỉ dùng hoạt động eligible; 5 km cần ≥ 5000 m', () {
       final recs = computeRecords(
-        [run('a', 4900, 1700000), run('b', 12400, 5000000), run('c', 20000, 1, gps: false), run('d', 30000, 1, deletedAt: 5), run('w', 15000, 9000000, type: ActivityType.walk)],
+        [
+          run('a', 4900, 1700000),
+          run('b', 12400, 5000000),
+          run('c', 20000, 1, gps: false),
+          run('d', 30000, 1, deletedAt: 5),
+          run('w', 15000, 9000000, type: ActivityType.walk),
+        ],
         {
           'a': {1000: 300000, 5000: 1500000},
           'b': {1000: 320000, 5000: 1726000},
