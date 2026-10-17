@@ -179,7 +179,15 @@ class ApiClient {
           return false;
         }
         final j = jsonDecode(res.body) as Map<String, dynamic>;
-        await tokens.save(access: j['accessToken'] as String, refresh: j['refreshToken'] as String);
+        // Backend trả {user, tokens:{accessToken, refreshToken, ...}}; chấp nhận cả dạng phẳng.
+        final t = (j['tokens'] is Map ? j['tokens'] as Map : j).cast<String, dynamic>();
+        final access = t['accessToken'];
+        final refresh = t['refreshToken'];
+        if (access is! String || refresh is! String) {
+          await tokens.clear();
+          return false;
+        }
+        await tokens.save(access: access, refresh: refresh);
         return true;
       } catch (_) {
         return false;

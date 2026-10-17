@@ -7,6 +7,9 @@ import 'app/router.dart';
 import 'core/db/app_database.dart';
 import 'core/logging/logger.dart';
 import 'core/providers.dart';
+import 'core/run_plugins.dart';
+import 'features/devices/devices_providers.dart';
+import 'features/live/live_share_providers.dart';
 import 'core/theme/stride_theme.dart';
 
 Future<void> main() async {
@@ -15,7 +18,17 @@ Future<void> main() async {
   final prefs = await SharedPreferences.getInstance();
   final db = await AppDatabase.open();
   FlutterError.onError = (d) => StrideLog.e('flutter', d.exception, d.stack);
-  runApp(ProviderScope(overrides: [sharedPrefsProvider.overrideWithValue(prefs), databaseProvider.overrideWithValue(db)], child: const StrideApp()));
+  runApp(
+    ProviderScope(
+      overrides: [
+        sharedPrefsProvider.overrideWithValue(prefs),
+        databaseProvider.overrideWithValue(db),
+        // Ghép plugin mở rộng vào engine phiên chạy (L03 nhịp tim, M07 live sharing); provider trả null khi flag tắt.
+        runPluginsProvider.overrideWith((ref) => [?ref.watch(heartRateRunPluginProvider), ?ref.watch(liveShareRunPluginProvider)]),
+      ],
+      child: const StrideApp(),
+    ),
+  );
 }
 
 class StrideApp extends ConsumerStatefulWidget {

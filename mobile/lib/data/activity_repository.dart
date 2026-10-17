@@ -248,11 +248,12 @@ class ActivityRepository {
   }
 
   /// Sửa metadata (I03). Route/distance không đổi ở core.
-  Future<Activity> updateMetadata(Activity a, {String? title, Feeling? feeling, String? notes, Privacy? privacy}) async {
+  Future<Activity> updateMetadata(Activity a, {String? title, Feeling? feeling, bool clearFeeling = false, String? notes, Privacy? privacy}) async {
     final next = await _db.db.transaction((txn) async {
       final n = a.copyWith(
         title: title,
         feeling: feeling,
+        clearFeeling: clearFeeling,
         notes: notes,
         privacy: privacy,
         revision: a.revision + 1,
@@ -298,14 +299,15 @@ class ActivityRepository {
       where: "owner_id = ? AND entity = ? AND entity_id = ? AND state IN ('pending','error')",
       whereArgs: [ownerId, entity, entityId],
     );
+    final opId = _uuid.v4();
     final opRow = SyncOperation(
-      id: _uuid.v4(),
+      id: opId,
       ownerId: ownerId,
       entity: entity,
       entityId: entityId,
       op: op,
       payload: payload,
-      idempotencyKey: '$entity:$entityId:${op.name}:$revision',
+      idempotencyKey: '$entity:$entityId:${op.name}:$revision:$opId',
       createdAt: _clock.nowMs(),
     );
     await ex.insert('sync_outbox', opRow.toRow(), conflictAlgorithm: ConflictAlgorithm.ignore);
@@ -448,10 +450,19 @@ FROM activities WHERE $where''', args);
       await txn.update('step_samples', {'owner_id': toOwner}, where: 'owner_id = ?', whereArgs: [fromOwner], conflictAlgorithm: ConflictAlgorithm.ignore);
       await txn.update('goal_versions', {'owner_id': toOwner}, where: 'owner_id = ?', whereArgs: [fromOwner]);
       await txn.update('workout_plans', {'owner_id': toOwner}, where: 'owner_id = ?', whereArgs: [fromOwner]);
+      // Chuyển luôn thao tác outbox của khách sang user (không để kẹt dưới owner khách).
+      await txn.update('sync_outbox', {'owner_id': toOwner}, where: 'owner_id = ?', whereArgs: [fromOwner]);
       final acts = await txn.query('activities', where: "owner_id = ? AND status = 'saved' AND deleted_at IS NULL", whereArgs: [toOwner]);
       for (final row in acts) {
         final a = Activity.fromRow(row);
-        if (a.syncState == SyncState.pending) {
+        final hasOp = await txn.query(
+          'sync_outbox',
+          columns: ['id'],
+          where: "owner_id = ? AND entity = 'activity' AND entity_id = ? AND state IN ('pending','error','sending')",
+          whereArgs: [toOwner, a.id],
+          limit: 1,
+        );
+        if (a.syncState == SyncState.pending && hasOp.isEmpty) {
           await _enqueue(txn, toOwner, 'activity', a.id, SyncOpType.upsert, a.toJson(), revision: a.revision);
         }
       }

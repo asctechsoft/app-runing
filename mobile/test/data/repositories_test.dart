@@ -24,7 +24,14 @@ void main() {
   tearDown(() => db.close());
 
   Future<Activity> recordAndSave(String owner, {double distance = 5200}) async {
-    final (a, _) = await repo.createSession(ownerId: owner, type: ActivityType.run, goal: const RunGoal.free(), monoMs: clock.monoMs(), tzId: 'UTC', tzOffsetMin: 0);
+    final (a, _) = await repo.createSession(
+      ownerId: owner,
+      type: ActivityType.run,
+      goal: const RunGoal.free(),
+      monoMs: clock.monoMs(),
+      tzId: 'UTC',
+      tzOffsetMin: 0,
+    );
     clock.advance(const Duration(minutes: 30));
     await repo.appendEvent(activityId: a.id, type: SessionEventType.pause, monoMs: clock.monoMs(), newStatus: ActivityStatus.paused);
     await repo.appendEvent(activityId: a.id, type: SessionEventType.finish, monoMs: clock.monoMs());
@@ -112,7 +119,13 @@ void main() {
     test('resume mở segment mới', () async {
       final (a, seg0) = await repo.createSession(ownerId: 'o', type: ActivityType.run, goal: const RunGoal.free(), monoMs: 0, tzId: 'UTC', tzOffsetMin: 0);
       await repo.appendEvent(activityId: a.id, type: SessionEventType.pause, monoMs: 1000, newStatus: ActivityStatus.paused);
-      await repo.appendEvent(activityId: a.id, type: SessionEventType.resume, monoMs: 5000, newStatus: ActivityStatus.recording, openSegment: SegmentReason.resume);
+      await repo.appendEvent(
+        activityId: a.id,
+        type: SessionEventType.resume,
+        monoMs: 5000,
+        newStatus: ActivityStatus.recording,
+        openSegment: SegmentReason.resume,
+      );
       final segs = await repo.segments(a.id);
       expect(segs.length, 2);
       expect(segs.first.id, seg0.id);
@@ -126,6 +139,14 @@ void main() {
       expect(await repo.transferOwnership(fromOwner: 'guest:1', toOwner: 'user:1'), 0);
       expect(await repo.countSaved('user:1'), 1);
       expect(await repo.countSaved('guest:1'), 0);
+    });
+
+    test('chuyển dữ liệu khách mang theo outbox, không để kẹt dưới owner khách', () async {
+      await recordAndSave('guest:2');
+      await repo.transferOwnership(fromOwner: 'guest:2', toOwner: 'user:2');
+      final ops = await db.db.query('sync_outbox');
+      expect(ops.length, 1);
+      expect(ops.single['owner_id'], 'user:2');
     });
 
     test('keyset pagination ổn định khi trùng startedAt', () async {
