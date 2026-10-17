@@ -1,0 +1,16 @@
+{
+  "user": {
+    "id": "7b9d0c3e-2f41-4a8b-b6c2-1e5f9a3d4c21",
+    "email": "runner@example.com",
+    "emailVerified": false,
+    "displayName": "Linh",
+    "createdAt": 1760076000000
+  },
+  "tokens": {
+    "accessToken": "<jwt>",
+    "accessTokenExpiresAt": 1760076900000,
+    "expiresIn": 900,
+    "refreshToken": "<opaque>",
+    "tokenType": "Bearer"
+  }
+}

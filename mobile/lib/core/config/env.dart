@@ -17,7 +17,7 @@ class EnvConfig {
     final env = StrideEnv.values.firstWhere((e) => e.name == envName, orElse: () => StrideEnv.dev);
     const api = String.fromEnvironment('STRIDE_API_URL', defaultValue: '');
     // Android emulator truy cập host qua 10.0.2.2.
-    final apiUrl = api.isNotEmpty ? api : (env == StrideEnv.dev ? 'http://10.0.2.2:3000/api/v1' : '');
+    final apiUrl = api.isNotEmpty ? api : (env == StrideEnv.dev ? 'http://10.0.2.2:3001/api/v1' : '');
     const tiles = String.fromEnvironment('STRIDE_TILE_URL', defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png');
     const attribution = String.fromEnvironment('STRIDE_TILE_ATTRIBUTION', defaultValue: '© OpenStreetMap contributors');
     return EnvConfig(env: env, apiBaseUrl: apiUrl, tileUrlTemplate: tiles, tileAttribution: attribution, flags: FeatureFlags.defaultsFor(env));

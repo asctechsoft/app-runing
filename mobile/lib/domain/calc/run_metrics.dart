@@ -21,7 +21,17 @@ List<MovingInterval> movingIntervals(List<SessionEvent> events) {
   final out = <MovingInterval>[];
   int? openMono;
   int? openT;
+  int? lastMono;
   for (final e in events) {
+    // Khôi phục sau sự cố: khoảng còn mở bị đóng tại checkpoint cuối (data.closeAtMono) hoặc event trước đó,
+    // để thời gian app bị dừng không tính là moving time (G08).
+    if (e.type == SessionEventType.recovered && openMono != null) {
+      final closeAt = (e.data?['closeAtMono'] as num?)?.toInt() ?? lastMono ?? openMono;
+      out.add(MovingInterval(openMono, closeAt < openMono ? openMono : closeAt, openT!));
+      openMono = null;
+      openT = null;
+    }
+    lastMono = e.monoMs;
     if (_openers.contains(e.type)) {
       if (openMono == null) {
         openMono = e.monoMs;

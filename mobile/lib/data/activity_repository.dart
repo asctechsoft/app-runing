@@ -229,7 +229,9 @@ class ActivityRepository {
         revision: a.revision + 1,
         updatedAt: now,
       );
-      await txn.insert('activities', next.toRow(), conflictAlgorithm: ConflictAlgorithm.replace);
+      // Không dùng INSERT OR REPLACE: REPLACE xóa dòng cũ → CASCADE xóa track/event/ảnh.
+      final n = await txn.update('activities', next.toRow(), where: 'id = ?', whereArgs: [next.id]);
+      if (n == 0) await txn.insert('activities', next.toRow());
       await txn.delete('session_checkpoints', where: 'activity_id = ?', whereArgs: [a.id]);
       if (enqueueSync) await _enqueue(txn, next.ownerId, 'activity', next.id, SyncOpType.upsert, next.toJson(), revision: next.revision);
       return next;

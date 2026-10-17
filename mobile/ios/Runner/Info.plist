@@ -2,10 +2,30 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>STRIDE uses your location only while you record an outdoor activity, to measure distance, pace and draw your route.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Allow location while the screen is locked so STRIDE can keep recording the activity you started.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>STRIDE reads motion data to count your daily steps.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>STRIDE connects to Bluetooth heart rate sensors you choose to pair.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Take a photo to add to your activity.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choose photos to add to your activity.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Save your share image to your photo library.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>audio</string>
+		<string>bluetooth-central</string>
+	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Stride</string>
+	<string>STRIDE</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
