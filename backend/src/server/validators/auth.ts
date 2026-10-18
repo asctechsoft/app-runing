@@ -25,4 +25,10 @@ export const refreshSchema = z.object({ refreshToken: z.string().min(16).max(200
 export const tokenSchema = z.object({ token: z.string().min(16).max(200) });
 export const forgotSchema = z.object({ email: emailSchema });
 export const resetSchema = z.object({ token: z.string().min(16).max(200), newPassword: passwordSchema });
-export const reauthSchema = z.object({ password: z.string().min(1).max(200) });
+export const idTokenSchema = z.string().min(20).max(4096);
+// Reauth bằng mật khẩu, hoặc bằng Firebase ID token cho tài khoản Google.
+export const reauthSchema = z.union([
+  z.object({ password: z.string().min(1).max(200) }).strict(),
+  z.object({ idToken: idTokenSchema }).strict(),
+]);
+export const firebaseLoginSchema = z.object({ idToken: idTokenSchema });

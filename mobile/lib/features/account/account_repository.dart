@@ -107,6 +107,12 @@ class AccountRepository {
     return _job(await auth.authed(() => _api.post('/me/deletion')));
   }
 
+  /// Biến thể cho tài khoản đăng nhập bằng Google (không có mật khẩu): xác thực lại bằng Firebase ID token.
+  Future<AccountJob> requestDeletionWithFirebase(String idToken) async {
+    await auth.reauthWithFirebase(idToken);
+    return _job(await auth.authed(() => _api.post('/me/deletion')));
+  }
+
   /// Trạng thái yêu cầu xóa gần nhất; null nếu chưa từng yêu cầu.
   Future<AccountJob?> deletionStatus() async {
     try {

@@ -8,7 +8,8 @@ Chủ sản phẩm chốt 2026-10-17: thi công **P0 + P1**. Nền tảng: Andro
 |---|---|---|---|---|
 | Onboarding, guest, profile setup, goals | P0 | — | bật | |
 | Auth email/password + reset | P0 | `auth.email` | bật | Cần backend. |
-| Sign in with Apple / Google | P0 | `auth.apple`, `auth.google` | **tắt (ẩn)** | Chưa có client ID. |
+| Sign in with Apple | P0 | `auth.apple` | **tắt (ẩn)** | Chưa có client ID. |
+| Sign in with Google (Firebase) | P0 | `auth.google` | bật tự động khi Firebase khởi tạo được (Android) | App lấy Firebase ID token → `POST /auth/firebase` → backend cấp JWT STRIDE. iOS cần GoogleService-Info.plist. |
 | Daily steps (sensor) | P0 | — | bật | |
 | Health Connect / HealthKit import | P0 | `steps.health` | tắt | Cần spike F02 trên máy thật. |
 | Run engine GPS, pause/lock/finish, recovery | P0 | — | bật | |

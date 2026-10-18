@@ -38,7 +38,7 @@ npm 12 chặn install script mặc định; `package.json#allowScripts` đã cho
 Xem `.env.example`. Không commit `.env`. Biến chính: `DATABASE_URL`, `JWT_SECRET`, `PUBLIC_BASE_URL` (dựng URL ký số
 upload/download), `APP_LINK_BASE` (link trong email), `STORAGE_DIR`, `MAILER_DRIVER` (`console` | `memory`),
 `JOB_RUNNER` (`inline` | `manual`), `RATE_LIMIT_AUTH_PER_MIN`, `RATE_LIMIT_SOCIAL_PER_MIN`,
-`RATE_LIMIT_LOOKUP_PER_HOUR` (20), `RATE_LIMIT_FEEDBACK_PER_HOUR` (10), `BCRYPT_ROUNDS` (mặc định 12).
+`RATE_LIMIT_LOOKUP_PER_HOUR` (20), `RATE_LIMIT_FEEDBACK_PER_HOUR` (10), `FIREBASE_PROJECT_ID` (đăng nhập Google), `BCRYPT_ROUNDS` (mặc định 12).
 
 ## Đổi sang PostgreSQL
 
@@ -81,6 +81,24 @@ tests/                            vitest gọi trực tiếp route handler thậ
 - Tài nguyên không thuộc người gọi luôn trả **404** (kể cả id thật), không phải 403.
 - `fixtures/*.json`: mẫu request/response; `tests/fixtures.test.ts` kiểm tra fixture request khớp schema server.
 
+## Đăng nhập Google (Firebase)
+
+`POST /api/v1/auth/firebase {idToken}` — giữ song song email/mật khẩu + JWT của mình.
+
+- Xác minh token không cần firebase-admin/service account: `jose.createRemoteJWKSet` trên JWKS công khai
+  `securetoken@system.gserviceaccount.com`, RS256, `iss = https://securetoken.google.com/<FIREBASE_PROJECT_ID>`,
+  `aud = FIREBASE_PROJECT_ID`, `sub` 1–128, `auth_time` <= hiện tại, `firebase.sign_in_provider = google.com`.
+  Nằm sau interface `FirebaseTokenVerifier` (`src/server/auth/firebase.ts`); test dùng verifier thật với khóa RSA + JWKS cục bộ.
+- Thiếu `FIREBASE_PROJECT_ID` => 503 `provider_not_configured`.
+- Bảng `AuthIdentity` (provider `google`, providerUid = Firebase uid), unique (provider, providerUid).
+- Thứ tự: identity đã có => user đó. Chưa có + email Google đã xác minh: có tài khoản cùng email đã xác minh => liên kết;
+  tài khoản đó chưa xác minh => 409 `account_exists_unverified`; không có => tạo user mới (email đã xác minh, `passwordHash = null`).
+  Email Google chưa xác minh => 422 `email_not_verified`. Tài khoản đang xóa/đã xóa => 403 `account_disabled`.
+- Tài khoản không mật khẩu: `/auth/login` trả `invalid_credentials` chung; `/auth/forgot-password` trả phản hồi chung,
+  không gửi email; `/auth/reauth` nhận `{idToken}` của đúng identity đã liên kết.
+- Rate limit như các endpoint auth khác; idToken không bao giờ được log (khóa `*token*` bị redact).
+- Apple: chưa hỗ trợ, không có route.
+
 ## Upsert hoạt động (PUT /activities/{id} và sync push)
 
 Plugin live trên mobile có thể tạo hoạt động (`recording`) trước khi sync engine đẩy bản cuối. Quy tắc với hoạt
@@ -100,7 +118,8 @@ Tombstone luôn thắng (409 `activity_deleted`); id thuộc người khác => 4
 |---|---|---|
 | B06 | Skeleton API, Prisma migration, `GET /api/health`, `StorageDriver` + local disk (`storage/`, gitignore), `.env.example`, README | |
 | C06 | OpenAPI 3.1, fixtures, `/api/v1`, error envelope, cursor pagination, Idempotency-Key | |
-| E02 | Đăng ký (mật khẩu ≥ 8, có chữ + số), xác minh email (Mailer console/memory), đăng nhập, refresh xoay vòng + phát hiện reuse (thu hồi cả family), logout, quên/đặt lại mật khẩu (phản hồi chung), reauth, rate limit (in-memory, interface `RateLimiter`) | Apple/Google: chỉ có interface `src/server/auth/providers.ts`, **không** có route |
+| E02 + Google | `POST /auth/firebase` (xem mục Đăng nhập Google). | |
+| E02 | Đăng ký (mật khẩu ≥ 8, có chữ + số), xác minh email (Mailer console/memory), đăng nhập, refresh xoay vòng + phát hiện reuse (thu hồi cả family), logout, quên/đặt lại mật khẩu (phản hồi chung), reauth, rate limit (in-memory, interface `RateLimiter`) | Apple: chỉ có interface `src/server/auth/providers.ts`, **không** có route |
 | E03 | `POST /me/claim-guest` giữ chỗ id hoạt động guest; idempotent; không bao giờ gắn dữ liệu của người khác | |
 | Me | Profile/settings với `expectedRevision` (409 + bản server), GoalVersion append-only theo `effectiveFrom`, source priorities | |
 | H01 | Mọi truy vấn dữ liệu người dùng qua `ownerScope`; test A không đọc/sửa/xóa được activity/track/attachment của B (id thật + id đoán => 404) | |

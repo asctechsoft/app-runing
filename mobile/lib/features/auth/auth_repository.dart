@@ -129,6 +129,13 @@ class AuthRepository {
     return _userOf(res);
   }
 
+  /// Đăng nhập bằng Firebase ID token (Google). Backend verify token và cấp JWT STRIDE như /auth/login.
+  Future<AuthUser> loginWithFirebase(String idToken) async {
+    final res = await api.post('/auth/firebase', auth: false, body: {'idToken': idToken});
+    await _saveTokens((res as Map)['tokens']);
+    return _userOf(res);
+  }
+
   /// Luôn trả kết quả chung (backend không tiết lộ email tồn tại).
   Future<void> forgotPassword(String email) async {
     await api.post('/auth/forgot-password', auth: false, body: {'email': email.trim()});
@@ -144,6 +151,9 @@ class AuthRepository {
 
   /// Xác thực lại bằng mật khẩu → mở cửa sổ 5 phút cho thao tác nhạy cảm (xóa tài khoản).
   Future<void> reauth(String password) => authed(() => api.post('/auth/reauth', body: {'password': password}));
+
+  /// Xác thực lại bằng Google cho tài khoản không có mật khẩu.
+  Future<void> reauthWithFirebase(String idToken) => authed(() => api.post('/auth/reauth', body: {'idToken': idToken}));
 
   /// Hồ sơ trên server: `{user, profile}`.
   Future<Map<String, Object?>> me() async => ((await authed(() => api.get('/me'))) as Map).cast<String, Object?>();
@@ -245,6 +255,16 @@ String authErrorMessage(Object error, AuthAction action) {
       return 'Your session has expired. Please log in again.';
     case 'rate_limited':
       return 'Too many attempts. Wait a minute and try again.';
+    case 'account_exists_unverified':
+      return "An account with this email already exists but isn't verified. Log in with your password and verify your email first.";
+    case 'email_not_verified':
+      return 'Your Google account email isn\'t verified. Verify it with Google or use your email instead.';
+    case 'account_disabled':
+      return 'This account is being deleted or has been deleted.';
+    case 'invalid_id_token':
+      return "Couldn't confirm your Google sign-in. Please try again.";
+    case 'provider_not_configured':
+      return "Sign in with Google isn't available on this server yet. Use your email instead.";
     case 'account_deletion_pending':
       return 'This account is being deleted.';
     case 'account_deleted':

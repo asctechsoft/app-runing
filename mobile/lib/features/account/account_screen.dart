@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import '../auth/google_sign_in_service.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -481,6 +482,25 @@ class _ReauthDeleteFormState extends ConsumerState<_ReauthDeleteForm> {
     }
   });
 
+  /// Tài khoản Google không có mật khẩu: xác thực lại bằng chính tài khoản Google đã liên kết.
+  Future<void> _confirmWithGoogle() => _guard.run(() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final idToken = await ref.read(googleIdTokenSourceProvider).signInAndGetIdToken();
+      final job = await ref.read(accountRepositoryProvider).requestDeletionWithFirebase(idToken);
+      if (mounted) Navigator.of(context).pop(job);
+    } on GoogleSignInCancelled {
+      // Người dùng hủy: giữ nguyên form.
+    } catch (e) {
+      if (mounted) setState(() => _error = e is GoogleSignInFailure ? "Couldn't confirm with Google. Try again." : accountErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  });
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -507,6 +527,10 @@ class _ReauthDeleteFormState extends ConsumerState<_ReauthDeleteForm> {
         ),
         const SizedBox(height: StrideSpace.s16),
         DestructiveButton(label: 'Delete account', loading: _busy, onPressed: _submit),
+        if (ref.watch(flagsProvider).authGoogle) ...[
+          const SizedBox(height: StrideSpace.s8),
+          OutlineButton(label: 'Signed up with Google? Confirm with Google', icon: Icons.g_mobiledata, onPressed: _busy ? null : _confirmWithGoogle),
+        ],
       ],
     );
   }
@@ -574,6 +598,7 @@ Future<void> signOutFlow(BuildContext context, WidgetRef ref) async {
 
 Future<void> _localSignOut(BuildContext context, WidgetRef ref) async {
   await ref.read(authRepositoryProvider).logout();
+  await ref.read(googleIdTokenSourceProvider).signOut();
   await ref.read(ownerRepositoryProvider).signOut();
   ref.read(ownerProvider.notifier).reload();
   await ref.read(syncServiceProvider).refreshStatus();

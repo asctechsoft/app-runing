@@ -5,7 +5,7 @@ import { logger } from "@/lib/logger";
 import { runInTransaction } from "@/lib/prisma";
 import { storage } from "@/lib/storage";
 import { activityRepository, changeLogRepository, guestClaimRepository } from "@/server/repositories/activity.repository";
-import { emailTokenRepository, sessionRepository, userRepository } from "@/server/repositories/auth.repository";
+import { authIdentityRepository, emailTokenRepository, sessionRepository, userRepository } from "@/server/repositories/auth.repository";
 import { challengeRepository, liveShareRepository, routeRepository } from "@/server/repositories/explore.repository";
 import { idempotencyRepository } from "@/server/repositories/idempotency.repository";
 import { jobRepository } from "@/server/repositories/job.repository";
@@ -141,10 +141,11 @@ async function deleteAccountData(userId: string, jobId: string) {
     await emailTokenRepository.invalidateAll(userId, "verifyEmail", tx);
     await emailTokenRepository.invalidateAll(userId, "resetPassword", tx);
     await sessionRepository.revokeAllForUser(userId, "accountDeleted", tx);
+    await authIdentityRepository.deleteAllForUser(userId, tx);
     // Ẩn danh hóa định danh, giải phóng email để có thể đăng ký lại.
     await userRepository.update(
       userId,
-      { status: "deleted", email: `deleted+${userId}@deleted.invalid`, passwordHash: "!", displayName: null },
+      { status: "deleted", email: `deleted+${userId}@deleted.invalid`, passwordHash: null, displayName: null },
       tx,
     );
   });

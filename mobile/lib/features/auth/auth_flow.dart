@@ -13,6 +13,7 @@ import '../../data/settings_repository.dart';
 import '../sync/sync_providers.dart';
 import '../sync/sync_service.dart';
 import 'auth_repository.dart';
+import 'google_sign_in_service.dart';
 
 /// Chuyển dữ liệu khách sang tài khoản (E03). Idempotent: chạy lại không nhân đôi, không đụng owner khác.
 class GuestTransferService {
@@ -122,3 +123,22 @@ Future<String> completeSignInWidget(WidgetRef ref, AuthUser user) async {
 
 /// Màn tiếp theo sau khi xử lý dữ liệu khách.
 String routeAfterMerge(OwnerState owner) => owner.profileSetupDone ? Routes.home : Routes.setupProfile;
+
+/// Luồng "Continue with Google": chọn tài khoản → Firebase ID token → backend → cùng bước sau đăng nhập như email.
+/// Trả route kế tiếp, hoặc null khi người dùng hủy. Ném lỗi để UI hiển thị thông báo.
+Future<String?> signInWithGoogleWidget(WidgetRef ref) async {
+  final String idToken;
+  try {
+    idToken = await ref.read(googleIdTokenSourceProvider).signInAndGetIdToken();
+  } on GoogleSignInCancelled {
+    return null;
+  }
+  final user = await ref.read(authRepositoryProvider).loginWithFirebase(idToken);
+  return completeSignInWidget(ref, user);
+}
+
+/// Thông báo lỗi cho luồng Google.
+String googleSignInErrorMessage(Object error) {
+  if (error is GoogleSignInFailure) return "Couldn't sign in with Google. Check your connection and try again.";
+  return authErrorMessage(error, AuthAction.login);
+}

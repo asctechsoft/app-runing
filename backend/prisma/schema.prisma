@@ -17,7 +17,8 @@ datasource db {
 model User {
   id                  String    @id
   email               String    @unique
-  passwordHash        String
+  // null = tài khoản chỉ đăng nhập qua Google (Firebase), không có mật khẩu.
+  passwordHash        String?
   emailVerifiedAt     DateTime?
   displayName         String?
   avatarKey           String?
@@ -31,6 +32,21 @@ model User {
   refreshTokens RefreshToken[]
   emailTokens   EmailToken[]
   profile       Profile?
+  identities    AuthIdentity[]
+}
+
+// Danh tính đăng nhập bên ngoài. Hiện chỉ provider 'google' qua Firebase Auth (providerUid = Firebase uid / sub).
+model AuthIdentity {
+  id          String   @id
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider    String
+  providerUid String
+  email       String?
+  createdAt   DateTime @default(now())
+
+  @@unique([provider, providerUid])
+  @@index([userId])
 }
 
 // Một "family" refresh token = một phiên đăng nhập trên một thiết bị.

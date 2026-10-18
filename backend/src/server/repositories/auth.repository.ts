@@ -11,11 +11,26 @@ export const userRepository = {
   findManyActiveByIds(ids: string[], db: Db = prisma) {
     return db.user.findMany({ where: { id: { in: ids }, status: "active" }, select: { id: true } });
   },
-  create(data: { id: string; email: string; passwordHash: string; displayName?: string | null }, db: Db = prisma) {
+  create(
+    data: { id: string; email: string; passwordHash: string | null; displayName?: string | null; emailVerifiedAt?: Date | null },
+    db: Db = prisma,
+  ) {
     return db.user.create({ data: { ...data, profile: { create: { displayName: data.displayName ?? null } } } });
   },
-  update(id: string, data: { emailVerifiedAt?: Date; passwordHash?: string; status?: string; deletionRequestedAt?: Date | null; email?: string; displayName?: string | null }, db: Db = prisma) {
+  update(id: string, data: { emailVerifiedAt?: Date; passwordHash?: string | null; status?: string; deletionRequestedAt?: Date | null; email?: string; displayName?: string | null }, db: Db = prisma) {
     return db.user.update({ where: { id }, data });
+  },
+};
+
+export const authIdentityRepository = {
+  find(provider: string, providerUid: string, db: Db = prisma) {
+    return db.authIdentity.findUnique({ where: { provider_providerUid: { provider, providerUid } } });
+  },
+  create(data: { userId: string; provider: string; providerUid: string; email: string | null }, db: Db = prisma) {
+    return db.authIdentity.create({ data: { id: newId(), ...data } });
+  },
+  deleteAllForUser(userId: string, db: Db = prisma) {
+    return db.authIdentity.deleteMany({ where: { userId } });
   },
 };
 

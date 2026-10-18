@@ -21,7 +21,7 @@ Tài liệu nguồn yêu cầu: đếm bước nền, ghi GPS khi khóa màn hì
 | Thông báo | flutter_local_notifications + timezone | Reminders theo local time (J02). |
 | Audio cue | flutter_tts | Mốc km, chuyển phase interval (G07, K02). |
 | Backend | Next.js 15 (route handlers) + Prisma + PostgreSQL | Khớp bộ agent BE/Prisma sẵn có. Local/test dùng SQLite qua cùng schema Prisma; production đổi `provider = "postgresql"`. |
-| Auth | Email/password tự quản (argon2/bcrypt + JWT access ngắn + refresh token xoay vòng). Apple/Google: interface có sẵn, **ẩn** cho tới khi có client ID. | Không có tài khoản provider lúc này; không ship nút giả. |
+| Auth | Email/password tự quản (bcrypt + JWT access ngắn + refresh token xoay vòng). Google qua Firebase Auth (project `app-runing-667b3`, Android `com.asc.app_runing`): backend verify Firebase ID token bằng JWKS công khai, không cần service account. Apple: **ẩn**. | Cập nhật 2026-10-18 theo quyết định chủ sản phẩm. |
 | Object storage | Interface `StorageDriver`; local disk cho dev, S3-compatible cho production | Chưa chọn nhà cung cấp. |
 | Push/crash | Chưa chọn; interface logger có redaction | Không đưa SDK chưa duyệt. |
 

@@ -1,0 +1,3 @@
+{
+  "idToken": "<firebase-id-token-from-FirebaseAuth.currentUser.getIdToken()>"
+}

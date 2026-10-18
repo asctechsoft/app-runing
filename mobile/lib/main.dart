@@ -1,3 +1,5 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +10,7 @@ import 'core/db/app_database.dart';
 import 'core/logging/logger.dart';
 import 'core/providers.dart';
 import 'core/run_plugins.dart';
+import 'features/auth/google_sign_in_service.dart';
 import 'features/devices/devices_providers.dart';
 import 'features/live/live_share_providers.dart';
 import 'core/theme/stride_theme.dart';
@@ -18,17 +21,33 @@ Future<void> main() async {
   final prefs = await SharedPreferences.getInstance();
   final db = await AppDatabase.open();
   FlutterError.onError = (d) => StrideLog.e('flutter', d.exception, d.stack);
+  final googleReady = await _initFirebase();
   runApp(
     ProviderScope(
       overrides: [
         sharedPrefsProvider.overrideWithValue(prefs),
         databaseProvider.overrideWithValue(db),
+        googleSignInAvailableProvider.overrideWithValue(googleReady),
+        flagsProvider.overrideWith((ref) => ref.watch(envProvider).flags.copyWith(authGoogle: googleReady)),
         // Ghép plugin mở rộng vào engine phiên chạy (L03 nhịp tim, M07 live sharing); provider trả null khi flag tắt.
         runPluginsProvider.overrideWith((ref) => [?ref.watch(heartRateRunPluginProvider), ?ref.watch(liveShareRunPluginProvider)]),
       ],
       child: const StrideApp(),
     ),
   );
+}
+
+/// Firebase chỉ dùng cho Google Sign-In trên Android (google-services.json). iOS chưa có GoogleService-Info.plist.
+/// Không chặn app: lỗi cấu hình/không mạng → ẩn nút Google, các luồng khác vẫn chạy offline.
+Future<bool> _initFirebase() async {
+  if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return false;
+  try {
+    await Firebase.initializeApp().timeout(const Duration(seconds: 5));
+    return true;
+  } catch (e) {
+    StrideLog.e('firebase', 'init failed: $e');
+    return false;
+  }
 }
 
 class StrideApp extends ConsumerStatefulWidget {

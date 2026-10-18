@@ -2,20 +2,23 @@ import bcrypt from "bcryptjs";
 import type { User } from "@prisma/client";
 import { newId } from "@/lib/crypto";
 import { appLinkBase, intEnv } from "@/lib/env";
-import { AppError, conflict, unauthorized } from "@/lib/errors";
+import { AppError, conflict, forbidden, unauthorized } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { mailer } from "@/lib/mailer";
 import { isUniqueViolation, runInTransaction } from "@/lib/prisma";
 import { limitAuth } from "@/lib/rate-limit";
 import { maskEmail } from "@/lib/redact";
 import {
+  authIdentityRepository,
   emailTokenRepository,
   refreshTokenRepository,
   sessionRepository,
   userRepository,
 } from "@/server/repositories/auth.repository";
+import { firebaseVerifier } from "@/server/auth/firebase";
 import { ACCESS_TTL_SEC, REFRESH_TTL_MS, hashOpaqueToken, newOpaqueToken, signAccessToken } from "@/server/auth/tokens";
 import {
+  firebaseLoginSchema,
   forgotSchema,
   loginSchema,
   reauthSchema,
@@ -79,7 +82,57 @@ async function sendVerification(user: User) {
   });
 }
 
+const accountDisabled = () => forbidden("account_disabled", "This account is not available");
+
+async function resolveGoogleUser(claims: { uid: string; email: string | null; emailVerified: boolean; name: string | null }) {
+  return runInTransaction(async (tx) => {
+    const identity = await authIdentityRepository.find("google", claims.uid, tx);
+    if (identity) {
+      const user = await userRepository.findById(identity.userId, tx);
+      if (!user || user.status !== "active") throw accountDisabled();
+      return { user, created: false };
+    }
+    if (!claims.email || !claims.emailVerified) {
+      throw new AppError(422, "email_not_verified", "Google account email is missing or not verified");
+    }
+    const existing = await userRepository.findByEmail(claims.email, tx);
+    if (existing) {
+      if (existing.status !== "active") throw accountDisabled();
+      // Không cho đăng nhập Google chiếm tài khoản mật khẩu chưa xác minh email.
+      if (!existing.emailVerifiedAt) {
+        throw conflict("account_exists_unverified", "An account with this email exists but its email is not verified");
+      }
+      await authIdentityRepository.create({ userId: existing.id, provider: "google", providerUid: claims.uid, email: claims.email }, tx);
+      return { user: existing, created: false };
+    }
+    const user = await userRepository.create(
+      { id: newId(), email: claims.email, passwordHash: null, displayName: claims.name, emailVerifiedAt: new Date() },
+      tx,
+    );
+    await authIdentityRepository.create({ userId: user.id, provider: "google", providerUid: claims.uid, email: claims.email }, tx);
+    return { user, created: true };
+  });
+}
+
 export const authService = {
+  /** Đăng nhập Google qua Firebase ID token. Không bao giờ log idToken. */
+  async firebaseLogin(raw: unknown, ip: string) {
+    const { idToken } = firebaseLoginSchema.parse(raw);
+    await limitAuth("firebase", ip);
+    const claims = await firebaseVerifier().verify(idToken);
+    let result;
+    try {
+      result = await resolveGoogleUser(claims);
+    } catch (err) {
+      // Hai request song song cùng uid/email: lần sau đọc lại identity vừa tạo.
+      if (!isUniqueViolation(err)) throw err;
+      result = await resolveGoogleUser(claims);
+    }
+    const session = await sessionRepository.create(result.user.id);
+    if (result.created) logger.info("user_registered_google", { userId: result.user.id, email: maskEmail(result.user.email) });
+    return { user: toUserDto(result.user), tokens: await issueTokens(result.user.id, session.id) };
+  },
+
   async register(raw: unknown, ip: string) {
     const input = registerSchema.parse(raw);
     await limitAuth("register", ip);
@@ -128,7 +181,8 @@ export const authService = {
     await limitAuth("login", ip, input.email);
     const user = await userRepository.findByEmail(input.email);
     const valid = await bcrypt.compare(input.password, user?.passwordHash ?? getDummyHash());
-    if (!user || !valid || user.status !== "active") {
+    // Tài khoản chỉ có Google (không mật khẩu) => cùng lỗi chung, không lộ loại tài khoản.
+    if (!user || !user.passwordHash || !valid || user.status !== "active") {
       throw unauthorized("invalid_credentials", "Email or password is incorrect");
     }
     const session = await sessionRepository.create(user.id);
@@ -165,7 +219,8 @@ export const authService = {
     const { email } = forgotSchema.parse(raw);
     await limitAuth("forgot", ip, email);
     const user = await userRepository.findByEmail(email);
-    if (user && user.status === "active") {
+    // Tài khoản không mật khẩu (chỉ Google): không gửi link, phản hồi vẫn giống hệt.
+    if (user && user.status === "active" && user.passwordHash) {
       await emailTokenRepository.invalidateAll(user.id, "resetPassword");
       const t = newOpaqueToken();
       await emailTokenRepository.create({
@@ -204,11 +259,17 @@ export const authService = {
 
   /** Xác thực lại bằng mật khẩu, mở cửa sổ 5 phút cho thao tác nhạy cảm (xóa tài khoản). */
   async reauth(userId: string, sessionId: string, raw: unknown, ip: string) {
-    const { password } = reauthSchema.parse(raw);
+    const input = reauthSchema.parse(raw);
     await limitAuth("reauth", ip, userId);
     const user = await userRepository.findById(userId);
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-      throw unauthorized("invalid_credentials", "Password is incorrect");
+    if (!user) throw unauthorized("invalid_credentials", "Credentials are incorrect");
+    if ("idToken" in input) {
+      // Token Google phải thuộc đúng identity đã liên kết với tài khoản này.
+      const claims = await firebaseVerifier().verify(input.idToken);
+      const identity = await authIdentityRepository.find("google", claims.uid);
+      if (!identity || identity.userId !== user.id) throw unauthorized("invalid_credentials", "Credentials are incorrect");
+    } else if (!user.passwordHash || !(await bcrypt.compare(input.password, user.passwordHash))) {
+      throw unauthorized("invalid_credentials", "Credentials are incorrect");
     }
     const s = await sessionRepository.markReauth(sessionId);
     return { reauthUntil: (s.reauthAt?.getTime() ?? Date.now()) + REAUTH_WINDOW_MS };

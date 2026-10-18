@@ -112,8 +112,9 @@ describe("E02 identity", () => {
     }
   });
 
-  it("has no Apple/Google sign-in routes", () => {
+  it("has no Apple route stubs; Google only via /auth/firebase", () => {
     expect(routePatterns.some((p) => /apple|google|oauth/i.test(p))).toBe(false);
+    expect(routePatterns).toContain("/api/v1/auth/firebase");
   });
 
   it("requires auth and returns error envelope", async () => {

@@ -1,5 +1,6 @@
-// Interface cho đăng nhập Apple/Google (E02). CHƯA có client ID nên KHÔNG có route nào dùng tới;
-// registry rỗng. Khi có cấu hình: hiện thực provider, đăng ký vào đây, rồi mới thêm route.
+// Interface cho đăng nhập bằng provider ngoài (E02).
+// - Google: đã hiện thực qua Firebase Auth (src/server/auth/firebase.ts, route POST /auth/firebase).
+// - Apple: CHƯA có cấu hình nên KHÔNG có route; registry rỗng. Khi có: hiện thực provider, đăng ký vào đây, rồi mới thêm route.
 
 export type ExternalProviderId = "apple" | "google";
 

@@ -464,8 +464,31 @@ paths:
         content: { application/json: { schema: { type: object, required: [email, password], properties: { email: { type: string }, password: { type: string } } } } }
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AuthResult" } } } }
-        "401": { description: "`invalid_credentials` (không phân biệt email sai hay mật khẩu sai)" }
+        "401": { description: "`invalid_credentials` (không phân biệt email sai, mật khẩu sai hay tài khoản chỉ có Google)" }
         "429": { $ref: "#/components/responses/RateLimited" }
+  /api/v1/auth/firebase:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Đăng nhập Google qua Firebase Auth
+      description: |
+        Xác minh Firebase ID token bằng JWKS công khai của Google (RS256, `iss = https://securetoken.google.com/<FIREBASE_PROJECT_ID>`,
+        `aud = FIREBASE_PROJECT_ID`, `sub` 1–128 ký tự, `auth_time` <= hiện tại, còn hạn, `firebase.sign_in_provider = google.com`).
+        Tìm user theo identity (provider google + Firebase uid); nếu chưa có và email Google đã xác minh:
+        liên kết với tài khoản cùng email CHỈ KHI tài khoản đó đã xác minh email (ngược lại 409 `account_exists_unverified`),
+        nếu không có tài khoản thì tạo mới (email đã xác minh, không mật khẩu, displayName từ `name`).
+        Response giống `/auth/login`; refresh token xoay vòng như thường. Apple: chưa hỗ trợ.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [idToken], properties: { idToken: { type: string } } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AuthResult" } } } }
+        "401": { description: "`invalid_id_token`" }
+        "403": { description: "`account_disabled` (đang xóa/đã xóa)" }
+        "409": { description: "`account_exists_unverified`" }
+        "422": { description: "`email_not_verified` hoặc validation_error" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { description: "`provider_not_configured` (thiếu FIREBASE_PROJECT_ID)" }
   /api/v1/auth/refresh:
     post:
       tags: [Auth]
@@ -495,7 +518,7 @@ paths:
     post:
       tags: [Auth]
       security: []
-      description: Luôn trả cùng phản hồi, không tiết lộ email có tồn tại.
+      description: Luôn trả cùng phản hồi, không tiết lộ email có tồn tại. Tài khoản chỉ có Google (không mật khẩu) không nhận email.
       requestBody: { content: { application/json: { schema: { type: object, required: [email], properties: { email: { type: string } } } } } }
       responses: { "202": { description: Accepted } }
   /api/v1/auth/reset-password:
@@ -514,8 +537,16 @@ paths:
   /api/v1/auth/reauth:
     post:
       tags: [Auth]
-      description: Xác nhận mật khẩu; mở cửa sổ 5 phút cho thao tác nhạy cảm (xóa tài khoản).
-      requestBody: { content: { application/json: { schema: { type: object, required: [password], properties: { password: { type: string } } } } } }
+      description: |
+        Xác nhận lại danh tính; mở cửa sổ 5 phút cho thao tác nhạy cảm (xóa tài khoản).
+        Gửi `{password}` (tài khoản có mật khẩu) hoặc `{idToken}` (Firebase ID token của đúng identity Google đã liên kết).
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - { type: object, required: [password], properties: { password: { type: string } }, additionalProperties: false }
+                - { type: object, required: [idToken], properties: { idToken: { type: string } }, additionalProperties: false }
       responses:
         "200": { description: "{ reauthUntil }" }
         "401": { $ref: "#/components/responses/Unauthorized" }

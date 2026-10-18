@@ -60,5 +60,23 @@ class FeatureFlags {
 
   bool get exploreAny => exploreClubs || exploreChallenges || exploreRoutes;
 
+  /// Flag phụ thuộc runtime (vd. Google chỉ bật khi Firebase khởi tạo được).
+  FeatureFlags copyWith({bool? authGoogle}) => FeatureFlags(
+    authEmail: authEmail,
+    authApple: authApple,
+    authGoogle: authGoogle ?? this.authGoogle,
+    stepsHealth: stepsHealth,
+    notificationsInbox: notificationsInbox,
+    workoutIntervals: workoutIntervals,
+    workoutPlans: workoutPlans,
+    devicesBle: devicesBle,
+    runIndoor: runIndoor,
+    exploreClubs: exploreClubs,
+    exploreChallenges: exploreChallenges,
+    exploreRoutes: exploreRoutes,
+    liveSharing: liveSharing,
+    sync: sync,
+  );
+
   static FeatureFlags defaultsFor(StrideEnv env) => const FeatureFlags();
 }

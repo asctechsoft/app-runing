@@ -9,6 +9,7 @@ import '../../core/theme/tokens.dart';
 import '../../core/widgets/widgets.dart';
 import 'auth_flow.dart';
 import 'auth_repository.dart';
+import 'google_sign_in_button.dart';
 import 'auth_widgets.dart';
 
 /// Đăng nhập email (E02). Lỗi cụ thể; offline báo rõ; hủy quay lại màn trước.
@@ -105,12 +106,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onPressed: () => showStrideSnack(context, "Sign in with Apple isn't available yet. Use your email instead."),
                     ),
                   if (flags.authApple && flags.authGoogle) const SizedBox(height: StrideSpace.s8),
-                  if (flags.authGoogle)
-                    OutlineButton(
-                      label: 'Continue with Google',
-                      icon: Icons.g_mobiledata,
-                      onPressed: () => showStrideSnack(context, "Sign in with Google isn't available yet. Use your email instead."),
-                    ),
+                  if (flags.authGoogle) const GoogleSignInButton(),
                 ],
                 const SizedBox(height: StrideSpace.s16),
                 InlineLink(prefix: "Don't have an account?", label: 'Create account', onTap: () => context.pushReplacement(Routes.register)),

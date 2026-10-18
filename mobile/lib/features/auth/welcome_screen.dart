@@ -7,6 +7,7 @@ import '../../core/providers.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/widgets.dart';
 import 'auth_repository.dart';
+import 'google_sign_in_button.dart';
 import 'auth_widgets.dart';
 
 /// Chọn cách bắt đầu: email / đăng nhập / dùng thử (F02). Apple/Google chỉ hiện khi flag bật.
@@ -22,7 +23,7 @@ class WelcomeScreen extends ConsumerWidget {
   }
 
   void _social(BuildContext context, String provider) {
-    // Flag bật nhưng backend chưa có endpoint OAuth → báo thật, không giả thành công.
+    // Apple: flag bật nhưng chưa có endpoint → báo thật, không giả thành công.
     showStrideSnack(context, 'Sign in with $provider isn\'t available yet. Continue with email instead.');
   }
 
@@ -77,10 +78,7 @@ class WelcomeScreen extends ConsumerWidget {
                       PrimaryButton(label: 'Continue with Apple', icon: Icons.apple, onPressed: () => _social(context, 'Apple')),
                       const SizedBox(height: StrideSpace.s8),
                     ],
-                    if (flags.authGoogle) ...[
-                      OutlineButton(label: 'Continue with Google', icon: Icons.g_mobiledata, onPressed: () => _social(context, 'Google')),
-                      const SizedBox(height: StrideSpace.s8),
-                    ],
+                    if (flags.authGoogle) ...[const GoogleSignInButton(), const SizedBox(height: StrideSpace.s8)],
                     (flags.authApple || flags.authGoogle)
                         ? OutlineButton(label: 'Continue with email', icon: Icons.mail_outline, onPressed: () => context.push(Routes.register))
                         : PrimaryButton(label: 'Continue with email', icon: Icons.mail_outline, onPressed: () => context.push(Routes.register)),
