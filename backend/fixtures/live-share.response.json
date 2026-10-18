@@ -1,0 +1,20 @@
+{
+  "id": "1b2c3d4e-5f6a-4b7c-8d9e-0f1a2b3c4d5e",
+  "activityId": "3f1c2a9e-4b7d-4c1e-9a55-0d6b2f8e7a10",
+  "ownerId": "7b9d0c3e-2f41-4a8b-b6c2-1e5f9a3d4c21",
+  "ownerDisplayName": "Linh",
+  "startedAt": 1760076000000,
+  "expiresAt": 1760090400000,
+  "stoppedAt": null,
+  "active": true,
+  "lastPoint": {
+    "t": 1760076600000,
+    "lat": 10.7801,
+    "lon": 106.7044,
+    "accuracyM": 6.2,
+    "distanceM": 1850.3,
+    "elapsedMs": 600000
+  },
+  "lastStatus": "active",
+  "lastUpdateAt": 1760076600500
+}

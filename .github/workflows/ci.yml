@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mobile:
+    name: Mobile (Flutter)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.38.9
+          channel: stable
+          cache: true
+      - name: Install (lock)
+        run: flutter pub get --enforce-lockfile
+      - name: Format
+        run: dart format -l 160 --output=none --set-exit-if-changed lib test
+      - name: Analyze
+        run: flutter analyze
+      - name: No placeholder screens
+        run: "! grep -rl TodoScreen lib/features"
+      - name: Unit + widget tests
+        run: flutter test
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Build staging APK
+        run: flutter build apk --debug --dart-define=STRIDE_ENV=staging
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stride-staging-apk
+          path: mobile/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 14
+
+  backend:
+    name: Backend (Next.js + Prisma)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: file:./ci.db
+      JWT_SECRET: ci-only-secret-not-used-anywhere-else-0123456789
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install (lock)
+        run: npm ci
+      - name: Prisma generate + migrate
+        run: npx prisma migrate deploy && npx prisma generate
+      - name: Lint
+        run: npm run lint
+      - name: Type-check
+        run: npx tsc --noEmit
+      - name: Test
+        run: npm test
+      - name: Build
+        run: npx next build

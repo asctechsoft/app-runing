@@ -1,0 +1,1051 @@
+openapi: 3.1.0
+info:
+  title: STRIDE API
+  version: 1.0.0
+  description: |
+    API backend cho STRIDE (C06). Quy ước:
+    - Phiên bản trong path: `/api/v1`.
+    - Đơn vị: khoảng cách mét, thời lượng mili giây, thời điểm UTC epoch ms + `tzId` (IANA) + `tzOffsetMin`.
+    - Thiếu dữ liệu = `null` (không dùng 0). Pace thiếu => `null` (UI hiển thị "—").
+    - ID do client sinh (UUID v4) cho activity, attachment, goal, sync operation.
+    - Lỗi: `{ "error": { "code", "message", "details"? } }`.
+    - Danh sách: `{ "items": [...], "nextCursor": string|null }`.
+    - Endpoint thay đổi dữ liệu nhận header `Idempotency-Key` (8–128 ký tự `[A-Za-z0-9_-:.]`). Cùng key + cùng request
+      => trả lại response cũ (header `Idempotent-Replayed: true`); cùng key + request khác => 422 `idempotency_key_reused`.
+    - Tài nguyên của người khác luôn trả 404 (không 403) để không lộ sự tồn tại.
+    - Mẫu request/response: thư mục `fixtures/`.
+servers:
+  - url: http://localhost:3001
+security:
+  - bearerAuth: []
+
+tags:
+  - { name: Health }
+  - { name: Auth, description: E02 }
+  - { name: Me }
+  - { name: Activities, description: H01/H02 }
+  - { name: Tracks, description: H02, I07 }
+  - { name: Attachments, description: H05 }
+  - { name: Sync, description: H03/H04 }
+  - { name: Jobs, description: H06 }
+  - { name: Clubs, description: M01–M03, J04 }
+  - { name: Challenges, description: M04 }
+  - { name: Routes, description: M05 }
+  - { name: LiveShare, description: M06/M07 }
+  - { name: Notifications }
+  - { name: Users }
+  - { name: Feedback }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    UserId: { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string, pattern: "^[A-Za-z0-9_\\-:.]{8,128}$" }
+    Cursor: { name: cursor, in: query, schema: { type: string } }
+    Limit: { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+
+  responses:
+    Error:
+      description: Error envelope
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    NotFound:
+      description: Không tồn tại hoặc không thuộc người gọi
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    Conflict:
+      description: Xung đột revision/trạng thái; `details.server` chứa bản hiện tại trên server (nếu có)
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    Validation:
+      description: Dữ liệu không hợp lệ (`validation_error`)
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    Unauthorized:
+      description: Thiếu/sai access token (`unauthorized`, `invalid_token`, `account_deleted`)
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    RateLimited:
+      description: Quá giới hạn tần suất; header `Retry-After`
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, examples: [not_found, validation_error, revision_conflict] }
+            message: { type: string }
+            details: {}
+    EpochMs: { type: integer, description: UTC epoch milliseconds }
+    Page:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items: { type: array, items: {} }
+        nextCursor: { type: [string, "null"] }
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        emailVerified: { type: boolean }
+        displayName: { type: [string, "null"] }
+        createdAt: { $ref: "#/components/schemas/EpochMs" }
+    Tokens:
+      type: object
+      properties:
+        accessToken: { type: string }
+        accessTokenExpiresAt: { $ref: "#/components/schemas/EpochMs" }
+        expiresIn: { type: integer, description: seconds }
+        refreshToken: { type: string, description: Opaque, xoay vòng mỗi lần refresh }
+        tokenType: { const: Bearer }
+    AuthResult:
+      type: object
+      properties:
+        user: { $ref: "#/components/schemas/User" }
+        tokens: { $ref: "#/components/schemas/Tokens" }
+    Password:
+      type: string
+      minLength: 8
+      description: ">= 8 ký tự, có chữ cái và chữ số, tối đa 72 byte"
+    Profile:
+      type: object
+      properties:
+        ownerId: { type: string, format: uuid }
+        displayName: { type: [string, "null"] }
+        heightCm: { type: [number, "null"] }
+        weightKg: { type: [number, "null"] }
+        activityLevel: { enum: [new, occasional, regular, active, null] }
+        runningExperience: { type: [string, "null"] }
+        distanceUnit: { enum: [km, mi] }
+        weightUnit: { enum: [kg, lb] }
+        heightUnit: { enum: [cm, ftin] }
+        weekStart: { type: integer, minimum: 1, maximum: 7 }
+        locale: { type: string }
+        audioCues:
+          type: object
+          properties:
+            enabled: { type: boolean }
+            everyKm: { type: number }
+            voice: { type: [string, "null"] }
+        autoPause: { type: boolean }
+        sourcePriority: { type: array, items: { type: string } }
+        revision: { type: integer }
+        updatedAt: { $ref: "#/components/schemas/EpochMs" }
+    ProfileUpdate:
+      description: Mọi trường của Profile (trừ ownerId/revision/updatedAt/sourcePriority) là tùy chọn.
+      type: object
+      required: [expectedRevision]
+      properties:
+        expectedRevision: { type: integer }
+      additionalProperties: true
+    Goal:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { enum: [dailySteps, weeklyRuns, weeklyDistanceM] }
+        value: { type: number }
+        effectiveFrom: { type: string, pattern: "^\\d{4}-\\d{2}-\\d{2}$" }
+        createdAt: { $ref: "#/components/schemas/EpochMs" }
+    ActivityBody:
+      type: object
+      required: [type, status, startedAt, tzId, tzOffsetMin, movingMs, elapsedMs, title, hasGps, distanceSource]
+      properties:
+        type: { enum: [run, walk, indoorRun] }
+        status: { enum: [recording, paused, awaitingSave, saved, discarded, recoveryNeeded] }
+        startedAt: { $ref: "#/components/schemas/EpochMs" }
+        endedAt: { type: [integer, "null"] }
+        tzId: { type: string, examples: [Asia/Ho_Chi_Minh] }
+        tzOffsetMin: { type: integer }
+        distanceM: { type: [number, "null"] }
+        movingMs: { type: integer }
+        elapsedMs: { type: integer }
+        avgPaceSecPerKm: { type: [number, "null"], description: "null nếu distanceM < 10" }
+        steps: { type: [integer, "null"] }
+        caloriesKcal: { type: [number, "null"], description: Cần calorieModel + weightKgUsed }
+        calorieModel: { type: [string, "null"], examples: [met-v1] }
+        weightKgUsed: { type: [number, "null"] }
+        title: { type: string, maxLength: 120 }
+        feeling: { enum: [easy, steady, hard, null] }
+        notes: { type: [string, "null"], maxLength: 2000 }
+        privacy: { enum: [onlyMe, followers, public], default: onlyMe }
+        shareRoute: { type: boolean, default: false, description: Cho phép lộ điểm đầu/cuối cho người xem được phép }
+        goal:
+          type: [object, "null"]
+          properties:
+            type: { enum: [free, distance, time] }
+            value: { type: [number, "null"] }
+        hasGps: { type: boolean }
+        distanceSource: { enum: [gps, steps, manual], description: "steps => estimated" }
+        workoutExecutionId: { type: [string, "null"], format: uuid }
+    Activity:
+      allOf:
+        - $ref: "#/components/schemas/ActivityBody"
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            ownerId: { type: string, format: uuid }
+            revision: { type: integer }
+            createdAt: { $ref: "#/components/schemas/EpochMs" }
+            updatedAt: { $ref: "#/components/schemas/EpochMs" }
+            deletedAt: { type: "null" }
+    Tombstone:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ownerId: { type: string, format: uuid }
+        revision: { type: integer }
+        deletedAt: { $ref: "#/components/schemas/EpochMs" }
+        updatedAt: { $ref: "#/components/schemas/EpochMs" }
+    TrackSegment:
+      type: object
+      required: [id, seq, startedAt, reason]
+      properties:
+        id: { type: string, format: uuid }
+        seq: { type: integer }
+        startedAt: { $ref: "#/components/schemas/EpochMs" }
+        endedAt: { type: [integer, "null"] }
+        reason: { enum: [start, resume, gpsGap, recovery] }
+    TrackPoint:
+      type: object
+      required: [segmentId, seq, t, lat, lon, accepted]
+      properties:
+        segmentId: { type: string, format: uuid }
+        seq: { type: integer }
+        t: { $ref: "#/components/schemas/EpochMs" }
+        lat: { type: number }
+        lon: { type: number }
+        accuracyM: { type: [number, "null"] }
+        altitudeM: { type: [number, "null"] }
+        speedMps: { type: [number, "null"] }
+        accepted: { type: boolean }
+        rejectReason: { type: [string, "null"] }
+    TrackChunk:
+      type: object
+      required: [points]
+      properties:
+        segments: { type: array, items: { $ref: "#/components/schemas/TrackSegment" } }
+        points: { type: array, items: { $ref: "#/components/schemas/TrackPoint" } }
+    TrackSummary:
+      type: object
+      properties:
+        activityId: { type: string }
+        status: { enum: [uploading, finalized] }
+        totalChunks: { type: integer }
+        pointCount: { type: integer }
+        segmentCount: { type: integer }
+        sha256: { type: string }
+        finalizedAt: { type: [integer, "null"] }
+    Attachment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        activityId: { type: string, format: uuid }
+        mime: { enum: [image/jpeg, image/png, image/heic, image/webp] }
+        bytes: { type: integer, maximum: 10485760 }
+        uploadState: { enum: [pending, uploaded] }
+        revision: { type: integer }
+        deletedAt: { type: [integer, "null"] }
+    SyncOperation:
+      type: object
+      required: [idempotencyKey, entity, op, entityId]
+      properties:
+        idempotencyKey: { type: string }
+        entity: { enum: [activity, profile, goal] }
+        op: { enum: [upsert, delete] }
+        entityId: { type: string, format: uuid }
+        expectedRevision: { type: integer }
+        payload: { description: "activity: ActivityBody; profile: ProfileUpdate fields; goal: {type,value,effectiveFrom}" }
+    SyncResult:
+      type: object
+      required: [idempotencyKey, entity, entityId, status]
+      properties:
+        idempotencyKey: { type: string }
+        entity: { type: string }
+        entityId: { type: string }
+        status: { enum: [acked, conflict, rejected] }
+        revision: { type: [integer, "null"] }
+        data: {}
+        server: { description: Bản hiện tại trên server khi conflict }
+        error: { $ref: "#/components/schemas/Error/properties/error" }
+    SyncChange:
+      type: object
+      properties:
+        seq: { type: integer }
+        entity: { enum: [activity, attachment, profile, goal] }
+        entityId: { type: string }
+        op: { enum: [upsert, delete] }
+        revision: { type: [integer, "null"] }
+        data: {}
+    Job:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        kind: { enum: [export, deleteAccount] }
+        status: { enum: [queued, running, succeeded, failed] }
+        createdAt: { $ref: "#/components/schemas/EpochMs" }
+        finishedAt: { type: [integer, "null"] }
+        expiresAt: { type: [integer, "null"] }
+        error: { type: [string, "null"] }
+    Membership:
+      type: [object, "null"]
+      properties:
+        role: { enum: [owner, mod, member] }
+        status: { enum: [pending, approved, rejected, left] }
+        updatedAt: { $ref: "#/components/schemas/EpochMs" }
+    Club:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        regionText: { type: string }
+        lat: { type: [number, "null"] }
+        lon: { type: [number, "null"] }
+        ownerId: { type: string }
+        memberCount: { type: integer }
+        isDevFixture: { type: boolean }
+        myMembership: { $ref: "#/components/schemas/Membership" }
+    PublicActivity:
+      type: object
+      description: Bản xem cho người khác (J04). `route` chỉ có khi chủ bật shareRoute.
+      properties:
+        id: { type: string }
+        ownerId: { type: string }
+        type: { type: string }
+        title: { type: string }
+        startedAt: { type: integer }
+        distanceM: { type: [number, "null"] }
+        distanceEstimated: { type: boolean }
+        movingMs: { type: integer }
+        avgPaceSecPerKm: { type: [number, "null"] }
+        route:
+          type: [object, "null"]
+          properties:
+            start: { type: object, properties: { lat: { type: number }, lon: { type: number } } }
+            end: { type: [object, "null"] }
+    Post:
+      type: object
+      properties:
+        id: { type: string }
+        clubId: { type: string }
+        authorId: { type: string }
+        authorDisplayName: { type: [string, "null"] }
+        text: { type: string }
+        activity: { oneOf: [{ $ref: "#/components/schemas/PublicActivity" }, { type: "null" }] }
+        activityHidden: { type: boolean }
+        commentCount: { type: integer }
+        cheerCount: { type: integer }
+        cheeredByMe: { type: boolean }
+        createdAt: { type: integer }
+    Comment:
+      type: object
+      properties:
+        id: { type: string }
+        postId: { type: string }
+        authorId: { type: string }
+        authorDisplayName: { type: [string, "null"] }
+        text: { type: string }
+        createdAt: { type: integer }
+    ClubEvent:
+      type: object
+      properties:
+        id: { type: string }
+        clubId: { type: string }
+        title: { type: string }
+        description: { type: string }
+        startAt: { type: integer }
+        endAt: { type: [integer, "null"] }
+        tzId: { type: string }
+        meetingPlace: { type: string, description: Do người tổ chức nhập }
+        cancelledAt: { type: [integer, "null"] }
+        goingCount: { type: integer }
+        myRsvp: { enum: [going, cancelled, null] }
+    Challenge:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        ruleVersion: { type: integer }
+        activityTypes: { type: array, items: { type: string } }
+        startDate: { type: string }
+        endDate: { type: string }
+        tzId: { type: string }
+        targetType: { enum: [distance, count, time] }
+        targetValue: { type: number }
+        badgeKey: { type: [string, "null"] }
+        participation:
+          type: [object, "null"]
+          properties:
+            progressValue: { type: number }
+            targetValue: { type: number }
+            percent: { type: integer }
+            completedAt: { type: [integer, "null"] }
+            leaderboardOptIn: { type: boolean }
+    Route:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        region: { type: string }
+        distanceM: { type: number }
+        surface: { enum: [road, trail, track, mixed] }
+        attribution: { type: string }
+        saved: { type: boolean }
+        polyline: { type: string, description: Chỉ có ở detail; Google encoded polyline precision 5 }
+    LiveShare:
+      type: object
+      properties:
+        id: { type: string }
+        activityId: { type: string }
+        ownerId: { type: string }
+        ownerDisplayName: { type: [string, "null"] }
+        startedAt: { type: integer }
+        expiresAt: { type: integer }
+        stoppedAt: { type: [integer, "null"] }
+        active: { type: boolean }
+        lastPoint: { type: [object, "null"] }
+        lastStatus: { enum: [active, paused, null], description: "Trạng thái từ point gần nhất có status" }
+        lastUpdateAt: { type: [integer, "null"] }
+        viewerIds: { type: array, items: { type: string }, description: Chỉ trả cho chủ sở hữu }
+    Notification:
+      type: object
+      properties:
+        id: { type: string }
+        kind: { type: string }
+        title: { type: string }
+        body: { type: string }
+        deepLink: { type: [string, "null"] }
+        createdAt: { type: integer }
+        readAt: { type: [integer, "null"] }
+
+paths:
+  /api/health:
+    get:
+      tags: [Health]
+      security: []
+      summary: Health check (B06)
+      responses:
+        "200": { description: OK }
+        "503": { description: DB không sẵn sàng }
+
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { $ref: "#/components/schemas/Password" }
+                displayName: { type: string }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/AuthResult" } } } }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/Validation" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        content: { application/json: { schema: { type: object, required: [email, password], properties: { email: { type: string }, password: { type: string } } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AuthResult" } } } }
+        "401": { description: "`invalid_credentials` (không phân biệt email sai hay mật khẩu sai)" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /api/v1/auth/refresh:
+    post:
+      tags: [Auth]
+      security: []
+      description: Xoay vòng refresh token. Trình lại token đã dùng => thu hồi cả phiên (`refresh_token_reused`).
+      requestBody:
+        content: { application/json: { schema: { type: object, required: [refreshToken], properties: { refreshToken: { type: string } } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AuthResult" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Thu hồi phiên hiện tại (access + refresh)
+      responses: { "200": { description: OK } }
+  /api/v1/auth/verify-email:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody: { content: { application/json: { schema: { type: object, required: [token], properties: { token: { type: string } } } } } }
+      responses:
+        "200": { description: OK }
+        "400": { description: "`invalid_token`" }
+  /api/v1/auth/resend-verification:
+    post: { tags: [Auth], responses: { "202": { description: Accepted } } }
+  /api/v1/auth/forgot-password:
+    post:
+      tags: [Auth]
+      security: []
+      description: Luôn trả cùng phản hồi, không tiết lộ email có tồn tại.
+      requestBody: { content: { application/json: { schema: { type: object, required: [email], properties: { email: { type: string } } } } } }
+      responses: { "202": { description: Accepted } }
+  /api/v1/auth/reset-password:
+    post:
+      tags: [Auth]
+      security: []
+      description: Đặt lại mật khẩu và thu hồi mọi phiên.
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [token, newPassword], properties: { token: { type: string }, newPassword: { $ref: "#/components/schemas/Password" } } }
+      responses:
+        "200": { description: OK }
+        "400": { description: "`invalid_token`" }
+        "422": { $ref: "#/components/responses/Validation" }
+  /api/v1/auth/reauth:
+    post:
+      tags: [Auth]
+      description: Xác nhận mật khẩu; mở cửa sổ 5 phút cho thao tác nhạy cảm (xóa tài khoản).
+      requestBody: { content: { application/json: { schema: { type: object, required: [password], properties: { password: { type: string } } } } } }
+      responses:
+        "200": { description: "{ reauthUntil }" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/me:
+    get:
+      tags: [Me]
+      responses: { "200": { description: "{ user, profile }" } }
+  /api/v1/me/profile:
+    get:
+      tags: [Me]
+      responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Profile" } } } } }
+    put:
+      tags: [Me]
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody: { content: { application/json: { schema: { $ref: "#/components/schemas/ProfileUpdate" } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Profile" } } } }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/me/source-priorities:
+    get: { tags: [Me], responses: { "200": { description: "{ priorities, revision }" } } }
+    put:
+      tags: [Me]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedRevision, priorities]
+              properties:
+                expectedRevision: { type: integer }
+                priorities: { type: array, items: { type: string, description: "phoneSensor | healthConnect | healthKit | device:<id>" } }
+      responses:
+        "200": { description: OK }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/me/goals:
+    get: { tags: [Me], responses: { "200": { description: Page of Goal (mọi version) } } }
+    post:
+      tags: [Me]
+      description: Append-only GoalVersion. Gửi lại cùng id + nội dung => 200.
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody: { content: { application/json: { schema: { $ref: "#/components/schemas/Goal" } } } }
+      responses:
+        "201": { description: Created }
+        "200": { description: Đã tồn tại (idempotent) }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/me/goals/current:
+    get:
+      tags: [Me]
+      parameters: [{ name: date, in: query, required: true, schema: { type: string, example: "2026-10-18" } }]
+      responses: { "200": { description: "{ date, goals: { dailySteps, weeklyRuns, weeklyDistanceM } }" } }
+  /api/v1/me/claim-guest:
+    post:
+      tags: [Me]
+      summary: Giữ chỗ ID hoạt động guest trước khi upload (E03)
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [guestId, activityIds]
+              properties:
+                guestId: { type: string, pattern: "^guest:" }
+                activityIds: { type: array, items: { type: string, format: uuid }, maxItems: 500 }
+      responses:
+        "200": { description: "{ results: [{ activityId, status: claimed|alreadyClaimed|alreadyOwned|rejected }] }" }
+  /api/v1/me/notifications:
+    get:
+      tags: [Notifications]
+      parameters: [{ $ref: "#/components/parameters/Cursor" }, { $ref: "#/components/parameters/Limit" }]
+      responses: { "200": { description: "Page<Notification> + unreadCount" } }
+  /api/v1/me/notifications/{id}/read:
+    post:
+      tags: [Notifications]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { description: Notification }, "404": { $ref: "#/components/responses/NotFound" } }
+  /api/v1/me/notifications/read-all:
+    post: { tags: [Notifications], responses: { "200": { description: "{ updated }" } } }
+  /api/v1/me/exports:
+    post:
+      tags: [Jobs]
+      summary: Tạo job export (zip JSON + CSV + GPX); trả job đang mở nếu có
+      responses: { "202": { description: Job, content: { application/json: { schema: { $ref: "#/components/schemas/Job" } } } } }
+  /api/v1/me/exports/{id}:
+    get:
+      tags: [Jobs]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { description: Job }, "404": { $ref: "#/components/responses/NotFound" } }
+  /api/v1/me/exports/{id}/download:
+    get:
+      tags: [Jobs]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: application/zip }
+        "409": { description: "`export_not_ready`" }
+        "410": { description: "`export_expired`" }
+  /api/v1/me/deletion:
+    post:
+      tags: [Jobs]
+      summary: Yêu cầu xóa tài khoản (cần /auth/reauth trong 5 phút)
+      responses:
+        "202": { description: Job (queued) }
+        "403": { description: "`reauth_required`" }
+    get:
+      tags: [Jobs]
+      summary: Trạng thái xóa; chỉ `succeeded` khi job đã xóa xong. Sau đó mọi token trả 401.
+      responses: { "200": { description: Job } }
+  /api/v1/me/clubs:
+    get: { tags: [Clubs], responses: { "200": { description: Page<Club> } } }
+  /api/v1/me/badges:
+    get: { tags: [Challenges], responses: { "200": { description: Page of badges } } }
+  /api/v1/me/saved-routes:
+    get: { tags: [Routes], responses: { "200": { description: Page<Route> } } }
+  /api/v1/me/blocks:
+    get: { tags: [Clubs], responses: { "200": { description: Page of blocked users } } }
+    post:
+      tags: [Clubs]
+      requestBody: { content: { application/json: { schema: { type: object, required: [userId], properties: { userId: { type: string, format: uuid } } } } } }
+      responses: { "201": { description: Blocked } }
+  /api/v1/me/blocks/{userId}:
+    delete:
+      tags: [Clubs]
+      parameters: [{ $ref: "#/components/parameters/UserId" }]
+      responses: { "200": { description: Unblocked }, "404": { $ref: "#/components/responses/NotFound" } }
+  /api/v1/me/live-shares/viewing:
+    get: { tags: [LiveShare], responses: { "200": { description: Page<LiveShare> đang chia sẻ cho tôi } } }
+
+  /api/v1/activities:
+    get:
+      tags: [Activities]
+      parameters:
+        - { $ref: "#/components/parameters/Cursor" }
+        - { $ref: "#/components/parameters/Limit" }
+        - { name: includeDeleted, in: query, schema: { enum: ["true", "false"] } }
+      responses: { "200": { description: Page<Activity|Tombstone> (startedAt desc) } }
+  /api/v1/users/lookup:
+    get:
+      tags: [Users]
+      summary: Tra cứu người dùng theo email để chọn người xem live share
+      description: |
+        Chỉ trả `{id, displayName}` (không email/PII) cho tài khoản active, đã xác minh email, không phải chính mình,
+        không có quan hệ chặn với người gọi. Mọi trường hợp khác trả cùng 404 `user_not_found`.
+        Rate limit theo user (mặc định 20/giờ, `RATE_LIMIT_LOOKUP_PER_HOUR`), tính cả lần không tìm thấy.
+      parameters: [{ name: email, in: query, required: true, schema: { type: string, format: email } }]
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { type: object, required: [id, displayName], properties: { id: { type: string, format: uuid }, displayName: { type: [string, "null"] } } } } }
+        "404": { description: "`user_not_found`", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /api/v1/feedback:
+    post:
+      tags: [Feedback]
+      summary: Gửi phản hồi (đăng nhập hoặc không)
+      description: |
+        Lưu ownerId nếu có access token hợp lệ. `diagnostics` đi qua bộ redact log (token, mật khẩu, tọa độ) trước khi lưu.
+        Rate limit theo user, hoặc theo IP khi chưa đăng nhập (mặc định 10/giờ, `RATE_LIMIT_FEEDBACK_PER_HOUR`).
+      security: [{}, { bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: { type: string, minLength: 1, maxLength: 4000 }
+                diagnostics: { type: string, maxLength: 8000 }
+                appVersion: { type: string, maxLength: 40 }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { type: object, properties: { id: { type: string, format: uuid } } } } } }
+        "422": { $ref: "#/components/responses/Validation" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /api/v1/activities/{id}:
+    parameters: [{ $ref: "#/components/parameters/Id" }]
+    get:
+      tags: [Activities]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Activity" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Activities]
+      summary: Upsert theo id client
+      description: |
+        Chưa có => tạo (201). Đã xóa => 409 `activity_deleted`. Đã có (cùng chủ):
+        (a) `expectedRevision` == revision hiện tại => thay bằng bản client;
+        (b) bản server còn `recording`/`paused` => chấp nhận bản client dù thiếu/lệch `expectedRevision`; trường metadata
+            (`title, feeling, notes, privacy, shareRoute, goal, workoutExecutionId`) mà client không gửi hoặc gửi null
+            giữ giá trị server; số đo luôn theo client;
+        (c) còn lại: cùng nội dung => 200 không đổi; khác => 409 (`revision_required` / `revision_conflict`) kèm `details.server`.
+        Áp dụng y hệt cho op activity upsert trong `/sync/push`.
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [activity]
+              properties:
+                activity: { $ref: "#/components/schemas/ActivityBody" }
+                expectedRevision: { type: integer }
+      responses:
+        "201": { description: Created }
+        "200": { description: Updated / unchanged }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/Validation" }
+    patch:
+      tags: [Activities]
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedRevision]
+              properties:
+                expectedRevision: { type: integer }
+                title: { type: string }
+                feeling: { enum: [easy, steady, hard, null] }
+                notes: { type: [string, "null"] }
+                privacy: { enum: [onlyMe, followers, public] }
+                shareRoute: { type: boolean }
+                status: { enum: [saved, discarded] }
+                endedAt: { type: integer }
+      responses:
+        "200": { description: Activity }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      tags: [Activities]
+      summary: Tạo tombstone (giữ vĩnh viễn cho sync), xóa track + ảnh
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+        - { name: expectedRevision, in: query, schema: { type: integer } }
+      responses:
+        "200": { description: Tombstone, content: { application/json: { schema: { $ref: "#/components/schemas/Tombstone" } } } }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/activities/{id}/track/chunks/{seq}:
+    put:
+      tags: [Tracks]
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+        - { name: seq, in: path, required: true, schema: { type: integer, minimum: 0, maximum: 9999 } }
+        - { name: X-Checksum-Sha256, in: header, required: true, schema: { type: string, pattern: "^[a-f0-9]{64}$" } }
+      requestBody:
+        description: Tối đa 2 MB
+        content: { application/json: { schema: { $ref: "#/components/schemas/TrackChunk" } } }
+      responses:
+        "201": { description: Stored }
+        "200": { description: "Trùng (cùng seq + checksum) — idempotent" }
+        "400": { description: "`checksum_required` / `invalid_json`" }
+        "409": { description: "`chunk_conflict` / `track_finalized` / `no_gps`" }
+        "422": { description: "`checksum_mismatch` / `invalid_chunk`" }
+  /api/v1/activities/{id}/track/finalize:
+    post:
+      tags: [Tracks]
+      parameters: [{ $ref: "#/components/parameters/Id" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody: { content: { application/json: { schema: { type: object, required: [totalChunks], properties: { totalChunks: { type: integer } } } } } }
+      responses:
+        "200": { description: TrackSummary, content: { application/json: { schema: { $ref: "#/components/schemas/TrackSummary" } } } }
+        "409": { description: "`track_incomplete` (details.missing) / `track_chunk_out_of_range`" }
+  /api/v1/activities/{id}/track:
+    get:
+      tags: [Tracks]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { description: "{ activityId, segments: [TrackSegment & { points: TrackPoint[] }] }" }, "404": { $ref: "#/components/responses/NotFound" } }
+  /api/v1/activities/{id}/gpx:
+    get:
+      tags: [Tracks]
+      summary: GPX từ GPS thật — một trkseg mỗi segment, chỉ point accepted, không lấp khoảng trống (I07)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { description: application/gpx+xml }, "404": { $ref: "#/components/responses/NotFound" } }
+  /api/v1/activities/{id}/attachments:
+    parameters: [{ $ref: "#/components/parameters/Id" }]
+    get: { tags: [Attachments], responses: { "200": { description: Page<Attachment> } } }
+    post:
+      tags: [Attachments]
+      summary: Yêu cầu upload; trả URL ký số (PUT, hạn 10 phút)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, mime, bytes]
+              properties:
+                id: { type: string, format: uuid }
+                mime: { enum: [image/jpeg, image/png, image/heic, image/webp] }
+                bytes: { type: integer, maximum: 10485760 }
+                sha256: { type: string }
+      responses:
+        "201": { description: "{ attachment, upload: { uploadUrl, uploadMethod, uploadHeaders, expiresAt } | null }" }
+        "422": { $ref: "#/components/responses/Validation" }
+  /api/v1/uploads/{token}:
+    put:
+      tags: [Attachments]
+      security: []
+      summary: Đích của URL upload ký số; Content-Type và kích thước phải khớp khai báo
+      parameters: [{ name: token, in: path, required: true, schema: { type: string } }]
+      responses: { "204": { description: Stored }, "404": { description: Token sai/hết hạn }, "422": { description: Mismatch } }
+  /api/v1/attachments/{id}/complete:
+    post:
+      tags: [Attachments]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { description: Attachment }, "409": { description: "`upload_missing`" } }
+  /api/v1/attachments/{id}/url:
+    get:
+      tags: [Attachments]
+      summary: URL tải ký số (hạn 5 phút), chỉ cho chủ sở hữu
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { description: "{ url, expiresAt }" } }
+  /api/v1/attachments/{id}:
+    delete:
+      tags: [Attachments]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { description: Tombstone } }
+  /api/v1/files/{token}:
+    get:
+      tags: [Attachments]
+      security: []
+      parameters: [{ name: token, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: File bytes (Cache-Control private, no-store) }, "404": { description: Token sai/hết hạn/đã xóa } }
+  /api/v1/shared/activities/{id}:
+    get:
+      tags: [Clubs]
+      summary: Xem hoạt động của người khác theo quyền riêng tư (J04)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: PublicActivity, content: { application/json: { schema: { $ref: "#/components/schemas/PublicActivity" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/sync/push:
+    post:
+      tags: [Sync]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [operations]
+              properties: { operations: { type: array, maxItems: 100, items: { $ref: "#/components/schemas/SyncOperation" } } }
+      responses:
+        "200":
+          description: Kết quả riêng cho từng operation (theo thứ tự gửi)
+          content: { application/json: { schema: { type: object, properties: { results: { type: array, items: { $ref: "#/components/schemas/SyncResult" } } } } } }
+  /api/v1/sync/pull:
+    get:
+      tags: [Sync]
+      parameters:
+        - { name: cursor, in: query, schema: { type: string, pattern: "^\\d+$" }, description: Seq thay đổi đơn điệu; bỏ trống = từ đầu }
+        - { name: limit, in: query, schema: { type: integer, maximum: 500, default: 200 } }
+      responses:
+        "200":
+          description: Thay đổi kể cả tombstone (op=delete). Lưu nextCursor cho lần sau.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/SyncChange" } }
+                  nextCursor: { type: string }
+                  hasMore: { type: boolean }
+
+  /api/v1/clubs:
+    get:
+      tags: [Clubs]
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: region, in: query, schema: { type: string }, description: Văn bản khu vực người dùng nhập }
+        - { name: minLat, in: query, schema: { type: number } }
+        - { name: maxLat, in: query, schema: { type: number } }
+        - { name: minLon, in: query, schema: { type: number } }
+        - { name: maxLon, in: query, schema: { type: number } }
+        - { $ref: "#/components/parameters/Cursor" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses: { "200": { description: Page<Club> } }
+    post:
+      tags: [Clubs]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [name, regionText], properties: { name: { type: string }, description: { type: string }, regionText: { type: string }, lat: { type: number }, lon: { type: number } } }
+      responses: { "201": { description: Club } }
+  /api/v1/clubs/{id}:
+    get: { tags: [Clubs], parameters: [{ $ref: "#/components/parameters/Id" }], responses: { "200": { description: Club } } }
+  /api/v1/clubs/{id}/join:
+    post: { tags: [Clubs], parameters: [{ $ref: "#/components/parameters/Id" }], description: Gửi lại không tạo trùng, responses: { "200": { description: "{ membership }" } } }
+  /api/v1/clubs/{id}/leave:
+    post: { tags: [Clubs], parameters: [{ $ref: "#/components/parameters/Id" }], responses: { "200": { description: "{ membership }" }, "409": { description: "`owner_cannot_leave`" } } }
+  /api/v1/clubs/{id}/requests:
+    get: { tags: [Clubs], parameters: [{ $ref: "#/components/parameters/Id" }], description: Owner/mod, responses: { "200": { description: Pending requests }, "403": { $ref: "#/components/responses/Error" } } }
+  /api/v1/clubs/{id}/requests/{userId}/approve:
+    post: { tags: [Clubs], parameters: [{ $ref: "#/components/parameters/Id" }, { $ref: "#/components/parameters/UserId" }], responses: { "200": { description: OK } } }
+  /api/v1/clubs/{id}/requests/{userId}/reject:
+    post: { tags: [Clubs], parameters: [{ $ref: "#/components/parameters/Id" }, { $ref: "#/components/parameters/UserId" }], responses: { "200": { description: OK } } }
+  /api/v1/clubs/{id}/members/{userId}/role:
+    put:
+      tags: [Clubs]
+      parameters: [{ $ref: "#/components/parameters/Id" }, { $ref: "#/components/parameters/UserId" }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { role: { enum: [mod, member] } } } } } }
+      responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } }
+  /api/v1/clubs/{id}/posts:
+    parameters: [{ $ref: "#/components/parameters/Id" }]
+    get: { tags: [Clubs], description: Chỉ thành viên; loại bài của người có quan hệ chặn, responses: { "200": { description: Page<Post> } } }
+    post:
+      tags: [Clubs]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { id: { type: string, format: uuid }, text: { type: string }, activityId: { type: string, format: uuid } } } } } }
+      responses: { "201": { description: Post }, "422": { description: "`activity_private`" }, "429": { $ref: "#/components/responses/RateLimited" } }
+  /api/v1/clubs/{id}/events:
+    parameters: [{ $ref: "#/components/parameters/Id" }]
+    get: { tags: [Clubs], responses: { "200": { description: Page<ClubEvent> } } }
+    post:
+      tags: [Clubs]
+      description: Chỉ owner/mod
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [title, startAt, tzId, meetingPlace], properties: { title: { type: string }, description: { type: string }, startAt: { type: integer }, endAt: { type: integer }, tzId: { type: string }, meetingPlace: { type: string } } }
+      responses: { "201": { description: ClubEvent } }
+  /api/v1/posts/{id}:
+    parameters: [{ $ref: "#/components/parameters/Id" }]
+    get: { tags: [Clubs], responses: { "200": { description: Post }, "404": { $ref: "#/components/responses/NotFound" } } }
+    delete: { tags: [Clubs], description: Chỉ bài của mình, responses: { "200": { description: Deleted } } }
+  /api/v1/posts/{id}/comments:
+    parameters: [{ $ref: "#/components/parameters/Id" }]
+    get: { tags: [Clubs], responses: { "200": { description: Page<Comment> } } }
+    post: { tags: [Clubs], requestBody: { content: { application/json: { schema: { type: object, required: [text], properties: { text: { type: string } } } } } }, responses: { "201": { description: Comment } } }
+  /api/v1/posts/{id}/cheers:
+    parameters: [{ $ref: "#/components/parameters/Id" }]
+    post: { tags: [Clubs], responses: { "200": { description: Post } } }
+    delete: { tags: [Clubs], responses: { "200": { description: Post } } }
+  /api/v1/comments/{id}:
+    delete: { tags: [Clubs], parameters: [{ $ref: "#/components/parameters/Id" }], responses: { "200": { description: Deleted } } }
+  /api/v1/reports:
+    post:
+      tags: [Clubs]
+      requestBody: { content: { application/json: { schema: { type: object, required: [targetType, targetId, reason], properties: { targetType: { enum: [post, comment, user] }, targetId: { type: string }, reason: { type: string } } } } } }
+      responses: { "201": { description: Report (gửi lại không tạo trùng) } }
+  /api/v1/events/{id}:
+    get: { tags: [Clubs], parameters: [{ $ref: "#/components/parameters/Id" }], responses: { "200": { description: ClubEvent } } }
+  /api/v1/events/{id}/rsvp:
+    parameters: [{ $ref: "#/components/parameters/Id" }]
+    post: { tags: [Clubs], responses: { "200": { description: ClubEvent }, "409": { description: "`event_cancelled` / `event_past`" } } }
+    delete: { tags: [Clubs], responses: { "200": { description: ClubEvent } } }
+  /api/v1/events/{id}/cancel:
+    post: { tags: [Clubs], parameters: [{ $ref: "#/components/parameters/Id" }], responses: { "200": { description: ClubEvent } } }
+
+  /api/v1/challenges:
+    get: { tags: [Challenges], responses: { "200": { description: Page<Challenge> } } }
+  /api/v1/challenges/{id}:
+    get: { tags: [Challenges], parameters: [{ $ref: "#/components/parameters/Id" }], responses: { "200": { description: Challenge } } }
+  /api/v1/challenges/{id}/join:
+    post:
+      tags: [Challenges]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { leaderboardOptIn: { type: boolean, default: false } } } } } }
+      responses: { "200": { description: Challenge }, "409": { description: "`challenge_ended`" } }
+  /api/v1/challenges/{id}/leave:
+    post: { tags: [Challenges], parameters: [{ $ref: "#/components/parameters/Id" }], responses: { "200": { description: Challenge } } }
+  /api/v1/challenges/{id}/progress:
+    get: { tags: [Challenges], parameters: [{ $ref: "#/components/parameters/Id" }], description: "Tính ở server từ hoạt động đã lưu đủ điều kiện (loại, ngày theo tz challenge)", responses: { "200": { description: Participation } } }
+  /api/v1/challenges/{id}/leaderboard:
+    get: { tags: [Challenges], parameters: [{ $ref: "#/components/parameters/Id" }], description: Chỉ người opt-in, responses: { "200": { description: "Page of { rank, userId, displayName, progressValue }" } } }
+  /api/v1/challenges/{id}/leaderboard-opt-in:
+    put:
+      tags: [Challenges]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { content: { application/json: { schema: { type: object, required: [leaderboardOptIn], properties: { leaderboardOptIn: { type: boolean } } } } } }
+      responses: { "200": { description: Challenge } }
+
+  /api/v1/routes:
+    get:
+      tags: [Routes]
+      parameters:
+        - { name: region, in: query, schema: { type: string } }
+        - { name: minDistanceM, in: query, schema: { type: number } }
+        - { name: maxDistanceM, in: query, schema: { type: number } }
+        - { name: surface, in: query, schema: { enum: [road, trail, track, mixed] } }
+        - { $ref: "#/components/parameters/Cursor" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses: { "200": { description: Page<Route> (không kèm polyline) } }
+  /api/v1/routes/{id}:
+    get: { tags: [Routes], parameters: [{ $ref: "#/components/parameters/Id" }], responses: { "200": { description: Route (kèm polyline + attribution) } } }
+  /api/v1/routes/{id}/save:
+    parameters: [{ $ref: "#/components/parameters/Id" }]
+    post: { tags: [Routes], responses: { "200": { description: Route } } }
+    delete: { tags: [Routes], responses: { "200": { description: Route } } }
+
+  /api/v1/live-shares:
+    post:
+      tags: [LiveShare]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [activityId, viewerIds]
+              properties:
+                activityId: { type: string, format: uuid }
+                viewerIds: { type: array, items: { type: string, format: uuid }, maxItems: 20 }
+                ttlMinutes: { type: integer, minimum: 5, maximum: 720, default: 240 }
+      responses:
+        "201": { description: LiveShare }
+        "409": { description: "`activity_not_active` / `live_share_active`" }
+        "422": { description: "`invalid_viewers`" }
+  /api/v1/live-shares/{id}:
+    get:
+      tags: [LiveShare]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      description: Người xem phải có tên trong danh sách, chưa hết hạn/dừng; ngược lại 404.
+      responses: { "200": { description: LiveShare }, "404": { $ref: "#/components/responses/NotFound" } }
+  /api/v1/live-shares/{id}/points:
+    post:
+      tags: [LiveShare]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [t, lat, lon]
+              properties:
+                t: { type: integer }
+                lat: { type: number }
+                lon: { type: number }
+                accuracyM: { type: number }
+                distanceM: { type: number }
+                elapsedMs: { type: integer }
+                status: { enum: [active, paused], description: "Lưu thành lastStatus của share; bỏ trống thì giữ giá trị trước" }
+      responses: { "200": { description: LiveShare }, "409": { description: "`live_share_ended`" } }
+  /api/v1/live-shares/{id}/stop:
+    post: { tags: [LiveShare], parameters: [{ $ref: "#/components/parameters/Id" }], responses: { "200": { description: LiveShare } } }

@@ -1,0 +1,39 @@
+{
+  "items": [
+    {
+      "id": "3f1c2a9e-4b7d-4c1e-9a55-0d6b2f8e7a10",
+      "ownerId": "7b9d0c3e-2f41-4a8b-b6c2-1e5f9a3d4c21",
+      "type": "run",
+      "status": "saved",
+      "startedAt": 1760076000000,
+      "endedAt": 1760077800000,
+      "tzId": "Asia/Ho_Chi_Minh",
+      "tzOffsetMin": 420,
+      "distanceM": 5012.4,
+      "movingMs": 1740000,
+      "elapsedMs": 1800000,
+      "avgPaceSecPerKm": 347.1,
+      "steps": 5230,
+      "caloriesKcal": null,
+      "calorieModel": null,
+      "weightKgUsed": null,
+      "title": "Morning run",
+      "feeling": "steady",
+      "notes": null,
+      "privacy": "onlyMe",
+      "shareRoute": false,
+      "goal": {
+        "type": "distance",
+        "value": 5000
+      },
+      "hasGps": true,
+      "distanceSource": "gps",
+      "workoutExecutionId": null,
+      "revision": 1,
+      "createdAt": 1760077900000,
+      "updatedAt": 1760077900000,
+      "deletedAt": null
+    }
+  ],
+  "nextCursor": "eyJ0IjoxNzYwMDc2MDAwMDAwLCJpZCI6IjNmMWMyYTllLTRiN2QtNGMxZS05YTU1LTBkNmIyZjhlN2ExMCJ9"
+}

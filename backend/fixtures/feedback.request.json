@@ -1,0 +1,5 @@
+{
+  "message": "GPS lost for a minute near the river.",
+  "diagnostics": "{\"appState\":\"background\",\"gpsAccuracyM\":42}",
+  "appVersion": "0.1.0+3"
+}
