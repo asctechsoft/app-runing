@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../core/firebase/firebase_providers.dart';
 import '../../core/permissions/permission_coordinator.dart';
 import '../../core/providers.dart';
 import '../../core/run_plugins.dart';
@@ -9,7 +10,14 @@ import 'live_share_models.dart';
 import 'live_share_plugin.dart';
 import 'live_share_repository.dart';
 
-final liveShareRepositoryProvider = Provider<LiveShareRepository>((ref) => LiveShareRepository(ref.watch(apiClientProvider)));
+final liveShareRepositoryProvider = Provider<LiveShareRepository>((ref) {
+  bool ready() => ref.read(firebaseReadyProvider);
+  return LiveShareRepository(
+    ready: ready,
+    firestore: () => ref.read(firestoreProvider),
+    uid: () => ready() ? ref.read(firebaseAuthProvider).currentUser?.uid : null,
+  );
+});
 
 /// Cấu hình chia sẻ chờ cho buổi chạy kế tiếp (mặc định tắt).
 class LiveShareConfigNotifier extends Notifier<LiveShareConfig> {

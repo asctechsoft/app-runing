@@ -1,0 +1,126 @@
+rules_version = '2';
+
+// Hợp đồng dữ liệu: docs/firestore-schema.md
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function isMember(clubId) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/clubs/$(clubId)/members/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/clubs/$(clubId)/members/$(request.auth.uid)).data.status == 'active';
+    }
+    function onlyChanges(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+    function counterStep(field) {
+      let d = request.resource.data[field] - resource.data[field];
+      return d == 1 || d == -1;
+    }
+
+    // ---- Người dùng: mọi thứ dưới users/{uid} chỉ chủ sở hữu đọc/ghi.
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+      match /{sub}/{doc=**} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // Tra cứu email -> uid cho live sharing. Chỉ chủ tài khoản ghi; người đăng nhập đọc theo từng email.
+    match /userLookup/{emailLower} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create, update: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // ---- Câu lạc bộ
+    match /clubs/{clubId} {
+      allow read: if signedIn();
+      allow create, delete: if false;
+      // Người dùng chỉ được tăng/giảm memberCount đúng 1 đơn vị khi vào/rời.
+      allow update: if signedIn() && onlyChanges(['memberCount']) && counterStep('memberCount');
+
+      match /members/{uid} {
+        allow read: if signedIn();
+        allow create: if isOwner(uid) && request.resource.data.userId == uid && request.resource.data.role == 'member';
+        allow update: if false;
+        allow delete: if isOwner(uid);
+      }
+    }
+    // collection group `members` để liệt kê CLB của tôi (cần fieldOverride trong firestore.indexes.json).
+    match /{path=**}/members/{uid} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /posts/{postId} {
+      allow read: if isMember(resource.data.clubId);
+      allow create: if isMember(request.resource.data.clubId) && request.resource.data.authorId == request.auth.uid;
+      allow update: if signedIn() && (
+        (resource.data.authorId == request.auth.uid && onlyChanges(['deletedAt'])) ||
+        (isMember(resource.data.clubId) && onlyChanges(['cheerCount', 'commentCount']))
+      );
+      allow delete: if false;
+
+      match /cheers/{uid} {
+        allow read: if signedIn();
+        allow create, delete: if isOwner(uid);
+      }
+      match /comments/{commentId} {
+        allow read: if signedIn();
+        allow create: if signedIn() && request.resource.data.authorId == request.auth.uid;
+        allow update: if signedIn() && resource.data.authorId == request.auth.uid && onlyChanges(['deletedAt']);
+        allow delete: if false;
+      }
+    }
+
+    match /events/{eventId} {
+      allow read: if isMember(resource.data.clubId);
+      allow create: if isMember(request.resource.data.clubId) && request.resource.data.createdBy == request.auth.uid;
+      allow update: if signedIn() && (
+        (resource.data.createdBy == request.auth.uid && onlyChanges(['cancelledAt'])) ||
+        (isMember(resource.data.clubId) && onlyChanges(['goingCount']))
+      );
+      allow delete: if false;
+      match /rsvps/{uid} {
+        allow read: if signedIn();
+        allow create, delete: if isOwner(uid);
+      }
+    }
+
+    // ---- Thử thách & tuyến: nội dung do Admin SDK nạp; người dùng chỉ đọc + tham gia.
+    match /challenges/{id} {
+      allow read: if signedIn();
+      allow create, delete: if false;
+      allow update: if signedIn() && onlyChanges(['participantCount']) && counterStep('participantCount');
+      match /participants/{uid} {
+        allow read: if signedIn() && (isOwner(uid) || resource.data.leaderboardOptIn == true);
+        allow create: if isOwner(uid) && request.resource.data.userId == uid;
+        allow update: if isOwner(uid);
+        allow delete: if isOwner(uid);
+      }
+    }
+
+    match /routes/{id} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // ---- Live sharing: chủ ghi, người được mời đọc.
+    match /liveShares/{shareId} {
+      allow read: if signedIn() && (resource.data.ownerId == request.auth.uid || request.auth.uid in resource.data.viewerIds);
+      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid && request.resource.data.viewerIds.size() <= 20;
+      allow update: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow delete: if false;
+    }
+
+    // ---- Chỉ tạo
+    match /reports/{id} {
+      allow create: if signedIn() && request.resource.data.reporterId == request.auth.uid;
+    }
+    match /feedback/{id} {
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+    }
+  }
+}

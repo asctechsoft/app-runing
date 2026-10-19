@@ -1,11 +1,15 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:uuid/uuid.dart';
 
+import '../../core/firebase/firebase_providers.dart';
 import '../../core/network/api_client.dart';
 import '../../core/permissions/permission_coordinator.dart';
 import '../../core/providers.dart';
@@ -31,25 +35,59 @@ final profileShareProvider = Provider<ProfileShareService>((ref) => SystemShareS
 
 enum FeedbackResult { sent, unavailable }
 
-/// Gửi feedback lên `POST /feedback` (J06). [FeedbackResult.unavailable] khi build không có server,
-/// mất mạng hoặc server cũ chưa có endpoint → UI chuyển sang share sheet. Lỗi khác (422/429...) ném ApiException.
+/// Ghi một document `feedback/{id}` (test thay bằng bản in-memory).
+typedef FeedbackWriter = Future<void> Function(String id, Map<String, Object?> data);
+
+/// Gửi feedback vào Firestore `feedback/{id}` (J06). [FeedbackResult.unavailable] khi Firebase chưa sẵn sàng, chưa đăng nhập
+/// hoặc mất mạng (quá [timeout]) → UI chuyển sang share sheet. Lỗi khác (quyền, quá tải...) ném ApiException.
 class FeedbackSender {
-  FeedbackSender(this._api);
-  final ApiClient _api;
+  FeedbackSender({
+    required FeedbackWriter write,
+    required bool Function() ready,
+    required String? Function() uid,
+    int Function()? nowMs,
+    String Function()? newId,
+    this.timeout = const Duration(seconds: 10),
+  }) : _write = write,
+       _ready = ready,
+       _uid = uid,
+       _nowMs = nowMs ?? (() => DateTime.now().millisecondsSinceEpoch),
+       _newId = newId ?? (() => const Uuid().v4());
+
+  final FeedbackWriter _write;
+  final bool Function() _ready;
+  final String? Function() _uid;
+  final int Function() _nowMs;
+  final String Function() _newId;
+  final Duration timeout;
 
   Future<FeedbackResult> send({required String message, String? diagnostics, required String appVersion}) async {
-    if (!_api.configured) return FeedbackResult.unavailable;
+    final uid = _uid();
+    if (!_ready() || uid == null) return FeedbackResult.unavailable;
     try {
-      await _api.post('/feedback', body: {'message': message, 'diagnostics': ?diagnostics, 'appVersion': appVersion});
+      await _write(_newId(), {'uid': uid, 'message': message, 'diagnostics': diagnostics, 'appVersion': appVersion, 'createdAt': _nowMs()}).timeout(timeout);
       return FeedbackResult.sent;
+    } on TimeoutException {
+      return FeedbackResult.unavailable;
+    } on FirebaseException catch (e) {
+      final mapped = mapFirebaseError(e);
+      if (mapped.isNetwork || mapped.isNotFound || mapped.isUnauthorized) return FeedbackResult.unavailable;
+      throw mapped;
     } on ApiException catch (e) {
-      if (e.isNetwork || e.isNotFound) return FeedbackResult.unavailable;
+      if (e.isNetwork || e.isNotFound || e.isUnauthorized) return FeedbackResult.unavailable;
       rethrow;
     }
   }
 }
 
-final feedbackSenderProvider = Provider<FeedbackSender>((ref) => FeedbackSender(ref.watch(apiClientProvider)));
+final feedbackSenderProvider = Provider<FeedbackSender>((ref) {
+  bool ready() => ref.read(firebaseReadyProvider);
+  return FeedbackSender(
+    write: (id, data) => ref.read(firestoreProvider).collection('feedback').doc(id).set(data),
+    ready: ready,
+    uid: () => ready() ? ref.read(firebaseAuthProvider).currentUser?.uid : null,
+  );
+});
 
 String _platformName() {
   if (kIsWeb) return 'web';

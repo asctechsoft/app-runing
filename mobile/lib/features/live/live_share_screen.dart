@@ -231,7 +231,7 @@ class _MapPreview extends ConsumerWidget {
                       interactionOptions: const InteractionOptions(flags: InteractiveFlag.none),
                     ),
                     children: [
-                      TileLayer(urlTemplate: env.tileUrlTemplate, userAgentPackageName: 'app.stride'),
+                      TileLayer(urlTemplate: env.tileUrlTemplate, userAgentPackageName: 'com.asc.app_runing'),
                       MarkerLayer(
                         markers: [
                           Marker(

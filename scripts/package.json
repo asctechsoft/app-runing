@@ -1,0 +1,12 @@
+{
+  "name": "stride-scripts",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "seed": "node seed-firestore.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}

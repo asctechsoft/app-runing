@@ -1,16 +1,21 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
+import '../../core/firebase/firebase_providers.dart';
 import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
+import '../../core/time/clock.dart';
 import '../../data/settings_repository.dart';
 import '../auth/auth_repository.dart';
 
-/// Job phía server (export / deleteAccount): queued | running | succeeded | failed (H06).
+/// Job export / xóa tài khoản: queued | running | succeeded | failed (H06). Nay chạy ở client nên thường đi thẳng tới
+/// succeeded/failed, nhưng giữ dạng cũ để UI không đổi.
 class AccountJob {
   const AccountJob({required this.id, required this.kind, required this.status, this.createdAt, this.finishedAt, this.expiresAt, this.error});
 
@@ -38,94 +43,228 @@ class AccountJob {
   );
 }
 
+/// Đổi giá trị Firestore sang giá trị JSON được: Timestamp → epoch ms, GeoPoint → {lat, lon}, đệ quy qua Map/List.
+Object? exportJsonSafe(Object? v) {
+  if (v is Timestamp) return v.millisecondsSinceEpoch;
+  if (v is GeoPoint) return {'lat': v.latitude, 'lon': v.longitude};
+  if (v is Map) return {for (final e in v.entries) '${e.key}': exportJsonSafe(e.value)};
+  if (v is Iterable) return [for (final e in v) exportJsonSafe(e)];
+  return v;
+}
+
+/// Dựng cấu trúc export từ dữ liệu đã đọc (thuần, test được). Mỗi activity có `trackChunks`: list `{seq, count, sha256, json}`;
+/// `json` (chuỗi) được giải mã thành `points` để file đọc được; chunk hỏng giữ nguyên chuỗi gốc.
+Map<String, Object?> buildExportMap({
+  required String uid,
+  required int exportedAt,
+  required Map<String, Object?>? user,
+  required List<Map<String, Object?>> goals,
+  required List<Map<String, Object?>> activities,
+}) {
+  Map<String, Object?> chunk(Map<String, Object?> c) {
+    final raw = c['json'];
+    Object? parsed;
+    if (raw is String) {
+      try {
+        parsed = jsonDecode(raw);
+      } catch (_) {
+        parsed = null;
+      }
+    }
+    return {
+      'seq': c['seq'],
+      'count': c['count'],
+      'sha256': c['sha256'],
+      if (parsed != null) 'points': parsed else 'raw': raw,
+    };
+  }
+
+  return {
+    'format': 'stride-export',
+    'version': 1,
+    'exportedAt': exportedAt,
+    'uid': uid,
+    'user': exportJsonSafe(user),
+    'goals': [for (final g in goals) exportJsonSafe(g)],
+    'activities': [
+      for (final a in activities)
+        {
+          for (final e in a.entries)
+            if (e.key != 'trackChunks') e.key: exportJsonSafe(e.value),
+          'trackChunks': [
+            for (final c in (a['trackChunks'] as List? ?? const [])) chunk((c as Map).cast<String, Object?>()),
+          ],
+        },
+    ],
+  };
+}
+
 final accountRepositoryProvider = Provider<AccountRepository>(
-  (ref) => AccountRepository(auth: ref.watch(authRepositoryProvider), settings: ref.watch(settingsRepositoryProvider), http: ref.watch(authHttpClientProvider)),
+  (ref) => AccountRepository(
+    auth: ref.watch(authRepositoryProvider),
+    settings: ref.watch(settingsRepositoryProvider),
+    firestore: () => ref.read(firestoreProvider),
+    firebaseAuth: () => ref.read(firebaseAuthProvider),
+    clock: ref.watch(clockProvider),
+  ),
 );
 
-/// Export dữ liệu và yêu cầu xóa tài khoản qua API (H06, I07). Không bao giờ báo thành công khi server chưa xác nhận.
+/// Export dữ liệu và xóa tài khoản chạy ở client trên Firestore (H06, I07). Không bao giờ báo thành công khi chưa xong.
 class AccountRepository {
-  AccountRepository({required this.auth, required SettingsRepository settings, required http.Client http}) : _settings = settings, _http = http;
+  AccountRepository({
+    required this.auth,
+    required SettingsRepository settings,
+    required FirebaseFirestore Function() firestore,
+    required FirebaseAuth Function() firebaseAuth,
+    required Clock clock,
+  }) : _settings = settings,
+       _fsFn = firestore,
+       _authFn = firebaseAuth,
+       _clock = clock;
 
   final AuthRepository auth;
   final SettingsRepository _settings;
-  final http.Client _http;
+  final FirebaseFirestore Function() _fsFn;
+  final FirebaseAuth Function() _authFn;
+  final Clock _clock;
 
-  ApiClient get _api => auth.api;
   static const _kExportJob = 'account.export_job';
+  static const _batchLimit = 400;
 
-  AccountJob _job(Object? res) {
-    if (res is! Map) throw ApiException(500, 'bad_response', 'Unexpected server response');
-    return AccountJob.fromJson(res.cast<String, Object?>());
+  /// Export đã tạo, giữ trong bộ nhớ (không lưu đĩa: file chứa vị trí GPS).
+  final Map<String, Uint8List> _exports = {};
+  final Map<String, AccountJob> _exportJobs = {};
+
+  String _requireUid() {
+    if (!auth.available) throw ApiException(0, 'not_configured', 'Firebase is not configured for this build');
+    final uid = auth.uid;
+    if (uid == null) throw ApiException(401, 'unauthorized', 'Not signed in');
+    return uid;
   }
 
   Future<String?> lastExportId(String owner) => _settings.kvGet(owner, _kExportJob);
 
-  /// Tạo job export toàn tài khoản (server trả job đang mở nếu đã có).
-  Future<AccountJob> createExport(String owner) async {
-    final key = 'export:${const Uuid().v4()}';
-    final job = _job(await auth.authed(() => _api.post('/me/exports', idempotencyKey: key)));
-    await _settings.kvSet(owner, _kExportJob, job.id);
+  /// Gom toàn bộ `users/{uid}` thành JSON và trả job `succeeded` ngay khi đọc xong.
+  Future<AccountJob> createExport(String owner) => guardFirebase(() async {
+    final uid = _requireUid();
+    final userRef = _fsFn().collection('users').doc(uid);
+    final userSnap = await userRef.get();
+    final goals = await userRef.collection('goals').get();
+    final acts = await userRef.collection('activities').get();
+    final activities = <Map<String, Object?>>[];
+    for (final a in acts.docs) {
+      final chunks = await a.reference.collection('trackChunks').get();
+      final list = [for (final c in chunks.docs) c.data().cast<String, Object?>()]
+        ..sort((x, y) => ((x['seq'] as num?) ?? 0).compareTo((y['seq'] as num?) ?? 0));
+      activities.add({'id': a.id, ...a.data().cast<String, Object?>(), 'trackChunks': list});
+    }
+    final now = _clock.nowMs();
+    final map = buildExportMap(
+      uid: uid,
+      exportedAt: now,
+      user: userSnap.data()?.cast<String, Object?>(),
+      goals: [
+        for (final g in goals.docs) {'id': g.id, ...g.data().cast<String, Object?>()},
+      ],
+      activities: activities,
+    );
+    final bytes = Uint8List.fromList(utf8.encode(const JsonEncoder.withIndent('  ').convert(map)));
+    final id = 'export-${const Uuid().v4()}';
+    final job = AccountJob(id: id, kind: 'export', status: 'succeeded', createdAt: now, finishedAt: now);
+    _exports[id] = bytes;
+    _exportJobs[id] = job;
+    await _settings.kvSet(owner, _kExportJob, id);
+    return job;
+  });
+
+  /// Export chỉ giữ trong bộ nhớ: sau khi khởi động lại app không còn → 404 (UI chỉ hiện nút tạo mới).
+  Future<AccountJob> getExport(String id) async {
+    final job = _exportJobs[id];
+    if (job == null) throw ApiException(404, 'not_found', 'Export is no longer available');
     return job;
   }
 
-  Future<AccountJob> getExport(String id) async => _job(await auth.authed(() => _api.get('/me/exports/$id')));
-
-  /// Tải file zip (cần Bearer token, không phải link công khai).
+  /// Nội dung JSON (UTF-8) của export.
   Future<Uint8List> downloadExport(String id) async {
-    Future<http.Response> send() async {
-      final token = await auth.tokens.accessToken();
-      return _http
-          .get(Uri.parse('${_api.baseUrl}/me/exports/$id/download'), headers: {if (token != null) 'Authorization': 'Bearer $token'})
-          .timeout(const Duration(minutes: 2));
-    }
-
-    if (!_api.configured) throw ApiException(0, 'not_configured', 'Server is not configured for this build');
-    await auth.ensureFresh();
-    http.Response res;
-    try {
-      res = await send();
-      if (res.statusCode == 401 && await auth.refresh()) res = await send();
-    } on TimeoutException {
-      throw ApiException(0, 'timeout', 'Request timed out');
-    } on http.ClientException catch (e) {
-      throw ApiException(0, 'network', e.message);
-    }
-    if (res.statusCode == 200) return res.bodyBytes;
-    final code = switch (res.statusCode) {
-      409 => 'export_not_ready',
-      410 => 'export_expired',
-      404 => 'not_found',
-      401 => 'unauthorized',
-      _ => 'http_${res.statusCode}',
-    };
-    throw ApiException(res.statusCode, code, 'Download failed');
+    final bytes = _exports[id];
+    if (bytes == null) throw ApiException(404, 'not_found', 'Export is no longer available');
+    return bytes;
   }
 
-  /// Xóa tài khoản: xác thực lại bằng mật khẩu rồi gửi yêu cầu. Trả job để theo dõi trạng thái thật.
   Future<AccountJob> requestDeletion(String password) async {
     await auth.reauth(password);
-    return _job(await auth.authed(() => _api.post('/me/deletion')));
+    return _deleteEverything();
   }
 
-  /// Biến thể cho tài khoản đăng nhập bằng Google (không có mật khẩu): xác thực lại bằng Firebase ID token.
-  Future<AccountJob> requestDeletionWithFirebase(String idToken) async {
-    await auth.reauthWithFirebase(idToken);
-    return _job(await auth.authed(() => _api.post('/me/deletion')));
+  /// Biến thể cho tài khoản Google (không có mật khẩu): xác thực lại bằng credential Google.
+  Future<AccountJob> requestDeletionWithGoogle(AuthCredential credential) async {
+    await auth.reauthWithGoogle(credential);
+    return _deleteEverything();
   }
 
-  /// Trạng thái yêu cầu xóa gần nhất; null nếu chưa từng yêu cầu.
+  /// Xóa subcollection → `userLookup` → `users/{uid}` → tài khoản Auth. Chỉ trả succeeded khi `user.delete()` xong.
+  Future<AccountJob> _deleteEverything() => guardFirebase(() async {
+    final uid = _requireUid();
+    final user = _authFn().currentUser;
+    if (user == null) throw ApiException(401, 'unauthorized', 'Not signed in');
+    final fs = _fsFn();
+    final userRef = fs.collection('users').doc(uid);
+    final start = _clock.nowMs();
+    // Dấu "đang xóa": nếu bị gián đoạn, deletionStatus báo thất bại thay vì im lặng.
+    await userRef.set({'deletionRequestedAt': start}, SetOptions(merge: true));
+    for (final sub in const ['goals', 'blocks', 'savedRoutes', 'challengeJoins']) {
+      await _deleteCollection(fs, userRef.collection(sub));
+    }
+    await _deleteCollection(fs, userRef.collection('activities'), nested: const ['trackChunks']);
+    final email = user.email;
+    if (email != null && email.isNotEmpty) {
+      final lookup = fs.collection('userLookup').doc(emailLowerOf(email));
+      final snap = await lookup.get();
+      if (snap.exists && snap.data()?['uid'] == uid) await lookup.delete();
+    }
+    await userRef.delete();
+    await user.delete();
+    return AccountJob(id: 'delete-$uid', kind: 'deleteAccount', status: 'succeeded', createdAt: start, finishedAt: _clock.nowMs());
+  });
+
+  /// Xóa mọi document của [col] theo lô ≤ [_batchLimit]; [nested] là các subcollection con xóa trước.
+  Future<void> _deleteCollection(FirebaseFirestore fs, CollectionReference<Map<String, dynamic>> col, {List<String> nested = const []}) async {
+    while (true) {
+      final snap = await col.limit(_batchLimit).get();
+      if (snap.docs.isEmpty) return;
+      for (final d in snap.docs) {
+        for (final n in nested) {
+          await _deleteCollection(fs, d.reference.collection(n));
+        }
+      }
+      final batch = fs.batch();
+      for (final d in snap.docs) {
+        batch.delete(d.reference);
+      }
+      await batch.commit();
+    }
+  }
+
+  /// Trạng thái yêu cầu xóa; null nếu chưa từng yêu cầu. Dấu còn lại mà không đang chạy = bị gián đoạn → failed.
   Future<AccountJob?> deletionStatus() async {
+    final uid = auth.uid;
+    if (uid == null) return null;
     try {
-      return _job(await auth.authed(() => _api.get('/me/deletion')));
-    } on ApiException catch (e) {
-      if (e.isNotFound) return null;
-      rethrow;
+      final snap = await _fsFn().collection('users').doc(uid).get();
+      final at = (snap.data()?['deletionRequestedAt'] as num?)?.toInt();
+      if (at == null) return null;
+      return AccountJob(id: 'delete-$uid', kind: 'deleteAccount', status: 'failed', createdAt: at, error: 'Deletion was interrupted. Try again.');
+    } catch (e) {
+      final err = mapFirebaseError(e);
+      if (err.isNotFound) return null;
+      throw err;
     }
   }
 }
 
 /// Thông báo lỗi cho các thao tác tài khoản.
 String accountErrorMessage(Object e) {
+  if (e is FirebaseException) e = mapFirebaseError(e);
   if (e is ApiException) {
     if (e.code == 'not_configured') return "Accounts aren't available in this build.";
     if (e.isNetwork) return "You're offline. Connect to the internet and try again.";
@@ -140,6 +279,12 @@ String accountErrorMessage(Object e) {
         return 'This export has expired. Create a new one.';
       case 'rate_limited':
         return 'Too many attempts. Wait a minute and try again.';
+      case 'account_disabled':
+        return 'This account is being deleted or has been deleted.';
+      case 'validation_error':
+        return 'Some details are not valid. Check and try again.';
+      case 'forbidden':
+        return "You don't have permission to do that.";
       case 'unauthorized':
       case 'invalid_token':
         return 'Your session has expired. Log in again.';

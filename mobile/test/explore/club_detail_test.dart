@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:stride/core/config/env.dart';
 import 'package:stride/core/db/app_database.dart';
-import 'package:stride/core/network/api_client.dart';
 import 'package:stride/core/permissions/permission_coordinator.dart';
 import 'package:stride/core/providers.dart';
 import 'package:stride/features/explore/clubs_screen.dart';
@@ -14,7 +13,7 @@ import 'package:stride/features/explore/explore_repository.dart';
 import 'package:stride/features/explore/explore_screen.dart';
 
 class _FakeExploreRepository extends ExploreRepository {
-  _FakeExploreRepository(this.current) : super(ApiClient(baseUrl: '', tokens: MemoryTokenStore()));
+  _FakeExploreRepository(this.current) : super(ready: () => false, firestore: () => throw UnimplementedError(), uid: () => null);
   Club current;
   int joinCalls = 0;
   int postCalls = 0;

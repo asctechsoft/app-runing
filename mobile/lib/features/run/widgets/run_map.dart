@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/logging/logger.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../domain/calc/geo.dart';
@@ -155,7 +156,13 @@ class _RunMapState extends ConsumerState<RunMap> {
               },
             ),
             children: [
-              if (tiles) TileLayer(urlTemplate: env.tileUrlTemplate, userAgentPackageName: 'com.stride.stride'),
+              if (tiles)
+                TileLayer(
+                  urlTemplate: env.tileUrlTemplate,
+                  userAgentPackageName: 'com.asc.app_runing',
+                  // Ghi log khi nền bản đồ không tải được (mất mạng, bị chặn) để dễ chẩn đoán thay vì chỉ thấy khung trống.
+                  errorTileCallback: (tile, error, stackTrace) => StrideLog.d('map', 'tile ${tile.coordinates} failed: $error'),
+                ),
               PolylineLayer(
                 polylines: [
                   for (final s in widget.segments)

@@ -60,7 +60,7 @@ class ActivityRouteMapState extends ConsumerState<ActivityRouteMap> {
         interactionOptions: InteractionOptions(flags: widget.interactive ? InteractiveFlag.all & ~InteractiveFlag.rotate : InteractiveFlag.none),
       ),
       children: [
-        TileLayer(urlTemplate: env.tileUrlTemplate, userAgentPackageName: 'app.stride'),
+        TileLayer(urlTemplate: env.tileUrlTemplate, userAgentPackageName: 'com.asc.app_runing'),
         PolylineLayer(
           polylines: [
             for (final seg in route)

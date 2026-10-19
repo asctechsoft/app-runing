@@ -1,45 +1,43 @@
-import 'dart:convert';
+import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
 import 'package:stride/core/network/api_client.dart';
 import 'package:stride/features/profile/help_screen.dart';
 
-ApiClient _api(MockClientHandler h, {String base = 'http://x/api/v1'}) => ApiClient(baseUrl: base, tokens: MemoryTokenStore(), client: MockClient(h));
+FeedbackSender _sender(FeedbackWriter w, {bool ready = true, String? uid = 'u1', Duration timeout = const Duration(seconds: 1)}) =>
+    FeedbackSender(write: w, ready: () => ready, uid: () => uid, nowMs: () => 1760000000000, newId: () => 'f1', timeout: timeout);
 
 void main() {
-  test('gửi thành công → sent, body đúng hợp đồng', () async {
-    late Map<String, dynamic> body;
-    final s = FeedbackSender(
-      _api((req) async {
-        expect(req.url.path, '/api/v1/feedback');
-        body = jsonDecode(req.body) as Map<String, dynamic>;
-        return http.Response(jsonEncode({'id': 'f1'}), 201);
-      }),
-    );
+  test('gửi thành công → sent, document đúng hợp đồng', () async {
+    String? id;
+    Map<String, Object?>? data;
+    final s = _sender((i, d) async {
+      id = i;
+      data = d;
+    });
     expect(await s.send(message: 'Map froze', diagnostics: 'env=dev', appVersion: '1.0.0'), FeedbackResult.sent);
-    expect(body, {'message': 'Map froze', 'diagnostics': 'env=dev', 'appVersion': '1.0.0'});
+    expect(id, 'f1');
+    expect(data, {'uid': 'u1', 'message': 'Map froze', 'diagnostics': 'env=dev', 'appVersion': '1.0.0', 'createdAt': 1760000000000});
   });
 
-  test('server cũ (404) hoặc không có server → unavailable để chuyển share sheet', () async {
-    final old = FeedbackSender(_api((req) async => http.Response('Not found', 404)));
-    expect(await old.send(message: 'x', appVersion: '1'), FeedbackResult.unavailable);
-    final none = FeedbackSender(_api((req) async => fail('không được gọi mạng'), base: ''));
-    expect(await none.send(message: 'x', appVersion: '1'), FeedbackResult.unavailable);
+  test('Firebase chưa sẵn sàng hoặc chưa đăng nhập → unavailable, không ghi', () async {
+    Future<void> boom(String i, Map<String, Object?> d) async => fail('không được ghi');
+    expect(await _sender(boom, ready: false).send(message: 'x', appVersion: '1'), FeedbackResult.unavailable);
+    expect(await _sender(boom, uid: null).send(message: 'x', appVersion: '1'), FeedbackResult.unavailable);
   });
 
-  test('429 → ném lỗi, không báo đã gửi', () async {
-    final s = FeedbackSender(
-      _api(
-        (req) async => http.Response(
-          jsonEncode({
-            'error': {'code': 'rate_limited', 'message': 'slow down'},
-          }),
-          429,
-        ),
-      ),
-    );
-    await expectLater(s.send(message: 'x', appVersion: '1'), throwsA(isA<ApiException>()));
+  test('mất mạng (unavailable / quá thời gian) → unavailable để chuyển share sheet', () async {
+    final offline = _sender((i, d) async => throw FirebaseException(plugin: 'cloud_firestore', code: 'unavailable'));
+    expect(await offline.send(message: 'x', appVersion: '1'), FeedbackResult.unavailable);
+    final hang = _sender((i, d) => Completer<void>().future, timeout: const Duration(milliseconds: 20));
+    expect(await hang.send(message: 'x', appVersion: '1'), FeedbackResult.unavailable);
+  });
+
+  test('permission-denied / quá tải → ném ApiException, không báo đã gửi', () async {
+    final denied = _sender((i, d) async => throw FirebaseException(plugin: 'cloud_firestore', code: 'permission-denied'));
+    await expectLater(denied.send(message: 'x', appVersion: '1'), throwsA(isA<ApiException>().having((e) => e.status, 'status', 403)));
+    final limited = _sender((i, d) async => throw FirebaseException(plugin: 'cloud_firestore', code: 'resource-exhausted'));
+    await expectLater(limited.send(message: 'x', appVersion: '1'), throwsA(isA<ApiException>().having((e) => e.status, 'status', 429)));
   });
 }

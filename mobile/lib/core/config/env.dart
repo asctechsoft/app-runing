@@ -2,10 +2,9 @@
 enum StrideEnv { dev, staging, production }
 
 class EnvConfig {
-  const EnvConfig({required this.env, required this.apiBaseUrl, required this.tileUrlTemplate, required this.tileAttribution, required this.flags});
+  const EnvConfig({required this.env, required this.tileUrlTemplate, required this.tileAttribution, required this.flags});
 
   final StrideEnv env;
-  final String apiBaseUrl;
   final String tileUrlTemplate;
   final String tileAttribution;
   final FeatureFlags flags;
@@ -15,12 +14,9 @@ class EnvConfig {
   static EnvConfig fromEnvironment() {
     const envName = String.fromEnvironment('STRIDE_ENV', defaultValue: 'dev');
     final env = StrideEnv.values.firstWhere((e) => e.name == envName, orElse: () => StrideEnv.dev);
-    const api = String.fromEnvironment('STRIDE_API_URL', defaultValue: '');
-    // Android emulator truy cập host qua 10.0.2.2.
-    final apiUrl = api.isNotEmpty ? api : (env == StrideEnv.dev ? 'http://10.0.2.2:3001/api/v1' : '');
     const tiles = String.fromEnvironment('STRIDE_TILE_URL', defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png');
     const attribution = String.fromEnvironment('STRIDE_TILE_ATTRIBUTION', defaultValue: '© OpenStreetMap contributors');
-    return EnvConfig(env: env, apiBaseUrl: apiUrl, tileUrlTemplate: tiles, tileAttribution: attribution, flags: FeatureFlags.defaultsFor(env));
+    return EnvConfig(env: env, tileUrlTemplate: tiles, tileAttribution: attribution, flags: FeatureFlags.defaultsFor(env));
   }
 }
 

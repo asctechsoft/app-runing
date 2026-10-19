@@ -4,11 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stride/core/config/env.dart';
-import 'package:stride/core/network/api_client.dart';
 import 'package:stride/core/providers.dart';
 import 'package:stride/core/time/clock.dart';
 import 'package:stride/features/live/live_share_models.dart';
 import 'package:stride/features/live/live_share_providers.dart';
+import 'package:stride/features/live/live_share_repository.dart';
 import 'package:stride/features/live/live_share_screen.dart';
 
 void main() {
@@ -19,10 +19,8 @@ void main() {
       overrides: [
         sharedPrefsProvider.overrideWithValue(prefs),
         clockProvider.overrideWithValue(FakeClock()),
-        envProvider.overrideWithValue(
-          const EnvConfig(env: StrideEnv.dev, apiBaseUrl: 'http://test/api/v1', tileUrlTemplate: '', tileAttribution: '', flags: FeatureFlags()),
-        ),
-        apiClientProvider.overrideWithValue(ApiClient(baseUrl: 'http://test/api/v1', tokens: MemoryTokenStore())),
+        envProvider.overrideWithValue(const EnvConfig(env: StrideEnv.dev, tileUrlTemplate: '', tileAttribution: '', flags: FeatureFlags())),
+        liveShareRepositoryProvider.overrideWithValue(LiveShareRepository(ready: () => true, firestore: () => throw UnimplementedError(), uid: () => 'user-1')),
         liveSharePreviewPositionProvider.overrideWith((ref) async => null),
       ],
     );

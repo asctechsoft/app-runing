@@ -9,7 +9,6 @@ import '../domain/models/profile.dart';
 import 'config/env.dart';
 import 'db/app_database.dart';
 import 'format/formatters.dart';
-import 'network/api_client.dart';
 import 'permissions/permission_coordinator.dart';
 import 'time/clock.dart';
 
@@ -20,9 +19,6 @@ final clockProvider = Provider<Clock>((ref) => SystemClock());
 final databaseProvider = Provider<AppDatabase>((ref) => throw UnimplementedError('override databaseProvider'));
 final sharedPrefsProvider = Provider<SharedPreferences>((ref) => throw UnimplementedError('override sharedPrefsProvider'));
 final permissionsProvider = Provider<PermissionCoordinator>((ref) => DevicePermissionCoordinator());
-final tokenStoreProvider = Provider<TokenStore>((ref) => SecureTokenStore());
-
-final apiClientProvider = Provider<ApiClient>((ref) => ApiClient(baseUrl: ref.watch(envProvider).apiBaseUrl, tokens: ref.watch(tokenStoreProvider)));
 
 final ownerRepositoryProvider = Provider<OwnerRepository>((ref) => OwnerRepository(ref.watch(sharedPrefsProvider)));
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) => SettingsRepository(ref.watch(databaseProvider), ref.watch(clockProvider)));

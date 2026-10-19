@@ -347,7 +347,7 @@ class _RouteDetailBodyState extends ConsumerState<_RouteDetailBody> {
                         interactionOptions: const InteractionOptions(flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag | InteractiveFlag.doubleTapZoom),
                       ),
                       children: [
-                        TileLayer(urlTemplate: env.tileUrlTemplate, userAgentPackageName: 'app.stride'),
+                        TileLayer(urlTemplate: env.tileUrlTemplate, userAgentPackageName: 'com.asc.app_runing'),
                         PolylineLayer(
                           polylines: [Polyline(points: r.points, strokeWidth: 5, color: StrideColors.primary)],
                         ),

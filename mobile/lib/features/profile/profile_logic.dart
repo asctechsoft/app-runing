@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 import '../../core/config/env.dart';
+import '../../core/firebase/firebase_providers.dart';
 import '../../core/format/formatters.dart';
 import '../../core/permissions/permission_coordinator.dart';
 import '../../core/providers.dart';
@@ -250,19 +251,18 @@ final profileStatsProvider = FutureProvider.autoDispose<ProfileStats>((ref) asyn
   return ProfileStats(activityCount: all.count, distanceM: all.distanceM, runCount: runs.count, activeDays: days);
 });
 
-/// Ngày tham gia: chỉ cho user đã đăng nhập, lấy từ cache kv hoặc GET /me. Không có → null (không bịa).
+/// Ngày tham gia: chỉ cho user đã đăng nhập, lấy từ cache kv hoặc users/{uid}.createdAt. Không có → null (không bịa).
 final profileJoinedProvider = FutureProvider.autoDispose<DateTime?>((ref) async {
   final owner = ref.watch(ownerProvider);
   if (owner.isGuest) return null;
   final repo = ref.watch(settingsRepositoryProvider);
   final cached = int.tryParse(await repo.kvGet(owner.ownerId, kvAccountCreatedAt) ?? '');
   if (cached != null) return DateTime.fromMillisecondsSinceEpoch(cached);
-  final api = ref.watch(apiClientProvider);
-  if (!api.configured) return null;
+  final uid = ref.watch(currentUidProvider);
+  if (uid == null || uid != owner.ownerId) return null;
   try {
-    final j = await api.get('/me');
-    final user = j is Map ? j['user'] : null;
-    final created = user is Map ? (user['createdAt'] as num?)?.toInt() : null;
+    final snap = await ref.watch(firestoreProvider).collection('users').doc(uid).get();
+    final created = (snap.data()?['createdAt'] as num?)?.toInt();
     if (created == null) return null;
     await repo.kvSet(owner.ownerId, kvAccountCreatedAt, '$created');
     return DateTime.fromMillisecondsSinceEpoch(created);

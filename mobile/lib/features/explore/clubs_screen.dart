@@ -880,7 +880,7 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
     );
     if (!ok || !mounted) return;
     try {
-      await ref.read(exploreRepositoryProvider).deleteComment(c.id);
+      await ref.read(exploreRepositoryProvider).deleteComment(c.id, postId: c.postId);
       if (!mounted) return;
       setState(() {
         _items = [

@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/router.dart';
 import 'core/db/app_database.dart';
+import 'core/firebase/firebase_providers.dart';
 import 'core/logging/logger.dart';
 import 'core/providers.dart';
 import 'core/run_plugins.dart';
@@ -28,6 +29,7 @@ Future<void> main() async {
         sharedPrefsProvider.overrideWithValue(prefs),
         databaseProvider.overrideWithValue(db),
         googleSignInAvailableProvider.overrideWithValue(googleReady),
+        firebaseReadyProvider.overrideWithValue(googleReady),
         flagsProvider.overrideWith((ref) => ref.watch(envProvider).flags.copyWith(authGoogle: googleReady)),
         // Ghép plugin mở rộng vào engine phiên chạy (L03 nhịp tim, M07 live sharing); provider trả null khi flag tắt.
         runPluginsProvider.overrideWith((ref) => [?ref.watch(heartRateRunPluginProvider), ?ref.watch(liveShareRunPluginProvider)]),
@@ -37,8 +39,8 @@ Future<void> main() async {
   );
 }
 
-/// Firebase chỉ dùng cho Google Sign-In trên Android (google-services.json). iOS chưa có GoogleService-Info.plist.
-/// Không chặn app: lỗi cấu hình/không mạng → ẩn nút Google, các luồng khác vẫn chạy offline.
+/// Firebase là backend duy nhất (Auth + Firestore) trên Android (google-services.json). iOS chưa có GoogleService-Info.plist.
+/// Không chặn app: lỗi cấu hình/không mạng → ẩn tính năng tài khoản/đám mây, app vẫn chạy offline.
 Future<bool> _initFirebase() async {
   if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return false;
   try {

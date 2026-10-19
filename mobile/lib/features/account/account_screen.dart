@@ -318,11 +318,11 @@ class _ExportSectionState extends ConsumerState<_ExportSection> {
     try {
       final bytes = await ref.read(accountRepositoryProvider).downloadExport(job.id);
       final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}${Platform.pathSeparator}stride-export-${job.id}.zip');
+      final file = File('${dir.path}${Platform.pathSeparator}stride-export-${job.id}.json');
       await file.writeAsBytes(bytes, flush: true);
       await SharePlus.instance.share(
         ShareParams(
-          files: [XFile(file.path, mimeType: 'application/zip')],
+          files: [XFile(file.path, mimeType: 'application/json')],
           subject: 'STRIDE data export',
         ),
       );
@@ -350,7 +350,7 @@ class _ExportSectionState extends ConsumerState<_ExportSection> {
           ),
           const SizedBox(height: StrideSpace.s8),
           const Text(
-            'A zip with your activities (JSON and CSV), GPS routes as GPX, profile and goals. Routes include your recorded locations — share the file carefully.',
+            'A JSON file with your activities, GPS routes, profile and goals. Routes include your recorded locations — share the file carefully.',
             style: StrideText.bodySecondary,
           ),
           const SizedBox(height: StrideSpace.s12),
@@ -403,7 +403,7 @@ class _DeletionSection extends ConsumerWidget {
         child: StatusBanner(
           tone: BannerTone.success,
           title: 'Account deleted',
-          message: 'Your account and its data were deleted from our servers.',
+          message: 'Your account and its data were deleted from our cloud storage.',
           actionLabel: 'Sign out',
           onAction: () => _localSignOut(context, ref),
         ),
@@ -429,7 +429,7 @@ Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
     context,
     title: 'Delete your account?',
     message:
-        'This permanently deletes your account, activities, routes, photos and goals from our servers. It can\'t be undone. '
+        'This permanently deletes your account, activities, routes, photos and goals from our cloud storage. It can\'t be undone. '
         'Export your data first if you want a copy.',
     confirmLabel: 'Continue',
     cancelLabel: 'Cancel',
@@ -439,8 +439,13 @@ Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
   if (!ok || !context.mounted) return;
   final job = await showStrideSheet<AccountJob>(context, title: 'Confirm your password', builder: (_) => const _ReauthDeleteForm());
   if (job == null || !context.mounted) return;
+  if (job.succeeded) {
+    // Tài khoản Firebase đã bị xóa → đăng xuất cục bộ (dữ liệu trên máy giữ nguyên dưới owner cũ).
+    await _localSignOut(context, ref);
+    return;
+  }
   ref.invalidate(_deletionStatusProvider);
-  showStrideSnack(context, job.succeeded ? 'Your account was deleted.' : 'Deletion requested. We\'ll show the status here.');
+  showStrideSnack(context, 'Deletion requested. We\'ll show the status here.');
 }
 
 class _ReauthDeleteForm extends ConsumerStatefulWidget {
@@ -489,8 +494,8 @@ class _ReauthDeleteFormState extends ConsumerState<_ReauthDeleteForm> {
       _error = null;
     });
     try {
-      final idToken = await ref.read(googleIdTokenSourceProvider).signInAndGetIdToken();
-      final job = await ref.read(accountRepositoryProvider).requestDeletionWithFirebase(idToken);
+      final credential = await ref.read(googleCredentialSourceProvider).pickCredential();
+      final job = await ref.read(accountRepositoryProvider).requestDeletionWithGoogle(credential);
       if (mounted) Navigator.of(context).pop(job);
     } on GoogleSignInCancelled {
       // Người dùng hủy: giữ nguyên form.
@@ -598,7 +603,7 @@ Future<void> signOutFlow(BuildContext context, WidgetRef ref) async {
 
 Future<void> _localSignOut(BuildContext context, WidgetRef ref) async {
   await ref.read(authRepositoryProvider).logout();
-  await ref.read(googleIdTokenSourceProvider).signOut();
+  await ref.read(googleCredentialSourceProvider).signOut();
   await ref.read(ownerRepositoryProvider).signOut();
   ref.read(ownerProvider.notifier).reload();
   await ref.read(syncServiceProvider).refreshStatus();

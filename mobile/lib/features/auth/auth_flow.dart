@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart' show AuthCredential;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
@@ -103,7 +104,7 @@ Future<String> completeSignInWidget(WidgetRef ref, AuthUser user) async {
   final guestId = owners.guestId();
   await owners.signIn(userId: user.id, email: user.email);
   await owners.markIntroSeen();
-  // Hồ sơ trên server (best-effort, không chặn khi mạng yếu): tài khoản cũ trên máy mới không phải nhập lại.
+  // Hồ sơ trên Firestore (best-effort, không chặn khi mạng yếu): tài khoản cũ trên máy mới không phải nhập lại.
   try {
     final me = await read(authRepositoryProvider).me().timeout(const Duration(seconds: 6));
     final profile = (me['profile'] as Map?)?.cast<String, Object?>();
@@ -124,16 +125,16 @@ Future<String> completeSignInWidget(WidgetRef ref, AuthUser user) async {
 /// Màn tiếp theo sau khi xử lý dữ liệu khách.
 String routeAfterMerge(OwnerState owner) => owner.profileSetupDone ? Routes.home : Routes.setupProfile;
 
-/// Luồng "Continue with Google": chọn tài khoản → Firebase ID token → backend → cùng bước sau đăng nhập như email.
+/// Luồng "Continue with Google": chọn tài khoản → đăng nhập Firebase → cùng bước sau đăng nhập như email.
 /// Trả route kế tiếp, hoặc null khi người dùng hủy. Ném lỗi để UI hiển thị thông báo.
 Future<String?> signInWithGoogleWidget(WidgetRef ref) async {
-  final String idToken;
+  final AuthCredential credential;
   try {
-    idToken = await ref.read(googleIdTokenSourceProvider).signInAndGetIdToken();
+    credential = await ref.read(googleCredentialSourceProvider).pickCredential();
   } on GoogleSignInCancelled {
     return null;
   }
-  final user = await ref.read(authRepositoryProvider).loginWithFirebase(idToken);
+  final user = await ref.read(authRepositoryProvider).loginWithGoogle(credential);
   return completeSignInWidget(ref, user);
 }
 

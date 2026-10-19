@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/core/network/api_client.dart';
 import 'package:stride/core/time/clock.dart';
 import 'package:stride/domain/models/activity.dart';
 import 'package:stride/features/live/live_share_models.dart';
@@ -7,7 +6,7 @@ import 'package:stride/features/live/live_share_plugin.dart';
 import 'package:stride/features/live/live_share_repository.dart';
 
 class FakeLiveRepo extends LiveShareRepository {
-  FakeLiveRepo(this.clock) : super(ApiClient(baseUrl: 'http://test/api/v1', tokens: MemoryTokenStore()));
+  FakeLiveRepo(this.clock) : super(ready: () => true, firestore: () => throw UnimplementedError(), uid: () => 'user-1');
 
   final FakeClock clock;
   final starts = <Map<String, Object?>>[];

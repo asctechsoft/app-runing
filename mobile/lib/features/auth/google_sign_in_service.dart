@@ -17,15 +17,17 @@ class GoogleSignInFailure implements Exception {
   String toString() => 'GoogleSignInFailure($message)';
 }
 
-/// Lấy Firebase ID token sau khi người dùng chọn tài khoản Google.
-/// Backend verify token này rồi cấp JWT STRIDE (auth email/password vẫn giữ nguyên).
-abstract class GoogleIdTokenSource {
+/// Cho người dùng chọn tài khoản Google và trả [AuthCredential] của Firebase.
+/// Nguồn này KHÔNG tự đăng nhập Firebase: [AuthRepository] dùng credential để đăng nhập hoặc xác thực lại.
+abstract class GoogleCredentialSource {
   /// Ném [GoogleSignInCancelled] khi người dùng hủy, [GoogleSignInFailure] khi lỗi.
-  Future<String> signInAndGetIdToken();
+  Future<AuthCredential> pickCredential();
+
+  /// Đăng xuất phía Google (best-effort).
   Future<void> signOut();
 }
 
-class FirebaseGoogleIdTokenSource implements GoogleIdTokenSource {
+class FirebaseGoogleCredentialSource implements GoogleCredentialSource {
   bool _initialized = false;
 
   Future<void> _init() async {
@@ -36,38 +38,31 @@ class FirebaseGoogleIdTokenSource implements GoogleIdTokenSource {
   }
 
   @override
-  Future<String> signInAndGetIdToken() async {
+  Future<AuthCredential> pickCredential() async {
     try {
       await _init();
       final account = await GoogleSignIn.instance.authenticate();
       final googleIdToken = account.authentication.idToken;
       if (googleIdToken == null) throw const GoogleSignInFailure('Google did not return an ID token');
-      final cred = await FirebaseAuth.instance.signInWithCredential(GoogleAuthProvider.credential(idToken: googleIdToken));
-      final token = await cred.user?.getIdToken(true);
-      if (token == null) throw const GoogleSignInFailure('Firebase did not return an ID token');
-      return token;
+      return GoogleAuthProvider.credential(idToken: googleIdToken);
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled || e.code == GoogleSignInExceptionCode.interrupted) throw const GoogleSignInCancelled();
       StrideLog.e('google', 'sign-in failed: ${e.code.name}');
       throw GoogleSignInFailure(e.code.name);
-    } on FirebaseAuthException catch (e) {
-      StrideLog.e('google', 'firebase sign-in failed: ${e.code}');
-      throw GoogleSignInFailure(e.code);
     }
   }
 
   @override
   Future<void> signOut() async {
     try {
-      await FirebaseAuth.instance.signOut();
       if (_initialized) await GoogleSignIn.instance.signOut();
     } catch (_) {
-      // Đăng xuất Google là best-effort; phiên STRIDE đã bị xóa ở AuthRepository.
+      // Đăng xuất Google là best-effort; phiên Firebase đã bị xóa ở AuthRepository.
     }
   }
 }
 
-final googleIdTokenSourceProvider = Provider<GoogleIdTokenSource>((ref) => FirebaseGoogleIdTokenSource());
+final googleCredentialSourceProvider = Provider<GoogleCredentialSource>((ref) => FirebaseGoogleCredentialSource());
 
 /// true khi Firebase khởi tạo thành công (có google-services.json đúng package). Override trong main().
 final googleSignInAvailableProvider = Provider<bool>((ref) => false);

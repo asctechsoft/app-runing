@@ -4,8 +4,12 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
-import '../auth/auth_repository.dart';
+import '../../core/firebase/firebase_providers.dart';
+import 'sync_remote.dart';
 import 'sync_service.dart';
+
+/// Kênh Firestore của engine sync. Lazy: chỉ chạm `FirebaseFirestore` khi thật sự đồng bộ. Override trong test bằng bản in-memory.
+final syncRemoteProvider = Provider<SyncRemote>((ref) => FirestoreSyncRemote(() => ref.read(firestoreProvider)));
 
 /// Luồng online/offline (true = có mạng). Override trong test để không gọi plugin.
 final syncConnectivityProvider = Provider<Stream<bool>>((ref) {
@@ -22,7 +26,9 @@ final syncServiceProvider = Provider<SyncService>((ref) {
     db: ref.watch(databaseProvider),
     activities: ref.watch(activityRepositoryProvider),
     settings: ref.watch(settingsRepositoryProvider),
-    auth: ref.watch(authRepositoryProvider),
+    remote: ref.watch(syncRemoteProvider),
+    uid: () => ref.read(currentUidProvider),
+    ready: () => ref.read(firebaseReadyProvider),
     clock: ref.watch(clockProvider),
     owner: () => ref.read(ownerProvider),
     enabled: ref.watch(flagsProvider).sync,

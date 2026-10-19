@@ -29,3 +29,9 @@ linter:
 
 formatter:
   page_width: 160
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**

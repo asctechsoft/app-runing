@@ -19,6 +19,13 @@ int? _optInt(Map<String, Object?> j, String k) => (j[k] as num?)?.toInt();
 double? _optDouble(Map<String, Object?> j, String k) => (j[k] as num?)?.toDouble();
 bool _bool(Map<String, Object?> j, String k) => j[k] == true;
 
+/// Ngày YYYY-MM-DD (UTC) từ epoch ms — dùng khi document không có sẵn chuỗi ngày.
+String dateFromMs(int ms) {
+  final d = DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);
+  String two(int v) => v.toString().padLeft(2, '0');
+  return '${d.year.toString().padLeft(4, '0')}-${two(d.month)}-${two(d.day)}';
+}
+
 /// Trang kết quả có cursor {items, nextCursor}.
 class ExplorePage<T> {
   const ExplorePage(this.items, this.nextCursor);
@@ -49,6 +56,16 @@ class ClubMembership {
     final j = _map(json, 'membership');
     final s = MembershipStatus.values.firstWhere((v) => v.name == j['status'], orElse: () => MembershipStatus.unknown);
     return ClubMembership(role: _optStr(j, 'role') ?? 'member', status: s);
+  }
+
+  /// `clubs/{id}/members/{uid}`: status `active` → approved, `pending` → pending.
+  factory ClubMembership.fromDoc(Map<String, Object?> d) {
+    final s = switch (d['status']) {
+      'active' => MembershipStatus.approved,
+      'pending' => MembershipStatus.pending,
+      _ => MembershipStatus.unknown,
+    };
+    return ClubMembership(role: _optStr(d, 'role') ?? 'member', status: s);
   }
 }
 
@@ -82,6 +99,17 @@ class Club {
     memberCount: _optInt(j, 'memberCount') ?? 0,
     membership: ClubMembership.parse(j['myMembership']),
     isDevFixture: _bool(j, 'isDevFixture'),
+  );
+
+  /// `clubs/{id}`.
+  factory Club.fromDoc(String id, Map<String, Object?> d, {ClubMembership? membership}) => Club(
+    id: id,
+    name: _str(d, 'name'),
+    description: _optStr(d, 'description') ?? '',
+    regionText: _optStr(d, 'region') ?? '',
+    memberCount: _optInt(d, 'memberCount') ?? 0,
+    membership: membership,
+    isDevFixture: _bool(d, 'isDevFixture'),
   );
 }
 
@@ -160,6 +188,19 @@ class ClubPost {
     cheeredByMe: _bool(j, 'cheeredByMe'),
     createdAt: _optInt(j, 'createdAt') ?? 0,
   );
+
+  /// `posts/{id}`; [cheeredByMe] lấy từ `posts/{id}/cheers/{uid}`.
+  factory ClubPost.fromDoc(String id, Map<String, Object?> d, {bool cheeredByMe = false}) => ClubPost(
+    id: id,
+    clubId: _str(d, 'clubId'),
+    authorId: _str(d, 'authorId'),
+    authorName: _optStr(d, 'authorName'),
+    text: _optStr(d, 'text') ?? '',
+    commentCount: _optInt(d, 'commentCount') ?? 0,
+    cheerCount: _optInt(d, 'cheerCount') ?? 0,
+    cheeredByMe: cheeredByMe,
+    createdAt: _optInt(d, 'createdAt') ?? 0,
+  );
 }
 
 class PostComment {
@@ -178,6 +219,16 @@ class PostComment {
     authorName: _optStr(j, 'authorDisplayName'),
     text: _optStr(j, 'text') ?? '',
     createdAt: _optInt(j, 'createdAt') ?? 0,
+  );
+
+  /// `posts/{postId}/comments/{id}`.
+  factory PostComment.fromDoc(String id, String postId, Map<String, Object?> d) => PostComment(
+    id: id,
+    postId: postId,
+    authorId: _str(d, 'authorId'),
+    authorName: _optStr(d, 'authorName'),
+    text: _optStr(d, 'text') ?? '',
+    createdAt: _optInt(d, 'createdAt') ?? 0,
   );
 }
 
@@ -224,6 +275,21 @@ class ClubEvent {
     goingCount: _optInt(j, 'goingCount') ?? 0,
     myRsvp: _optStr(j, 'myRsvp'),
   );
+
+  /// `events/{id}`; [going] lấy từ `events/{id}/rsvps/{uid}`.
+  factory ClubEvent.fromDoc(String id, Map<String, Object?> d, {bool going = false}) => ClubEvent(
+    id: id,
+    clubId: _str(d, 'clubId'),
+    title: _str(d, 'title'),
+    description: _optStr(d, 'description') ?? '',
+    startAt: _optInt(d, 'startsAt') ?? (throw const FormatException('Missing startsAt')),
+    endAt: _optInt(d, 'endsAt'),
+    tzId: _optStr(d, 'tzId') ?? 'UTC',
+    meetingPlace: _optStr(d, 'location') ?? '',
+    cancelledAt: _optInt(d, 'cancelledAt'),
+    goingCount: _optInt(d, 'goingCount') ?? 0,
+    myRsvp: going ? 'going' : null,
+  );
 }
 
 enum ChallengeTarget { distance, count, time }
@@ -244,6 +310,19 @@ class ChallengeParticipation {
     percent: (_optInt(j, 'percent') ?? 0).clamp(0, 100),
     completedAt: _optInt(j, 'completedAt'),
   );
+
+  /// `challenges/{id}/participants/{uid}` với mục tiêu [targetValue] của thử thách.
+  factory ChallengeParticipation.fromDoc(Map<String, Object?> d, {required double targetValue}) {
+    final progress = _optDouble(d, 'progressValue') ?? 0;
+    final pct = targetValue <= 0 ? 0 : ((progress / targetValue) * 100).floor();
+    return ChallengeParticipation(
+      joinedAt: _optInt(d, 'joinedAt') ?? 0,
+      progressValue: progress,
+      targetValue: targetValue,
+      percent: pct.clamp(0, 100),
+      completedAt: _optInt(d, 'completedAt'),
+    );
+  }
 }
 
 class Challenge {
@@ -301,6 +380,27 @@ class Challenge {
     badgeKey: _optStr(j, 'badgeKey'),
     participation: j['participation'] == null ? null : ChallengeParticipation.fromJson(_map(j['participation'], 'participation')),
   );
+
+  /// `challenges/{id}`: `metric` = distance|count|time, `target` theo đơn vị gốc (m / lần / ms). Trường tùy chọn:
+  /// `activityTypes`, `tzId`, `startDate`/`endDate` (YYYY-MM-DD), `badgeKey`.
+  factory Challenge.fromDoc(String id, Map<String, Object?> d, {ChallengeParticipation? participation}) {
+    final starts = _optInt(d, 'startsAt') ?? (throw const FormatException('Missing startsAt'));
+    final ends = _optInt(d, 'endsAt') ?? (throw const FormatException('Missing endsAt'));
+    final types = d['activityTypes'] is List ? (d['activityTypes'] as List).whereType<String>().toList() : const <String>[];
+    return Challenge(
+      id: id,
+      title: _str(d, 'title'),
+      description: _optStr(d, 'description') ?? '',
+      activityTypes: types.isEmpty ? const ['run', 'walk', 'indoorRun'] : types,
+      startDate: _optStr(d, 'startDate') ?? dateFromMs(starts),
+      endDate: _optStr(d, 'endDate') ?? dateFromMs(ends),
+      tzId: _optStr(d, 'tzId') ?? 'UTC',
+      targetType: ChallengeTarget.values.firstWhere((t) => t.name == d['metric'], orElse: () => throw const FormatException('Unknown metric')),
+      targetValue: _optDouble(d, 'target') ?? (throw const FormatException('Missing target')),
+      badgeKey: _optStr(d, 'badgeKey'),
+      participation: participation,
+    );
+  }
 }
 
 class RouteSummary {
@@ -333,6 +433,17 @@ class RouteSummary {
     attribution: _optStr(j, 'attribution') ?? '',
     saved: _bool(j, 'saved'),
   );
+
+  /// `routes/{id}`; [saved] lấy từ `users/{uid}/savedRoutes/{id}`.
+  factory RouteSummary.fromDoc(String id, Map<String, Object?> d, {bool saved = false}) => RouteSummary(
+    id: id,
+    name: _str(d, 'name'),
+    region: _optStr(d, 'region') ?? '',
+    distanceM: _optDouble(d, 'distanceM'),
+    surface: _optStr(d, 'surface'),
+    attribution: _optStr(d, 'attribution') ?? '',
+    saved: saved,
+  );
 }
 
 class RouteDetail {
@@ -349,6 +460,14 @@ class RouteDetail {
       pts = decodePolyline5(raw);
     }
     return RouteDetail(summary: RouteSummary.fromJson(j), points: pts);
+  }
+
+  factory RouteDetail.fromDoc(String id, Map<String, Object?> d, {bool saved = false}) {
+    final raw = _optStr(d, 'polyline');
+    return RouteDetail(
+      summary: RouteSummary.fromDoc(id, d, saved: saved),
+      points: (raw != null && raw.isNotEmpty) ? decodePolyline5(raw) : const [],
+    );
   }
 }
 

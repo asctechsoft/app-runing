@@ -14,8 +14,7 @@ import '../../data/settings_repository.dart';
 import '../../domain/models/activity.dart';
 import '../../domain/models/profile.dart';
 import '../../domain/models/sync.dart';
-import '../auth/auth_repository.dart';
-import 'sha256.dart';
+import 'sync_remote.dart';
 
 enum SyncPhase { idle, syncing, error, offline, signedOut, disabled }
 
@@ -84,27 +83,31 @@ class _AuthLost implements Exception {}
 
 /// Engine đồng bộ outbox ↔ server (H03/H04).
 ///
-/// - Push: pending → sending → acked/error, backoff mũ ([SyncOperation.backoffMs]), Idempotency-Key = op.idempotencyKey.
-/// - Activity có GPS: upsert summary → upload track theo chunk (sha256) → finalize → mới đánh dấu synced.
-/// - Pull: theo cursor (bảng sync_cursor), áp tombstone — bản đã xóa không bao giờ sống lại.
-/// - Xung đột 409: giữ cả bản local và server trong kv, chờ người dùng chọn.
-/// Chỉ chạy cho owner đã đăng nhập và có credential.
+/// - Push: pending → sending → acked/error, backoff mũ ([SyncOperation.backoffMs]); ghi Firestore theo ID document nên lặp lại là idempotent.
+/// - Activity có GPS: upsert summary → ghi track theo chunk (sha256) → mới đánh dấu synced.
+/// - Pull: theo cursor serverUpdatedAt (µs, bảng sync_cursor), áp tombstone — bản đã xóa không bao giờ sống lại.
+/// - Xung đột (revision lệch): giữ cả bản local và server trong kv, chờ người dùng chọn.
+/// Chỉ chạy cho owner đã đăng nhập Firebase (uid == owner) khi Firebase sẵn sàng.
 class SyncService {
   SyncService({
     required AppDatabase db,
     required ActivityRepository activities,
     required SettingsRepository settings,
-    required AuthRepository auth,
+    required SyncRemote remote,
+    required String? Function() uid,
+    bool Function()? ready,
     required Clock clock,
     required OwnerState Function() owner,
     this.enabled = true,
     Stream<bool>? online,
     this.debounce = const Duration(seconds: 3),
-    this.chunkPoints = 1000,
+    this.chunkPoints = kTrackChunkPoints,
   }) : _db = db,
        _activities = activities,
        _settings = settings,
-       _auth = auth,
+       _remote = remote,
+       _uid = uid,
+       _ready = ready ?? (() => true),
        _clock = clock,
        _owner = owner,
        _online = online;
@@ -112,7 +115,9 @@ class SyncService {
   final AppDatabase _db;
   final ActivityRepository _activities;
   final SettingsRepository _settings;
-  final AuthRepository _auth;
+  final SyncRemote _remote;
+  final String? Function() _uid;
+  final bool Function() _ready;
   final Clock _clock;
   final OwnerState Function() _owner;
   final Stream<bool>? _online;
@@ -120,7 +125,6 @@ class SyncService {
   final Duration debounce;
   final int chunkPoints;
 
-  ApiClient get _api => _auth.api;
   Database get _raw => _db.db;
 
   final status = ValueNotifier<SyncStatus>(const SyncStatus());
@@ -262,7 +266,8 @@ class SyncService {
       _emit(s.copyWith(phase: SyncPhase.disabled));
       return status.value;
     }
-    if (o.isGuest || !_auth.available || !await _auth.hasCredentials()) {
+    final uid = _ready() ? _uid() : null;
+    if (o.isGuest || uid == null || uid != o.ownerId) {
       _emit(s.copyWith(phase: SyncPhase.signedOut, clearError: true));
       return status.value;
     }
@@ -319,7 +324,7 @@ class SyncService {
     }());
   }
 
-  /// Thao tác kẹt ở `sending` (app bị kill giữa chừng) quay về pending; gửi lại an toàn nhờ idempotency key.
+  /// Thao tác kẹt ở `sending` (app bị kill giữa chừng) quay về pending; gửi lại an toàn vì ghi theo ID document + kiểm revision.
   Future<void> _resetStuck(String owner) =>
       _raw.update('sync_outbox', {'state': SyncOpState.pending.name}, where: "owner_id = ? AND state = 'sending'", whereArgs: [owner]);
 
@@ -384,25 +389,6 @@ class SyncService {
     }
   }
 
-  Future<Map<String, Object?>> _pushOne(SyncOperation op, {required String entity, required String entityId, int? expectedRevision, Object? payload}) async {
-    final body = {
-      'operations': [
-        {
-          'idempotencyKey': op.idempotencyKey,
-          'entity': entity,
-          'op': op.op.name,
-          'entityId': entityId,
-          'expectedRevision': ?expectedRevision,
-          'payload': ?payload,
-        },
-      ],
-    };
-    final res = await _auth.authed(() => _api.post('/sync/push', body: body, idempotencyKey: op.idempotencyKey));
-    final results = res is Map ? res['results'] : null;
-    if (results is! List || results.isEmpty || results.first is! Map) throw ApiException(500, 'bad_response', 'Unexpected sync response');
-    return (results.first as Map).cast<String, Object?>();
-  }
-
   // kv theo owner
   Future<String?> _kvGet(String owner, String key) => _settings.kvGet(owner, key);
   Future<void> _kvSet(String owner, String key, String value) => _settings.kvSet(owner, key, value);
@@ -413,7 +399,7 @@ class SyncService {
   static String trackKey(String id) => 'sync.track.$id';
   static String _expKey(String opId) => 'sync.opexp.$opId';
 
-  /// expectedRevision chốt ở lần gửi đầu và tái dùng khi retry — để body giống hệt, server trả lại kết quả đã lưu.
+  /// expectedRevision chốt ở lần gửi đầu và tái dùng khi retry — nếu lần trước đã ghi nhưng mất phản hồi, remote nhận ra ghi lặp (revision = expected + 1, nội dung giống) và ack.
   Future<int?> _expectedRevision(SyncOperation op, String revEntity, String entityId, {Future<int?> Function()? fetch}) async {
     final saved = await _kvGet(op.ownerId, _expKey(op.id));
     if (saved != null) return saved == 'none' ? null : int.tryParse(saved);
@@ -434,16 +420,15 @@ class SyncService {
   Future<String?> _pushActivity(SyncOperation op) async {
     final isDelete = op.op == SyncOpType.delete;
     final expected = await _expectedRevision(op, 'activity', op.entityId);
-    final result = await _pushOne(
-      op,
-      entity: 'activity',
-      entityId: op.entityId,
+    final result = await _remote.pushActivity(
+      op.ownerId,
+      op.entityId,
       expectedRevision: expected,
-      payload: isDelete ? null : activityBodyForServer(op.payload),
+      body: isDelete ? null : activityBodyForServer(op.payload),
+      nowMs: _clock.nowMs(),
     );
-    final st = result['status'];
-    if (st == 'acked') {
-      final rev = (result['revision'] as num?)?.toInt();
+    if (result.status == PushStatus.acked) {
+      final rev = result.revision;
       if (rev != null) await _kvSet(op.ownerId, revKey('activity', op.entityId), '$rev');
       if (!isDelete && op.payload['hasGps'] == true) {
         // Track phải lên đủ trước khi coi activity là synced.
@@ -456,10 +441,9 @@ class SyncService {
       }
       return null;
     }
-    final error = (result['error'] as Map?)?.cast<String, Object?>() ?? const {};
-    final code = error['code'] as String? ?? 'error';
-    if (st == 'conflict') {
-      await _handleConflict(op, code, (result['server'] as Map?)?.cast<String, Object?>());
+    final code = result.code ?? 'error';
+    if (result.status == PushStatus.conflict) {
+      await _handleConflict(op, code, result.server);
       return null;
     }
     // rejected
@@ -469,60 +453,41 @@ class SyncService {
       await _raw.update('activities', {'sync_state': SyncState.synced.name}, where: 'id = ? AND owner_id = ?', whereArgs: [op.entityId, op.ownerId]);
       return null;
     }
-    final transient = code == 'retry_later';
-    await _fail(op, code, permanent: !transient);
-    if (!transient) {
-      await _raw.update('activities', {'sync_state': SyncState.error.name}, where: 'id = ? AND owner_id = ?', whereArgs: [op.entityId, op.ownerId]);
-    }
-    return transient ? "Couldn't reach the server. We'll retry." : "An activity couldn't be synced ($code).";
+    await _fail(op, code, permanent: true);
+    await _raw.update('activities', {'sync_state': SyncState.error.name}, where: 'id = ? AND owner_id = ?', whereArgs: [op.entityId, op.ownerId]);
+    return "An activity couldn't be synced ($code).";
   }
 
   Future<String?> _pushGoal(SyncOperation op) async {
     final p = op.payload;
-    final result = await _pushOne(
-      op,
-      entity: 'goal',
-      entityId: op.entityId,
-      payload: {'type': p['type'], 'value': p['value'], 'effectiveFrom': p['effectiveFrom']},
-    );
-    if (result['status'] == 'acked') {
-      await _ack(op);
-      return null;
-    }
-    final code = ((result['error'] as Map?)?['code'] as String?) ?? 'error';
-    final transient = code == 'retry_later';
-    await _fail(op, code, permanent: !transient);
-    return transient ? "Couldn't reach the server. We'll retry." : "A goal couldn't be synced ($code).";
+    await _remote.putGoal(op.ownerId, op.entityId, {
+      'type': p['type'],
+      'value': p['value'],
+      'effectiveFrom': p['effectiveFrom'],
+      'createdAt': (p['createdAt'] as num?)?.toInt() ?? _clock.nowMs(),
+    });
+    await _ack(op);
+    return null;
   }
 
   Future<String?> _pushProfile(SyncOperation op) async {
     final userId = op.ownerId;
-    final expected = await _expectedRevision(
-      op,
-      'profile',
-      userId,
-      fetch: () async {
-        final p = await _auth.authed(() => _api.get('/me/profile'));
-        return p is Map ? (p['revision'] as num?)?.toInt() : null;
-      },
-    );
-    final result = await _pushOne(op, entity: 'profile', entityId: userId, expectedRevision: expected, payload: op.payload);
-    final st = result['status'];
-    if (st == 'acked') {
-      final rev = (result['revision'] as num?)?.toInt();
+    final expected = await _expectedRevision(op, 'profile', userId, fetch: () => _remote.profileRevision(userId));
+    final result = await _remote.pushProfile(userId, expectedRevision: expected, profile: op.payload, nowMs: _clock.nowMs());
+    if (result.status == PushStatus.acked) {
+      final rev = result.revision;
       if (rev != null) await _kvSet(op.ownerId, revKey('profile', userId), '$rev');
       await _ack(op);
       await _kvDel(op.ownerId, _expKey(op.id));
       return null;
     }
-    final code = ((result['error'] as Map?)?['code'] as String?) ?? 'error';
-    if (st == 'conflict') {
-      await _handleConflict(op, code, (result['server'] as Map?)?.cast<String, Object?>());
+    final code = result.code ?? 'error';
+    if (result.status == PushStatus.conflict) {
+      await _handleConflict(op, code, result.server);
       return null;
     }
-    final transient = code == 'retry_later';
-    await _fail(op, code, permanent: !transient);
-    return transient ? "Couldn't reach the server. We'll retry." : "Profile changes couldn't be synced ($code).";
+    await _fail(op, code, permanent: true);
+    return "Profile changes couldn't be synced ($code).";
   }
 
   Future<void> _handleConflict(SyncOperation op, String code, Map<String, Object?>? server) async {
@@ -560,57 +525,75 @@ class SyncService {
       await _kvSet(owner, trackKey(activityId), 'done');
       return;
     }
-    final chunks = buildTrackChunks(segments, points, chunkPoints);
-    for (var i = 0; i < chunks.length; i++) {
-      final bytes = utf8.encode(jsonEncode(chunks[i]));
-      final sum = sha256Hex(bytes);
-      await _auth.authed(
-        () => _api.putBytes('/activities/$activityId/track/chunks/$i', bytes, contentType: 'application/json', headers: {'X-Checksum-Sha256': sum}),
-      );
+    final docs = trackChunkDocs(buildTrackChunks(segments, points, chunkPoints));
+    for (var i = 0; i < docs.length; i++) {
+      await _remote.putTrackChunk(owner, activityId, i, docs[i]);
     }
-    await _auth.authed(
-      () => _api.post(
-        '/activities/$activityId/track/finalize',
-        body: {'totalChunks': chunks.length},
-        idempotencyKey: 'track:$activityId:finalize:${chunks.length}',
-      ),
-    );
     await _kvSet(owner, trackKey(activityId), 'done');
   }
 
   // ---------------- Pull ----------------
 
+  static const _goalCursorKey = 'sync.cursor.goals';
+  static const _pullPageSize = 200;
+
   Future<void> _pullAll(String owner) async {
     final r = await _raw.query('sync_cursor', where: 'owner_id = ?', whereArgs: [owner]);
-    String? cursor = r.isEmpty ? null : r.first['cursor'] as String?;
+    int? cursor = r.isEmpty ? null : int.tryParse((r.first['cursor'] as String?) ?? '');
     var changed = false;
     final needTrack = <String>[];
     for (var page = 0; page < 50; page++) {
-      final res = await _auth.authed(() => _api.get('/sync/pull', query: {'cursor': ?cursor, 'limit': '200'}));
-      if (res is! Map) break;
-      final items = res['items'];
-      if (items is List) {
-        for (final it in items) {
-          if (it is! Map) continue;
-          final applied = await _applyItem(owner, it.cast<String, Object?>(), needTrack);
-          changed = changed || applied;
-        }
+      final res = await _remote.pullActivities(owner, afterUs: cursor, limit: _pullPageSize);
+      for (final it in res.items) {
+        final applied = await _applyItem(owner, it, needTrack);
+        changed = changed || applied;
       }
-      final next = res['nextCursor'] as String?;
-      if (next != null) {
+      final next = res.nextCursorUs;
+      if (next != null && next != cursor) {
         cursor = next;
-        await _raw.insert('sync_cursor', {'owner_id': owner, 'cursor': cursor, 'last_pulled_at': _clock.nowMs()}, conflictAlgorithm: ConflictAlgorithm.replace);
+        await _raw.insert('sync_cursor', {'owner_id': owner, 'cursor': '$cursor', 'last_pulled_at': _clock.nowMs()}, conflictAlgorithm: ConflictAlgorithm.replace);
       }
-      if (res['hasMore'] != true) break;
+      if (!res.hasMore) break;
     }
+    await _pullGoals(owner);
+    await _pullProfile(owner);
     for (final id in needTrack) {
       try {
-        await _downloadTrack(id);
+        await _downloadTrack(owner, id);
       } catch (_) {
         // Best-effort: thiếu track thì màn bản đồ hiển thị trạng thái không có tuyến, không bịa.
       }
     }
     if (changed) _activities.notifyChanged(owner);
+  }
+
+  Future<void> _pullGoals(String owner) async {
+    var cursor = int.tryParse(await _kvGet(owner, _goalCursorKey) ?? '');
+    for (var page = 0; page < 20; page++) {
+      final goals = await _remote.pullGoals(owner, afterCreatedAt: cursor, limit: _pullPageSize);
+      var maxCreated = cursor;
+      for (final g in goals) {
+        final id = g['id'] as String?;
+        if (id == null) continue;
+        await _applyItem(owner, {'entity': 'goal', 'entityId': id, 'op': 'upsert', 'data': g}, []);
+        final c = (g['createdAt'] as num?)?.toInt();
+        if (c != null && (maxCreated == null || c > maxCreated)) maxCreated = c;
+      }
+      if (maxCreated != null && maxCreated != cursor) {
+        cursor = maxCreated;
+        await _kvSet(owner, _goalCursorKey, '$cursor');
+      }
+      if (goals.length < _pullPageSize) break;
+    }
+  }
+
+  Future<void> _pullProfile(String owner) async {
+    final doc = await _remote.getUserDoc(owner);
+    final profile = (doc?['profile'] as Map?)?.cast<String, Object?>();
+    if (profile == null) return;
+    final rev = (doc?['profileRevision'] as num?)?.toInt();
+    if (rev != null && await _kvGet(owner, revKey('profile', owner)) == '$rev') return; // đã áp
+    await _applyItem(owner, {'entity': 'profile', 'entityId': owner, 'op': 'upsert', 'revision': rev, 'data': profile}, []);
   }
 
   Future<bool> _openOps(String owner, String entity, String id) async {
@@ -688,43 +671,14 @@ class SyncService {
     ]);
   }
 
-  Future<void> _downloadTrack(String activityId) async {
+  Future<void> _downloadTrack(String owner, String activityId) async {
     if ((await _activities.points(activityId)).isNotEmpty) return;
-    final res = await _auth.authed(() => _api.get('/activities/$activityId/track'));
-    if (res is! Map || res['segments'] is! List) return;
-    final points = <TrackPoint>[];
+    final docs = await _remote.getTrackChunks(owner, activityId);
+    if (docs.isEmpty) return;
+    final (segments, points) = parseTrackChunks(activityId, docs);
     final batch = _raw.batch();
-    for (final s in (res['segments'] as List).whereType<Map>()) {
-      final segId = s['id'] as String;
-      batch.insert(
-        'track_segments',
-        TrackSegment(
-          id: segId,
-          activityId: activityId,
-          seq: (s['seq'] as num).toInt(),
-          startedAt: (s['startedAt'] as num).toInt(),
-          endedAt: (s['endedAt'] as num?)?.toInt(),
-          reason: SegmentReason.values.firstWhere((r) => r.name == s['reason'], orElse: () => SegmentReason.start),
-        ).toRow(),
-        conflictAlgorithm: ConflictAlgorithm.ignore,
-      );
-      for (final p in (s['points'] as List? ?? const []).whereType<Map>()) {
-        points.add(
-          TrackPoint(
-            activityId: activityId,
-            segmentId: segId,
-            seq: (p['seq'] as num).toInt(),
-            t: (p['t'] as num).toInt(),
-            lat: (p['lat'] as num).toDouble(),
-            lon: (p['lon'] as num).toDouble(),
-            accuracyM: (p['accuracyM'] as num?)?.toDouble(),
-            altitudeM: (p['altitudeM'] as num?)?.toDouble(),
-            speedMps: (p['speedMps'] as num?)?.toDouble(),
-            accepted: p['accepted'] as bool? ?? true,
-            rejectReason: p['rejectReason'] as String?,
-          ),
-        );
-      }
+    for (final s in segments) {
+      batch.insert('track_segments', s.toRow(), conflictAlgorithm: ConflictAlgorithm.ignore);
     }
     await batch.commit(noResult: true);
     await _activities.insertPoints(points);

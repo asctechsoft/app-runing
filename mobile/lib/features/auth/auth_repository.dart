@@ -1,15 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/firebase/firebase_providers.dart';
+import '../../core/logging/logger.dart';
 import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/time/clock.dart';
 
-/// Người dùng trả về từ backend (`toUserDto`).
+/// Người dùng đăng nhập; [id] là Firebase uid.
 class AuthUser {
   const AuthUser({required this.id, required this.email, this.emailVerified = false, this.displayName});
 
@@ -24,204 +26,187 @@ class AuthUser {
     emailVerified: j['emailVerified'] as bool? ?? false,
     displayName: j['displayName'] as String?,
   );
+
+  Map<String, Object?> toJson() => {'id': id, 'email': email, 'emailVerified': emailVerified, 'displayName': displayName};
+
+  factory AuthUser.fromFirebase(User u) => authUserFromParts(uid: u.uid, email: u.email, emailVerified: u.emailVerified, displayName: u.displayName);
 }
 
-/// TokenStore bọc lại nhưng ẩn refresh token khỏi ApiClient lõi.
-///
-/// Lý do: `ApiClient._refresh` (lib/core) đọc `accessToken` ở cấp gốc, còn backend trả `{user, tokens:{...}}`.
-/// Nếu để ApiClient tự refresh, refresh token bị server đánh dấu đã dùng nhưng client không lưu được token mới
-/// → lần sau bị coi là reuse và cả phiên bị thu hồi. Vì vậy feature tự refresh (xem [AuthRepository.refresh]).
-class _NoAutoRefreshTokens implements TokenStore {
-  _NoAutoRefreshTokens(this._inner);
-  final TokenStore _inner;
-  @override
-  Future<String?> accessToken() => _inner.accessToken();
-  @override
-  Future<String?> refreshToken() async => null;
-  @override
-  Future<void> save({required String access, required String refresh}) => _inner.save(access: access, refresh: refresh);
-  @override
-  Future<void> clear() => _inner.clear();
+/// Mapper thuần (test được không cần Firebase). Email null → chuỗi rỗng, tên rỗng → null.
+AuthUser authUserFromParts({required String uid, String? email, bool emailVerified = false, String? displayName}) {
+  final name = displayName?.trim();
+  return AuthUser(id: uid, email: email ?? '', emailVerified: emailVerified, displayName: (name == null || name.isEmpty) ? null : name);
 }
 
-/// HTTP client dùng cho auth/sync — override bằng MockClient trong test.
-final authHttpClientProvider = Provider<http.Client>((ref) {
-  final c = http.Client();
-  ref.onDispose(c.close);
-  return c;
-});
+/// Khóa `userLookup/{emailLower}`: email chuẩn hóa chữ thường, bỏ khoảng trắng.
+String emailLowerOf(String email) => email.trim().toLowerCase();
 
-/// ApiClient của feature auth/sync: cùng base URL và kho token với apiClientProvider, nhưng không tự refresh sai định dạng.
-final authApiClientProvider = Provider<ApiClient>((ref) {
-  final base = ref.watch(apiClientProvider);
-  return buildAuthApiClient(baseUrl: base.baseUrl, tokens: ref.watch(tokenStoreProvider), client: ref.watch(authHttpClientProvider));
-});
-
-/// ApiClient không tự refresh (refresh do [AuthRepository] đảm nhiệm với đúng định dạng phản hồi).
-ApiClient buildAuthApiClient({required String baseUrl, required TokenStore tokens, required http.Client client}) =>
-    ApiClient(baseUrl: baseUrl, tokens: _NoAutoRefreshTokens(tokens), client: client);
+/// Dữ liệu tạo `users/{uid}` lần đầu (schema: displayName, email, emailLower, createdAt).
+Map<String, Object?> newUserDoc({required String email, String? displayName, required int nowMs}) => {
+  'displayName': displayName ?? '',
+  'email': email,
+  'emailLower': emailLowerOf(email),
+  'createdAt': nowMs,
+};
 
 final authRepositoryProvider = Provider<AuthRepository>(
   (ref) => AuthRepository(
-    api: ref.watch(authApiClientProvider),
-    tokens: ref.watch(tokenStoreProvider),
-    prefs: ref.watch(sharedPrefsProvider),
+    ready: ref.watch(firebaseReadyProvider),
+    auth: () => ref.read(firebaseAuthProvider),
+    firestore: () => ref.read(firestoreProvider),
     clock: ref.watch(clockProvider),
-    http: ref.watch(authHttpClientProvider),
   ),
 );
 
-/// Client auth theo backend/openapi (base /api/v1). Không bao giờ log mật khẩu/token.
+/// Auth qua Firebase Auth + hồ sơ trong Firestore `users/{uid}`. Không bao giờ log mật khẩu/token.
 class AuthRepository {
-  AuthRepository({required this.api, required this.tokens, required SharedPreferences prefs, required Clock clock, required http.Client http})
-    : _prefs = prefs,
-      _clock = clock,
-      _http = http;
+  AuthRepository({required bool ready, required FirebaseAuth Function() auth, required FirebaseFirestore Function() firestore, required Clock clock})
+    : _ready = ready,
+      _authFn = auth,
+      _fsFn = firestore,
+      _clock = clock;
 
-  final ApiClient api;
-  final TokenStore tokens;
-  final SharedPreferences _prefs;
+  final bool _ready;
+  final FirebaseAuth Function() _authFn;
+  final FirebaseFirestore Function() _fsFn;
   final Clock _clock;
-  final http.Client _http;
-  Future<bool>? _refreshing;
 
-  static const _kAccessExp = 'auth_access_expires_at';
+  /// Firebase chưa khởi tạo (thiếu google-services.json) → UI hiển thị "Accounts aren't available" thay vì giả thành công.
+  bool get available => _ready;
 
-  /// Build không có server → UI hiển thị trạng thái "Accounts aren't available" thay vì giả thành công.
-  bool get available => api.configured;
-
-  Future<bool> hasCredentials() async => (await tokens.refreshToken()) != null || (await tokens.accessToken()) != null;
-
-  Future<void> _saveTokens(Object? tokensJson) async {
-    if (tokensJson is! Map) throw ApiException(500, 'bad_response', 'Unexpected server response');
-    final access = tokensJson['accessToken'];
-    final refresh = tokensJson['refreshToken'];
-    if (access is! String || refresh is! String) throw ApiException(500, 'bad_response', 'Unexpected server response');
-    await tokens.save(access: access, refresh: refresh);
-    final exp = tokensJson['accessTokenExpiresAt'];
-    final expiresIn = tokensJson['expiresIn'];
-    final expMs = exp is num ? exp.toInt() : (expiresIn is num ? _clock.nowMs() + expiresIn.toInt() * 1000 : null);
-    if (expMs != null) {
-      await _prefs.setInt(_kAccessExp, expMs);
-    } else {
-      await _prefs.remove(_kAccessExp);
-    }
+  FirebaseAuth get _auth {
+    if (!_ready) throw ApiException(0, 'not_configured', 'Firebase is not configured for this build');
+    return _authFn();
   }
 
-  AuthUser _userOf(Object? res) {
-    if (res is! Map || res['user'] is! Map) throw ApiException(500, 'bad_response', 'Unexpected server response');
-    return AuthUser.fromJson((res['user'] as Map).cast<String, Object?>());
+  FirebaseFirestore get _fs => _fsFn();
+
+  User _requireUser() {
+    final u = _auth.currentUser;
+    if (u == null) throw ApiException(401, 'unauthorized', 'Not signed in');
+    return u;
   }
 
-  Future<AuthUser> register({required String email, required String password, String? displayName}) async {
-    final res = await api.post(
-      '/auth/register',
-      auth: false,
-      body: {'email': email.trim(), 'password': password, if (displayName != null && displayName.trim().isNotEmpty) 'displayName': displayName.trim()},
-    );
-    await _saveTokens((res as Map)['tokens']);
-    return _userOf(res);
-  }
+  /// uid hiện tại hoặc null.
+  String? get uid => _ready ? _authFn().currentUser?.uid : null;
 
-  Future<AuthUser> login({required String email, required String password}) async {
-    final res = await api.post('/auth/login', auth: false, body: {'email': email.trim(), 'password': password});
-    await _saveTokens((res as Map)['tokens']);
-    return _userOf(res);
-  }
+  Future<bool> hasCredentials() async => uid != null;
 
-  /// Đăng nhập bằng Firebase ID token (Google). Backend verify token và cấp JWT STRIDE như /auth/login.
-  Future<AuthUser> loginWithFirebase(String idToken) async {
-    final res = await api.post('/auth/firebase', auth: false, body: {'idToken': idToken});
-    await _saveTokens((res as Map)['tokens']);
-    return _userOf(res);
-  }
-
-  /// Luôn trả kết quả chung (backend không tiết lộ email tồn tại).
-  Future<void> forgotPassword(String email) async {
-    await api.post('/auth/forgot-password', auth: false, body: {'email': email.trim()});
-  }
-
-  Future<void> resetPassword({required String token, required String newPassword}) async {
-    await api.post('/auth/reset-password', auth: false, body: {'token': token, 'newPassword': newPassword});
-  }
-
-  Future<AuthUser> verifyEmail(String token) async => _userOf(await api.post('/auth/verify-email', auth: false, body: {'token': token}));
-
-  Future<void> resendVerification() => authed(() => api.post('/auth/resend-verification'));
-
-  /// Xác thực lại bằng mật khẩu → mở cửa sổ 5 phút cho thao tác nhạy cảm (xóa tài khoản).
-  Future<void> reauth(String password) => authed(() => api.post('/auth/reauth', body: {'password': password}));
-
-  /// Xác thực lại bằng Google cho tài khoản không có mật khẩu.
-  Future<void> reauthWithFirebase(String idToken) => authed(() => api.post('/auth/reauth', body: {'idToken': idToken}));
-
-  /// Hồ sơ trên server: `{user, profile}`.
-  Future<Map<String, Object?>> me() async => ((await authed(() => api.get('/me'))) as Map).cast<String, Object?>();
-
-  /// Thu hồi phiên trên server (best-effort) rồi luôn xóa token khỏi máy.
-  Future<void> logout() async {
+  /// Tạo `users/{uid}` nếu chưa có; upsert `userLookup` khi email đã xác minh (Google luôn xác minh).
+  /// Best-effort: lỗi mạng không làm hỏng đăng nhập (sẽ thử lại ở lần đăng nhập sau).
+  Future<void> _ensureProfileDocs(User u, {String? displayName}) async {
     try {
-      if (api.configured && await tokens.accessToken() != null) {
-        await authed(() => api.post('/auth/logout')).timeout(const Duration(seconds: 8));
+      final ref = _fs.collection('users').doc(u.uid);
+      final snap = await ref.get();
+      final name = (displayName ?? u.displayName)?.trim();
+      if (!snap.exists) {
+        await ref.set(newUserDoc(email: u.email ?? '', displayName: name, nowMs: _clock.nowMs()));
       }
-    } catch (_) {
-      // Offline/hết hạn: token local vẫn bị xóa; phiên server tự hết hạn.
-    } finally {
-      await clearLocal();
+      await _upsertLookup(u, fallbackName: snap.data()?['displayName'] as String? ?? name);
+    } catch (e) {
+      StrideLog.e('auth', 'ensure user doc failed: ${e is FirebaseException ? e.code : 'error'}');
     }
   }
 
-  Future<void> clearLocal() async {
-    await tokens.clear();
-    await _prefs.remove(_kAccessExp);
+  Future<void> _upsertLookup(User u, {String? fallbackName}) async {
+    final email = u.email;
+    if (email == null || email.isEmpty || !u.emailVerified) return;
+    await _fs.collection('userLookup').doc(emailLowerOf(email)).set({'uid': u.uid, 'displayName': fallbackName ?? u.displayName ?? ''});
   }
 
-  /// Refresh xoay vòng, tuần tự hóa (một request tại một thời điểm). Trả false khi phiên không còn hợp lệ.
-  Future<bool> refresh() {
-    return _refreshing ??= () async {
+  Future<AuthUser> register({required String email, required String password, String? displayName}) => guardFirebase(() async {
+    final cred = await _auth.createUserWithEmailAndPassword(email: email.trim(), password: password);
+    final u = cred.user;
+    if (u == null) throw ApiException(500, 'bad_response', 'Unexpected response');
+    final name = displayName?.trim();
+    if (name != null && name.isNotEmpty) await u.updateDisplayName(name);
+    try {
+      await u.sendEmailVerification();
+    } catch (e) {
+      StrideLog.e('auth', 'send verification failed: ${e is FirebaseException ? e.code : 'error'}');
+    }
+    await _ensureProfileDocs(u, displayName: name);
+    return authUserFromParts(uid: u.uid, email: u.email ?? email.trim(), emailVerified: u.emailVerified, displayName: name ?? u.displayName);
+  });
+
+  Future<AuthUser> login({required String email, required String password}) => guardFirebase(() async {
+    final cred = await _auth.signInWithEmailAndPassword(email: email.trim(), password: password);
+    final u = cred.user;
+    if (u == null) throw ApiException(500, 'bad_response', 'Unexpected response');
+    await _ensureProfileDocs(u);
+    return AuthUser.fromFirebase(u);
+  });
+
+  /// Đăng nhập bằng credential Google (lấy từ [GoogleCredentialSource]).
+  Future<AuthUser> loginWithGoogle(AuthCredential credential) => guardFirebase(() async {
+    final cred = await _auth.signInWithCredential(credential);
+    final u = cred.user;
+    if (u == null) throw ApiException(500, 'bad_response', 'Unexpected response');
+    await _ensureProfileDocs(u);
+    return AuthUser.fromFirebase(u);
+  });
+
+  /// Firebase không tiết lộ email có tồn tại hay không; `user-not-found` cũng coi như thành công để không lộ.
+  Future<void> forgotPassword(String email) => guardFirebase(() async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email.trim());
+    } on FirebaseAuthException catch (e) {
+      if (e.code != 'user-not-found') rethrow;
+    }
+  });
+
+  /// [token] là `oobCode` trong link đặt lại mật khẩu.
+  Future<void> resetPassword({required String token, required String newPassword}) =>
+      guardFirebase(() => _auth.confirmPasswordReset(code: token, newPassword: newPassword));
+
+  /// [token] là `oobCode` trong link xác minh email.
+  Future<AuthUser> verifyEmail(String token) => guardFirebase(() async {
+    final info = await _auth.checkActionCode(token);
+    await _auth.applyActionCode(token);
+    final u = _auth.currentUser;
+    if (u != null) {
+      await u.reload();
+      final fresh = _auth.currentUser ?? u;
       try {
-        final rt = await tokens.refreshToken();
-        if (rt == null || !api.configured) return false;
-        final res = await _http
-            .post(
-              Uri.parse('${api.baseUrl}/auth/refresh'),
-              headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-              body: jsonEncode({'refreshToken': rt}),
-            )
-            .timeout(api.timeout);
-        if (res.statusCode == 401) {
-          // Refresh token không hợp lệ/đã thu hồi → phải đăng nhập lại.
-          await clearLocal();
-          return false;
-        }
-        if (res.statusCode != 200) return false;
-        final j = jsonDecode(res.body);
-        await _saveTokens(j is Map ? j['tokens'] : null);
-        return true;
-      } catch (_) {
-        return false;
-      } finally {
-        _refreshing = null;
-      }
-    }();
-  }
+        await _upsertLookup(fresh);
+      } catch (_) {}
+      return AuthUser.fromFirebase(fresh);
+    }
+    return authUserFromParts(uid: '', email: info.data['email'] as String?, emailVerified: true);
+  });
 
-  /// Refresh trước khi access token hết hạn (biên 60 s) để không chạm nhánh 401.
-  Future<void> ensureFresh() async {
-    final exp = _prefs.getInt(_kAccessExp);
-    final hasAccess = await tokens.accessToken() != null;
-    if (!hasAccess || (exp != null && exp - _clock.nowMs() < 60 * 1000)) await refresh();
-  }
+  Future<void> resendVerification() => guardFirebase(() => _requireUser().sendEmailVerification());
 
-  /// Gọi API cần đăng nhập: làm tươi token, gặp 401 thì refresh một lần rồi thử lại.
-  Future<T> authed<T>(Future<T> Function() call) async {
-    await ensureFresh();
+  /// Xác thực lại bằng mật khẩu trước thao tác nhạy cảm (xóa tài khoản).
+  Future<void> reauth(String password) => guardFirebase(() async {
+    final u = _requireUser();
+    final email = u.email;
+    if (email == null) throw ApiException(401, 'reauth_required', 'No email on account');
+    await u.reauthenticateWithCredential(EmailAuthProvider.credential(email: email, password: password));
+  });
+
+  /// Xác thực lại bằng credential Google cho tài khoản không có mật khẩu.
+  Future<void> reauthWithGoogle(AuthCredential credential) => guardFirebase(() => _requireUser().reauthenticateWithCredential(credential));
+
+  /// Hồ sơ trên Firestore: `{user, profile}`. `profile` null nếu chưa có.
+  Future<Map<String, Object?>> me() => guardFirebase(() async {
+    final u = _requireUser();
+    final snap = await _fs.collection('users').doc(u.uid).get();
+    final data = snap.data() ?? const <String, Object?>{};
+    final user = AuthUser.fromFirebase(u).toJson();
+    final created = data['createdAt'];
+    if (created is num) user['createdAt'] = created.toInt();
+    final profile = data['profile'];
+    return {'user': user, 'profile': profile is Map ? profile.cast<String, Object?>() : null};
+  });
+
+  /// Đăng xuất Firebase; không ném lỗi (phiên cục bộ luôn bị xóa ở tầng gọi).
+  Future<void> logout() async {
+    if (!_ready) return;
     try {
-      return await call();
-    } on ApiException catch (e) {
-      if (!e.isUnauthorized) rethrow;
-      if (!await refresh()) rethrow;
-      return call();
+      await _authFn().signOut();
+    } catch (_) {
+      StrideLog.e('auth', 'sign out failed');
     }
   }
 }
@@ -229,8 +214,9 @@ class AuthRepository {
 /// Ngữ cảnh lỗi để chọn câu thông báo cụ thể (E02).
 enum AuthAction { login, register, forgot, reset, verify, reauth, other }
 
-/// Map lỗi API → thông báo cụ thể cho người dùng; không lộ chi tiết kỹ thuật.
+/// Map lỗi → thông báo cụ thể cho người dùng; không lộ chi tiết kỹ thuật.
 String authErrorMessage(Object error, AuthAction action) {
+  if (error is FirebaseException) error = mapFirebaseError(error);
   if (error is! ApiException) return 'Something went wrong. Please try again.';
   if (error.code == 'not_configured') return "Accounts aren't available in this build.";
   if (error.isNetwork) {
@@ -245,6 +231,10 @@ String authErrorMessage(Object error, AuthAction action) {
       return action == AuthAction.reauth ? 'That password is incorrect.' : 'Email or password is incorrect.';
     case 'email_taken':
       return 'An account with this email already exists. Try logging in instead.';
+    case 'reauth_required':
+      return 'Confirm your password again to continue.';
+    case 'account-exists-with-different-credential':
+      return 'An account with this email already exists. Log in with your password first.';
     case 'invalid_token':
       return action == AuthAction.verify || action == AuthAction.reset
           ? 'This link is invalid or has expired. Request a new one.'
@@ -264,7 +254,7 @@ String authErrorMessage(Object error, AuthAction action) {
     case 'invalid_id_token':
       return "Couldn't confirm your Google sign-in. Please try again.";
     case 'provider_not_configured':
-      return "Sign in with Google isn't available on this server yet. Use your email instead.";
+      return "Sign in with Google isn't available yet. Use your email instead.";
     case 'account_deletion_pending':
       return 'This account is being deleted.';
     case 'account_deleted':
@@ -284,7 +274,7 @@ String? _validationMessage(Object? details) {
   return null;
 }
 
-/// Quy tắc mật khẩu mà backend thực sự kiểm tra (validators/auth.ts): ≥ 8 ký tự, có chữ cái, có chữ số, ≤ 72 byte.
+/// Quy tắc mật khẩu của app (chặt hơn Firebase ≥ 6): ≥ 8 ký tự, có chữ cái, có chữ số, ≤ 72 byte.
 class PasswordRule {
   const PasswordRule(this.label, this.test);
   final String label;
