@@ -5,10 +5,13 @@ import 'package:asc_common/asc_common.dart';
 enum StrideEnv { dev, staging, production }
 
 class EnvConfig {
-  const EnvConfig({required this.env, required this.tileUrlTemplate, required this.tileAttribution, required this.flags});
+  const EnvConfig({required this.env, required this.tileUrlTemplate, required this.tileAttribution, required this.flags, this.tileFallbackUrlTemplate = ''});
 
   final StrideEnv env;
   final String tileUrlTemplate;
+
+  /// Nguồn tile dự phòng, dùng khi nguồn chính không tải được (mạng/ISP chặn tên miền, nguồn quá tải). Rỗng = không dự phòng.
+  final String tileFallbackUrlTemplate;
   final String tileAttribution;
   final FeatureFlags flags;
 
@@ -18,9 +21,15 @@ class EnvConfig {
     const envName = String.fromEnvironment('STRIDE_ENV');
     const flavorDefault = AscBuildFlavor.isProduct ? StrideEnv.production : StrideEnv.dev;
     final env = StrideEnv.values.firstWhere((e) => e.name == envName, orElse: () => flavorDefault);
-    const tiles = String.fromEnvironment('STRIDE_TILE_URL', defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png');
-    const attribution = String.fromEnvironment('STRIDE_TILE_ATTRIBUTION', defaultValue: '© OpenStreetMap contributors');
-    return EnvConfig(env: env, tileUrlTemplate: tiles, tileAttribution: attribution, flags: FeatureFlags.defaultsFor(env));
+    const defaultTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+    const tiles = String.fromEnvironment('STRIDE_TILE_URL', defaultValue: defaultTiles);
+    // Chỉ dự phòng khi dùng nguồn mặc định; đã tự chọn nhà cung cấp riêng thì tôn trọng lựa chọn đó (truyền STRIDE_TILE_FALLBACK_URL nếu muốn).
+    const fallback = String.fromEnvironment(
+      'STRIDE_TILE_FALLBACK_URL',
+      defaultValue: tiles == defaultTiles ? 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png' : '',
+    );
+    const attribution = String.fromEnvironment('STRIDE_TILE_ATTRIBUTION', defaultValue: '© OpenStreetMap contributors © CARTO');
+    return EnvConfig(env: env, tileUrlTemplate: tiles, tileFallbackUrlTemplate: fallback, tileAttribution: attribution, flags: FeatureFlags.defaultsFor(env));
   }
 }
 

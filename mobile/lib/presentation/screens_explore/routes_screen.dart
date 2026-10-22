@@ -12,6 +12,7 @@ import '../common_components/widgets.dart';
 import '../../models/ui_models/explore_models.dart';
 import '../../repository/explore_repository.dart';
 import 'components/explore_widgets.dart';
+import '../common_components/map_tiles.dart';
 
 enum RouteDistanceBucket { any, short, medium, long }
 
@@ -348,7 +349,7 @@ class _RouteDetailBodyState extends ConsumerState<_RouteDetailBody> {
                         interactionOptions: const InteractionOptions(flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag | InteractiveFlag.doubleTapZoom),
                       ),
                       children: [
-                        TileLayer(urlTemplate: env.tileUrlTemplate, userAgentPackageName: 'com.asc.app_runing'),
+                        strideTileLayer(env),
                         PolylineLayer(
                           polylines: [Polyline(points: r.points, strokeWidth: 5, color: StrideColors.primary)],
                         ),

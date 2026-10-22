@@ -10,6 +10,7 @@ import '../../../values/tokens.dart';
 import '../../../utils/calc/geo.dart';
 import '../../../models/data_models/activity.dart';
 import '../../../controller/run/engine/run_sources.dart';
+import '../../common_components/map_tiles.dart';
 
 /// Vị trí hiện tại để vẽ chấm xanh + quầng sai số.
 class RunMapCurrent {
@@ -158,12 +159,8 @@ class _RunMapState extends ConsumerState<RunMap> {
             ),
             children: [
               if (tiles)
-                TileLayer(
-                  urlTemplate: env.tileUrlTemplate,
-                  userAgentPackageName: 'com.asc.app_runing',
-                  // Ghi log khi nền bản đồ không tải được (mất mạng, bị chặn) để dễ chẩn đoán thay vì chỉ thấy khung trống.
-                  errorTileCallback: (tile, error, stackTrace) => StrideLog.d('map', 'tile ${tile.coordinates} failed: $error'),
-                ),
+                // Ghi log khi nền bản đồ không tải được (mất mạng, bị chặn) để dễ chẩn đoán thay vì chỉ thấy khung trống.
+                strideTileLayer(env, errorTileCallback: (tile, error, stackTrace) => StrideLog.d('map', 'tile ${tile.coordinates} failed: $error')),
               PolylineLayer(
                 polylines: [
                   for (final s in widget.segments)

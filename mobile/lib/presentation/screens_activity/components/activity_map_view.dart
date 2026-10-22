@@ -8,6 +8,7 @@ import '../../../values/tokens.dart';
 import '../../../controller/activity/activity_providers.dart';
 import '../../../utils/route_geometry.dart';
 import '../../../utils/l10n.dart';
+import '../../common_components/map_tiles.dart';
 
 /// Bản đồ tuyến: segment vẽ riêng (không nối qua pause/gap), marker start + cờ đích.
 /// Khi tile tắt (test) hoặc tuyến rỗng → vẽ sơ đồ tĩnh bằng painter; offline tile lỗi thì polyline vẫn hiện.
@@ -61,7 +62,7 @@ class ActivityRouteMapState extends ConsumerState<ActivityRouteMap> {
         interactionOptions: InteractionOptions(flags: widget.interactive ? InteractiveFlag.all & ~InteractiveFlag.rotate : InteractiveFlag.none),
       ),
       children: [
-        TileLayer(urlTemplate: env.tileUrlTemplate, userAgentPackageName: 'com.asc.app_runing'),
+        strideTileLayer(env),
         PolylineLayer(
           polylines: [
             for (final seg in route)

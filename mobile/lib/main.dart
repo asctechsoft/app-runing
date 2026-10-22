@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'values/router.dart';
@@ -12,6 +13,7 @@ import 'services/application/stride_base.dart';
 import 'services/storage/app_database.dart';
 import 'services/application/firebase_providers.dart';
 import 'services/application/app_lifecycle.dart';
+import 'utils/date_locale.dart';
 import 'utils/logger.dart';
 import 'controller/providers.dart';
 import 'controller/run_plugins.dart';
@@ -41,8 +43,10 @@ Future<void> main() async {
 
   await AppLocaleConfig.ensureConfigured();
   await AscLocale.loadTranslations();
-  // Tên thứ/tháng cho DateFormat theo ngôn ngữ app (utils/date_locale.dart).
+  // Tên thứ/tháng cho DateFormat theo ngôn ngữ app (utils/date_locale.dart). Đặt cả locale mặc định để các `DateFormat(pattern)`
+  // không truyền locale cũng theo ngôn ngữ app thay vì luôn là tiếng Anh.
   await initializeDateFormatting();
+  Intl.defaultLocale = appDateLocale;
 
   runApp(
     ProviderScope(

@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import '../../values/routes.dart';
 import '../../controller/providers.dart';
 import '../../values/tokens.dart';
+import '../common_components/map_tiles.dart';
 import '../common_components/widgets.dart';
 import '../../models/ui_models/live_share_models.dart';
 import '../../controller/live/live_share_providers.dart';
@@ -225,7 +226,7 @@ class _MapPreview extends ConsumerWidget {
                       interactionOptions: const InteractionOptions(flags: InteractiveFlag.none),
                     ),
                     children: [
-                      TileLayer(urlTemplate: env.tileUrlTemplate, userAgentPackageName: 'com.asc.app_runing'),
+                      strideTileLayer(env),
                       MarkerLayer(
                         markers: [
                           Marker(
