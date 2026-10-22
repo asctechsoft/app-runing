@@ -82,6 +82,23 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   sqflite_common_ffi: ^2.4.0+3
+  flutter_launcher_icons: ^0.14.4
+
+# Icon launcher: nguồn ở tool/icons (nền navy phủ vuông theo Design System, KHÔNG bo góc trong ảnh; góc do hệ điều hành bo).
+# Sinh lại sau khi đổi logo: `dart run flutter_launcher_icons`. Logo trong app: assets/images/img_logo.png.
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  image_path: "tool/icons/img_logo_launcher.png"
+  adaptive_icon_background: "#0A2038"
+  adaptive_icon_foreground: "tool/icons/img_logo_launcher.png"
+  min_sdk_android: 24
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "tool/icons/img_logo_launcher.png"
+    background_color: "#0A2038"
+    theme_color: "#0A2038"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

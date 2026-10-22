@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 
 import '../../values/tokens.dart';
 
-/// Wordmark STRIDE + dấu "S" người chạy như splash mockup.
-/// TODO(D01): thay bằng asset logo đã duyệt khi Design bàn giao (repo chưa có file logo gốc).
+/// Đường dẫn logo chính thức (người chạy trắng + lime trên nền navy, góc bo sẵn). Nguồn icon launcher: `tool/icons/`.
+const String strideLogoAsset = 'assets/images/img_logo.png';
+
+/// Logo STRIDE (ảnh chính thức) + wordmark. [size] là cạnh ô logo; không kéo giãn, xoay hay đổi màu.
 class StrideLogo extends StatelessWidget {
   const StrideLogo({super.key, this.size = 96, this.showWordmark = true, this.wordmarkColor = StrideColors.iconNavy});
   final double size;
@@ -21,10 +23,10 @@ class StrideLogo extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Vùng an toàn ≥ 16% quanh dấu.
+          // Vùng an toàn ≥ 16% quanh logo.
           Padding(
             padding: EdgeInsets.all(size * 0.16),
-            child: CustomPaint(size: Size.square(size * 0.68), painter: _StrideMarkPainter()),
+            child: Image.asset(strideLogoAsset, width: size * 0.68, height: size * 0.68, fit: BoxFit.contain, filterQuality: FilterQuality.high),
           ),
           if (showWordmark)
             Text(
@@ -47,27 +49,6 @@ class StrideWordmark extends StatelessWidget {
     semanticsLabel: 'STRIDE',
     style: TextStyle(fontFamily: StrideText.fontFamily, fontWeight: FontWeight.w800, fontSize: fontSize, letterSpacing: 0.5, color: StrideColors.iconNavy),
   );
-}
-
-class _StrideMarkPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size s) {
-    final w = s.width;
-    final stroke = Paint()
-      ..color = StrideColors.primary
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.16
-      ..strokeCap = StrokeCap.round;
-    final path = Path()
-      ..moveTo(w * 0.70, w * 0.22)
-      ..cubicTo(w * 0.40, w * 0.12, w * 0.12, w * 0.30, w * 0.38, w * 0.48)
-      ..cubicTo(w * 0.62, w * 0.62, w * 0.55, w * 0.86, w * 0.18, w * 0.84);
-    canvas.drawPath(path, stroke);
-    canvas.drawCircle(Offset(w * 0.86, w * 0.12), w * 0.11, Paint()..color = StrideColors.lime);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// Vòng tiến độ (Home ring, countdown). Giữ bước thực kể cả vượt 100% — chỉ vòng dừng ở 100%.
