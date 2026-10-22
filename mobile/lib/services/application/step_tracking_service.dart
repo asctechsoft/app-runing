@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pedometer/pedometer.dart';
 
 import '../../utils/logger.dart';
+import '../../utils/stream_utils.dart';
 import '../native/permission_coordinator.dart';
 import '../../controller/providers.dart';
 
@@ -63,7 +64,7 @@ class StepTrackingService {
   }
 
   Future<void> stop() async {
-    await _sub?.cancel();
+    await cancelBounded(_sub, tag: 'steps');
     _sub = null;
     if (status.value == StepTrackingStatus.running) status.value = StepTrackingStatus.idle;
   }

@@ -18,6 +18,31 @@ class Analytics {
   static final RegExp _validEventName = RegExp(r'^[A-Za-z][A-Za-z0-9_]{0,39}$');
   static const List<String> _reservedPrefixes = ['firebase_', 'google_', 'ga_'];
 
+  /// Tên Firebase dành riêng (gửi sẽ bị từ chối: "Event name is reserved"). Đừng đặt event trùng — vd. `app_background` từng dính lỗi này.
+  static const Set<String> _reservedNames = {
+    'app_background',
+    'app_clear_data',
+    'app_exception',
+    'app_remove',
+    'app_store_refund',
+    'app_store_subscription_cancel',
+    'app_store_subscription_convert',
+    'app_store_subscription_renew',
+    'app_update',
+    'dynamic_link_app_open',
+    'dynamic_link_first_open',
+    'error',
+    'first_open',
+    'in_app_purchase',
+    'notification_dismiss',
+    'notification_foreground',
+    'notification_open',
+    'notification_receive',
+    'os_update',
+    'session_start',
+    'user_engagement',
+  };
+
   static AnalyticsEventSink _sink = _sendToFirebase;
 
   @visibleForTesting
@@ -26,7 +51,7 @@ class Analytics {
   @visibleForTesting
   static void resetSink() => _sink = _sendToFirebase;
 
-  static bool isValidEventName(String name) => _validEventName.hasMatch(name) && !_reservedPrefixes.any(name.startsWith);
+  static bool isValidEventName(String name) => _validEventName.hasMatch(name) && !_reservedPrefixes.any(name.startsWith) && !_reservedNames.contains(name);
 
   static void _log(String name, [Map<String, Object>? params]) {
     assert(isValidEventName(name), 'Invalid Firebase Analytics event name: $name');
@@ -53,8 +78,8 @@ class Analytics {
   static void appOpen({required bool firstOpen}) => _log('app_open', {'first_open': '$firstOpen'});
 
   /// App quay lại foreground / đi xuống background (vòng đời — xem `AppLifecycle`).
-  static void appForeground() => _log('app_foreground');
-  static void appBackground() => _log('app_background');
+  static void appForeground() => _log('stride_foreground');
+  static void appBackground() => _log('stride_background');
 
   /// Xem màn hình. [screen] là mẫu đường dẫn (`/home/activity/:id`), không bao giờ là đường dẫn có id thật.
   static void screenView(String screen) => _log('screen_view', {'firebase_screen': screen});

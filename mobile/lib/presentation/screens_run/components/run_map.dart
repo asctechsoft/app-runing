@@ -101,12 +101,15 @@ class _RunMapState extends ConsumerState<RunMap> {
 
   void _onReady() {
     _ready = true;
-    if (widget.fitRoute) {
-      final pts = _allPoints;
-      if (pts.length >= 2) {
-        _mc.fitCamera(CameraFit.coordinates(coordinates: pts, padding: const EdgeInsets.all(40), maxZoom: 17));
-      }
-    }
+  }
+
+  /// Căn khớp lộ trình ngay từ camera đầu tiên (`initialCameraFit`). Không gọi `fitCamera` trong `onMapReady`: làm vậy lớp tile
+  /// không tải ô nào cho tới khi người dùng chạm vào bản đồ (màn kết quả hiện nền xám).
+  CameraFit? get _initialFit {
+    if (!widget.fitRoute) return null;
+    final pts = _allPoints;
+    if (pts.length < 2) return null;
+    return CameraFit.coordinates(coordinates: pts, padding: const EdgeInsets.all(40), maxZoom: 17);
   }
 
   void _recenter() {
@@ -150,6 +153,7 @@ class _RunMapState extends ConsumerState<RunMap> {
             options: MapOptions(
               initialCenter: center,
               initialZoom: widget.initialZoom,
+              initialCameraFit: _initialFit,
               onMapReady: _onReady,
               interactionOptions: InteractionOptions(flags: widget.interactive ? InteractiveFlag.all & ~InteractiveFlag.rotate : InteractiveFlag.none),
               onPositionChanged: (camera, hasGesture) {

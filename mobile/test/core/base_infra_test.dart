@@ -21,6 +21,8 @@ void main() {
       expect(Analytics.isValidEventName('1bad'), isFalse);
       expect(Analytics.isValidEventName('has space'), isFalse);
       expect(Analytics.isValidEventName('firebase_x'), isFalse);
+      expect(Analytics.isValidEventName('app_background'), isFalse); // tên dành riêng của Firebase
+      expect(Analytics.isValidEventName('stride_background'), isTrue);
       expect(Analytics.isValidEventName('a' * 41), isFalse);
     });
 
@@ -29,7 +31,7 @@ void main() {
       Analytics.screenView('/home/activity/:id');
       Analytics.appForeground();
       Analytics.appBackground();
-      expect(sent.map((e) => e.$1), ['app_open', 'screen_view', 'app_foreground', 'app_background']);
+      expect(sent.map((e) => e.$1), ['app_open', 'screen_view', 'stride_foreground', 'stride_background']);
       expect(sent[0].$2, {'first_open': 'true'});
       expect(sent[1].$2, {'firebase_screen': '/home/activity/:id'});
       expect(sent.every((e) => e.$2 == null || e.$2!.values.every((v) => v is String)), isTrue);
@@ -65,13 +67,13 @@ void main() {
       lifecycle.didChangeAppLifecycleState(AppLifecycleState.paused);
       expect(lifecycle.isForeground.value, isFalse);
       expect(paused, 1);
-      expect(sent, ['app_background']);
+      expect(sent, ['stride_background']);
 
       lifecycle.didChangeAppLifecycleState(AppLifecycleState.resumed);
       expect(lifecycle.isForeground.value, isTrue);
       expect(lifecycle.lastResumedAt, isNotNull);
       expect(resumed, 3);
-      expect(sent, ['app_background', 'app_foreground']);
+      expect(sent, ['stride_background', 'stride_foreground']);
       lifecycle.isForeground.dispose();
     });
   });

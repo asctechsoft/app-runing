@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../utils/l10n.dart';
 import '../../../utils/logger.dart';
+import '../../../utils/stream_utils.dart';
 import '../../providers.dart';
 import '../../run_plugins.dart';
 import '../../../utils/clock.dart';
@@ -286,9 +287,10 @@ class RunSessionController extends Notifier<RunSessionState> {
   }
 
   Future<void> _stopSensors() async {
-    await _posSub?.cancel();
+    // Có thời hạn: cancel() của stream cảm biến có thể không bao giờ hoàn thành → treo Finish/Discard (xem utils/stream_utils.dart).
+    await cancelBounded(_posSub, tag: 'run.pos');
     _posSub = null;
-    await _stepSub?.cancel();
+    await cancelBounded(_stepSub, tag: 'run.steps');
     _stepSub = null;
     _tickTimer?.cancel();
     _tickTimer = null;
