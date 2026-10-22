@@ -23,6 +23,9 @@ Repo hiện chỉ chứa tài liệu đặc tả và ảnh UI; **chưa có sourc
 - Số dùng tabular numerals; lưu đơn vị gốc, đổi hiển thị theo cài đặt (km/mi).
 - Logo: không kéo giãn/xoay/đổi màu; vùng an toàn tối thiểu 16%. Logo chính thức `mobile/assets/images/img_logo.png` (dùng qua `StrideLogo`/`strideLogoAsset`); icon launcher sinh từ `mobile/tool/icons/img_logo_launcher.png` (nền navy `#0A2038` phủ vuông, không bo góc) bằng `dart run flutter_launcher_icons` — đổi logo thì thay hai file này rồi chạy lại.
 
+## Việc còn lại
+Danh sách việc chưa làm (kiểm chứng thiết bị, Firebase, đa ngôn ngữ, animation, điểm chạm, phát hành): `docs/checklist-con-lai.md`. Làm xong việc nào thì đánh dấu và ghi bằng chứng ở đó.
+
 ## Stack
 Đã chốt trong `docs/adr/0001-stack.md` (Flutter + Riverpod/go_router + Next.js/Prisma + OSM) và `docs/adr/0002-shared-base.md` (dùng chung base ASC). Không tự đổi framework hay nâng/hạ phiên bản thư viện nền mà không cập nhật ADR.
 

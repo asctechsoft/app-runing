@@ -53,6 +53,7 @@ A01 A02 A05 (tài liệu), B01–B06, C01–C06, D01–D04, E01–E06, F01–F04
 - K04 giáo án (flag `workout.plans` tắt), Health Connect/HealthKit (flag `steps.health` tắt), Apple/Google sign-in (flag tắt).
 - Backend: mailer production, S3 storage, rate limiter/job queue phân tán (Redis), chuyển PostgreSQL + sửa cursor sync đồng thời.
 - UI club: duyệt yêu cầu, phân quyền, tạo sự kiện; danh sách route đã lưu; export toàn tài khoản từ màn chi tiết.
-- Chuỗi UI qua localization key (J03): string hiện nằm trong code tiếng Anh, chưa tách ARB.
+- Chuỗi UI qua localization key (J03): **đã xong** (XML `lib/xml_strings`, en + vi). Còn: thêm ngôn ngữ, màn chọn ngôn ngữ, đổi ngôn ngữ lúc chạy — xem `docs/checklist-con-lai.md` mục 6.
 - N02/N03 (giám sát, backup), N04 (web admin, P2), Q05–Q07, R01–R05 (phát hành).
-- Logo: đang dùng wordmark dựng lại từ mockup; cần asset logo đã duyệt.
+- Logo: **đã thay** bằng asset chính thức (`mobile/assets/images/img_logo.png`; icon launcher sinh từ `mobile/tool/icons`). Backend Next.js đã bỏ từ 2026-10-19 (dùng Firebase) — danh sách "Chưa làm" về backend ở trên không còn áp dụng.
+- Danh sách việc còn lại đầy đủ, cập nhật mới nhất: `docs/checklist-con-lai.md`.
