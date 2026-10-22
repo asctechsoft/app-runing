@@ -1,0 +1,6 @@
+[submodule "asc_common"]
+	path = asc_common
+	url = https://github.com/asctechsoft/asc_common.git
+[submodule "mobile/dsp_base"]
+	path = mobile/dsp_base
+	url = https://github.com/asctechsoft/dsp_base_app.git

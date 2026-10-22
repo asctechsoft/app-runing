@@ -1,4 +1,7 @@
-/// Môi trường build (B03). Chọn bằng `--dart-define=STRIDE_ENV=staging` v.v.
+import 'package:asc_common/asc_common.dart';
+
+/// Môi trường build (B03). Chọn bằng `--dart-define=STRIDE_ENV=staging` v.v.; không truyền thì suy ra từ `--flavor`
+/// (product → production, còn lại → dev) để bản flavor product không bao giờ mang nhãn môi trường dev.
 enum StrideEnv { dev, staging, production }
 
 class EnvConfig {
@@ -12,8 +15,9 @@ class EnvConfig {
   bool get isProduction => env == StrideEnv.production;
 
   static EnvConfig fromEnvironment() {
-    const envName = String.fromEnvironment('STRIDE_ENV', defaultValue: 'dev');
-    final env = StrideEnv.values.firstWhere((e) => e.name == envName, orElse: () => StrideEnv.dev);
+    const envName = String.fromEnvironment('STRIDE_ENV');
+    const flavorDefault = AscBuildFlavor.isProduct ? StrideEnv.production : StrideEnv.dev;
+    final env = StrideEnv.values.firstWhere((e) => e.name == envName, orElse: () => flavorDefault);
     const tiles = String.fromEnvironment('STRIDE_TILE_URL', defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png');
     const attribution = String.fromEnvironment('STRIDE_TILE_ATTRIBUTION', defaultValue: '© OpenStreetMap contributors');
     return EnvConfig(env: env, tileUrlTemplate: tiles, tileAttribution: attribution, flags: FeatureFlags.defaultsFor(env));

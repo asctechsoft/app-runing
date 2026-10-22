@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/routes.dart';
+import '../../core/analytics/analytics.dart';
 import '../../core/logging/logger.dart';
 import '../../core/providers.dart';
 import '../../core/theme/tokens.dart';
@@ -41,6 +42,7 @@ class _StartupScreenState extends ConsumerState<StartupScreen> {
     setState(() => _failed = false);
     try {
       final owner = ref.read(ownerProvider);
+      Analytics.appOpen(firstOpen: !owner.introSeen);
       Activity? session;
       try {
         session = await ref.read(activityRepositoryProvider).detectUnclosedSession(owner.ownerId);

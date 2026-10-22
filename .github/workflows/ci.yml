@@ -17,10 +17,14 @@ jobs:
       run:
         working-directory: mobile
     steps:
+      # asc_common (thư mục gốc) và mobile/dsp_base là git submodule — cần cho `flutter pub get`.
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      # Dart >= 3.13.3 (asc_common yêu cầu) → Flutter 3.47.x.
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.38.9
+          flutter-version: 3.47.4
           channel: stable
           cache: true
       - name: Install (lock)
@@ -43,12 +47,18 @@ jobs:
         run: |
           if [ -z "$GOOGLE_SERVICES_JSON" ]; then echo "::error::Thiếu secret GOOGLE_SERVICES_JSON"; exit 1; fi
           printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build scripts compile
+        run: python -m py_compile build.py tool/build_helper.py tool/build_aab.py tool/translate.py
+      # Flavor dev: cùng applicationId nên dùng chung google-services.json; AdMob dùng app ID test (xem android/app/build.gradle.kts).
       - name: Build staging APK
-        run: flutter build apk --debug --dart-define=STRIDE_ENV=staging
+        run: flutter build apk --debug --flavor dev --dart-define=STRIDE_ENV=staging
       - uses: actions/upload-artifact@v4
         with:
           name: stride-staging-apk
-          path: mobile/build/app/outputs/flutter-apk/app-debug.apk
+          path: mobile/build/app/outputs/flutter-apk/app-dev-debug.apk
           retention-days: 14
 
   backend:

@@ -23,12 +23,19 @@ Repo hiện chỉ chứa tài liệu đặc tả và ảnh UI; **chưa có sourc
 - Số dùng tabular numerals; lưu đơn vị gốc, đổi hiển thị theo cài đặt (km/mi).
 - Logo: không kéo giãn/xoay/đổi màu; vùng an toàn tối thiểu 16%.
 
-## Quyết định chưa chốt
-Framework mobile, backend, nhà cung cấp bản đồ, auth chưa được chọn. **Không tự giả định Flutter/React Native/native hay gán phiên bản thư viện**; chọn stack qua ADR (task A02) trước khi code.
+## Stack
+Đã chốt trong `docs/adr/0001-stack.md` (Flutter + Riverpod/go_router + Next.js/Prisma + OSM) và `docs/adr/0002-shared-base.md` (dùng chung base ASC). Không tự đổi framework hay nâng/hạ phiên bản thư viện nền mà không cập nhật ADR.
+
+## Base dùng chung với các app ASC (smart_drink...)
+- `asc_common/` (submodule ở gốc repo) và `mobile/dsp_base/` (submodule) cùng commit với smart_drink. **Không sửa trong repo này** — sửa ở repo gốc của base rồi cập nhật con trỏ submodule. Clone mới: `git submodule update --init --recursive`.
+- Phiên bản Firebase (`firebase_core ^4`, `firebase_auth ^6`, `cloud_firestore ^6`) và `permission_handler ^13` phải khớp họ phiên bản của `dsp_base`/`asc_common`; đừng nâng riêng lẻ.
+- STRIDE giữ Riverpod + go_router; GetX chỉ là hạ tầng của base (`Get.put` service, `.tr` cho chuỗi XML). Không viết màn hình/state mới bằng GetX.
+- Khởi động: `lib/main.dart` → `core/base/stride_base.dart` (Firebase, App Check, Crashlytics, Remote Config chạy nền). Chưa có quảng cáo: không gọi `DspAdsController.start` khi chưa có quyết định sản phẩm. Vòng đời: `core/lifecycle/app_lifecycle.dart`. Analytics: `core/analytics/` (không đưa id/tọa độ vào event).
+- Flavor `alpha | dev | product | claude` (bắt buộc truyền `--flavor`); cờ trong code: `core/base/app_figs.dart`. Build tự động, secret và AdMob: `docs/build.md`.
 
 ## Lệnh
-Stack đã chốt trong `docs/adr/0001-stack.md` (Flutter + Next.js/Prisma + OSM).
-- Mobile (`mobile/`): `flutter pub get`, `flutter analyze`, `flutter test`, `dart format -l 160 lib test`, `flutter run --dart-define=STRIDE_ENV=dev`.
+- Mobile (`mobile/`): `flutter pub get`, `flutter analyze`, `flutter test`, `flutter run --flavor dev`, build tự động `python build.py` (xem `docs/build.md`).
+- Format: dùng Dart **của Flutter**, không dùng `dart` trong PATH nếu nó là SDK cũ (`dart --version` phải ≥ 3.13): `flutter/bin/cache/dart-sdk/bin/dart format -l 160 lib test`. Dart cũ format sai kiểu và đổi hàng loạt file.
 - Backend (`backend/`): `npm ci`, `npm run dev` (cổng 3001), `npm run lint`, `npx tsc --noEmit`, `npm test`, `npx prisma migrate dev`, `npm run seed` (chỉ dev).
 - Máy dev có Kaspersky từng cách ly `dart.exe`: nếu `dart.exe is not recognized`, xóa `flutter/bin/cache/engine-dart-sdk.stamp` rồi chạy `flutter --version`; nếu `pub get` thất bại trong sandbox, đặt `PUB_CACHE` sang thư mục ghi được.
 

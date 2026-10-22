@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/analytics/route_analytics.dart';
 import '../features/account/account_screen.dart';
 import '../features/activity/activity_detail_screen.dart';
 import '../features/activity/activity_map_screen.dart';
@@ -63,7 +64,7 @@ GoRoute _activityRoute() => GoRoute(
 
 /// Router (D03/D04): 5 tab giữ state riêng bằng StatefulShellRoute; màn ghi chạy nằm ngoài shell (không bottom tab).
 final routerProvider = Provider<GoRouter>((ref) {
-  return GoRouter(
+  final router = GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: Routes.startup,
     routes: [
@@ -250,4 +251,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+  RouteAnalytics.attach(router);
+  return router;
 });
