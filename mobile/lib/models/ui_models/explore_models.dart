@@ -1,4 +1,4 @@
-// Model Explore (M01–M06) parse từ API backend /api/v1. Parse phòng thủ: thiếu trường bắt buộc → FormatException.
+// Model Explore (M01–M06) parse từ document Firestore (xem docs/firestore-schema.md). Parse phòng thủ: thiếu trường bắt buộc → FormatException.
 // Không bao giờ giữ tọa độ đầu/cuối của hoạt động trong feed (bỏ qua trường `route`).
 
 import 'package:latlong2/latlong.dart';

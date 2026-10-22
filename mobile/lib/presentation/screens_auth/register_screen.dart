@@ -11,7 +11,7 @@ import '../../repository/auth_repository.dart';
 import 'components/auth_widgets.dart';
 import '../../utils/l10n.dart';
 
-/// Đăng ký email (E02). Quy tắc mật khẩu hiển thị trực tiếp, đúng quy tắc backend.
+/// Đăng ký email (E02). Quy tắc mật khẩu hiển thị trực tiếp, đúng quy tắc mật khẩu của app.
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 

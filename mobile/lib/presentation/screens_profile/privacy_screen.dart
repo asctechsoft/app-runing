@@ -16,7 +16,7 @@ final profileDefaultPrivacyProvider = FutureProvider.autoDispose<Privacy>((ref) 
   return loadDefaultPrivacy(ref.watch(settingsRepositoryProvider), owner);
 });
 
-/// Các mức hiển thị có tác dụng thật. Backend chỉ cho người cùng club đã duyệt xem cả "followers" lẫn "public"
+/// Các mức hiển thị có tác dụng thật. Firestore rules chỉ cho người cùng club đã duyệt xem cả "followers" lẫn "public"
 /// nên không hiện "Public" riêng để tránh hứa phạm vi rộng hơn thực tế.
 List<Privacy> privacyChoices({required bool clubsEnabled}) => [Privacy.onlyMe, if (clubsEnabled) Privacy.followers];
 

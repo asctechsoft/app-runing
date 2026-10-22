@@ -1,6 +1,6 @@
 import '../../utils/l10n.dart';
 
-/// Quy tắc nhập hồ sơ (E04) — khoảng hợp lệ trùng backend validators/me.ts.
+/// Quy tắc nhập hồ sơ (E04) — khoảng hợp lệ của chiều cao/cân nặng/mục tiêu.
 abstract final class ProfileLimits {
   static const minHeightCm = 50.0;
   static const maxHeightCm = 272.0;

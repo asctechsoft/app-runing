@@ -1,12 +1,12 @@
 import '../../utils/l10n.dart';
 
-/// Người được chọn theo dõi (tài khoản STRIDE đã xác minh, do backend xác nhận).
+/// Người được chọn theo dõi (tài khoản STRIDE đã xác minh, do Firestore `userLookup` xác nhận).
 class LiveShareViewer {
   const LiveShareViewer({required this.userId, required this.label, this.email});
 
   final String userId;
 
-  /// Tên hiển thị do backend trả; nếu không có thì là email người dùng đã nhập.
+  /// Tên hiển thị lấy từ `userLookup`; nếu không có thì là email người dùng đã nhập.
   final String label;
   final String? email;
 

@@ -27,7 +27,7 @@ Repo hiện chỉ chứa tài liệu đặc tả và ảnh UI; **chưa có sourc
 Danh sách việc chưa làm (kiểm chứng thiết bị, Firebase, đa ngôn ngữ, animation, điểm chạm, phát hành): `docs/checklist-con-lai.md`. Làm xong việc nào thì đánh dấu và ghi bằng chứng ở đó.
 
 ## Stack
-Đã chốt trong `docs/adr/0001-stack.md` (Flutter + Riverpod/go_router + Next.js/Prisma + OSM) và `docs/adr/0002-shared-base.md` (dùng chung base ASC). Không tự đổi framework hay nâng/hạ phiên bản thư viện nền mà không cập nhật ADR.
+Đã chốt trong `docs/adr/0001-stack.md` (Flutter + Riverpod/go_router + Firebase Auth/Cloud Firestore + OSM; **không có server backend riêng**) và `docs/adr/0002-shared-base.md` (dùng chung base ASC). Không tự đổi framework hay nâng/hạ phiên bản thư viện nền mà không cập nhật ADR.
 
 ## Base dùng chung với các app ASC (smart_drink...)
 - `asc_common/` (submodule ở gốc repo) và `mobile/dsp_base/` (submodule) cùng commit với smart_drink. **Không sửa trong repo này** — sửa ở repo gốc của base rồi cập nhật con trỏ submodule. Clone mới: `git submodule update --init --recursive`.
@@ -66,7 +66,7 @@ Quy ước: màn hình chỉ ở `presentation/`, truy cập dữ liệu qua `re
 ## Lệnh
 - Mobile (`mobile/`): `flutter pub get`, `flutter analyze`, `flutter test`, `flutter run --flavor dev`, build tự động `python build.py` (xem `docs/build.md`).
 - Format: dùng Dart **của Flutter**, không dùng `dart` trong PATH nếu nó là SDK cũ (`dart --version` phải ≥ 3.13): `flutter/bin/cache/dart-sdk/bin/dart format -l 160 lib test`. Dart cũ format sai kiểu và đổi hàng loạt file.
-- Backend (`backend/`): `npm ci`, `npm run dev` (cổng 3001), `npm run lint`, `npx tsc --noEmit`, `npm test`, `npx prisma migrate dev`, `npm run seed` (chỉ dev).
+- Firestore: `firebase deploy --only firestore:rules,firestore:indexes --project app-runing-667b3`; seed dev: `cd scripts && npm install && node seed-firestore.mjs`. Schema ở `docs/firestore-schema.md` — sửa schema thì sửa luôn `firestore.rules` và `firestore.indexes.json`.
 - Máy dev có Kaspersky từng cách ly `dart.exe`: nếu `dart.exe is not recognized`, xóa `flutter/bin/cache/engine-dart-sdk.stamp` rồi chạy `flutter --version`; nếu `pub get` thất bại trong sandbox, đặt `PUB_CACHE` sang thư mục ghi được.
 
 ## Harness / cách làm việc với Claude

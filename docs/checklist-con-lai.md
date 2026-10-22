@@ -14,7 +14,7 @@ Cập nhật: 2026-10-22 · Nhánh: `feat/asc-base` · Nguồn đối chiếu: `
 | Hạng mục | Tình trạng |
 |---|---|
 | Code mobile | Có đủ luồng P0 + phần lớn P1, **389 test tự động đạt**, `flutter analyze` còn 33 cảnh báo mức *info* có từ trước |
-| Backend | **Đã bỏ** (quyết định 2026-10-19): dùng Firebase Auth + Cloud Firestore. Thư mục `backend/` cũ còn trong repo nhưng app không gọi |
+| Backend | **Đã bỏ và đã xóa khỏi repo** (2026-10-23; quyết định 2026-10-19): dùng Firebase Auth + Cloud Firestore, không có server riêng. Mã cũ xem lịch sử git |
 | Đa ngôn ngữ | Hạ tầng XML (`AscLocale`) xong; **mới có en + vi** (1.660 key, bản vi do AI dịch, chưa có người bản ngữ rà) |
 | Thiết bị thật | Đã chạy thử trên Samsung SM-G996B (Android 15): tiếng Việt, bản đồ, ghi chạy, tạm dừng, Back, kết thúc. **Chưa** kiểm chứng nền/khóa màn hình/pin |
 | Git | 8 commit trên `feat/asc-base` **chưa push, chưa có PR**; CI chưa chạy với cấu hình mới |
@@ -24,8 +24,8 @@ Cập nhật: 2026-10-22 · Nhánh: `feat/asc-base` · Nguồn đối chiếu: `
 ## 1. Việc cần làm ngay (đưa code vào `main`)
 - [ ] **S01 · P0 · Dev** — Push `feat/asc-base`, mở PR vào `main`, cho CI chạy. Sửa mọi lỗi CI (dự kiến: bước `dart format --set-exit-if-changed` ở vài file cũ vì đổi lên Flutter 3.47.4; kiểm tra `submodules: recursive`, Python 3.12).
   - Nghiệm thu: CI xanh cả 2 job; APK `app-dev-debug.apk` là artifact.
-- [ ] **S02 · P0 · Dev** — Quyết định số phận thư mục `backend/` (Next.js + Prisma) và job `backend` trong `.github/workflows/ci.yml`: xóa, hoặc giữ làm tham chiếu và bỏ khỏi CI. Cập nhật `README.md`, ADR 0001, `docs/scope.md`, `docs/domain-model.md`.
-- [ ] **S03 · P1 · Dev** — Cập nhật `docs/scope.md` (đang lỗi thời: còn ghi "chuỗi UI nằm trong code", "logo là wordmark dựng lại", "backend Next.js") và `docs/adr/0001-stack.md` (phần Backend/Auth).
+- [x] **S02 · P0 · Dev** — ~~Quyết định số phận thư mục `backend/`~~ **Đã xóa** `backend/` (195 file), gỡ job `backend` khỏi CI, cập nhật `README.md`, `CLAUDE.md`, ADR 0001, `docs/scope.md`, `docs/domain-model.md`, `docs/firestore-schema.md`, comment trong code. Người: Claude · 2026-10-23.
+- [x] **S03 · P1 · Dev** — ~~Cập nhật `docs/scope.md` và `docs/adr/0001-stack.md`~~ Đã cập nhật (Firebase thay backend, chuỗi qua key, logo, trạng thái 389 test). Còn lại phải làm khi có thay đổi mới: giữ hai file này đồng bộ với thực tế.
 - [ ] **S04 · P1 · Dev** — Commit `.vscode/launch.json` + `tasks.json` (cấu hình chạy theo flavor) nếu cả nhóm muốn dùng chung.
 - [ ] **S05 · P0 · Quản trị** — **Thu hồi và tạo lại** token Telegram bot và mật khẩu email (Gmail App Password) từng nằm trong `build_helper.py`/`build.py` của repo smart_drink/dsp_base (đã lộ). Xóa khỏi lịch sử git của các repo đó nếu có thể.
 - [ ] **S06 · P1 · Dev** — Sửa 33 cảnh báo *info* của `flutter analyze` (chủ yếu `prefer_initializing_formals`, vài `deprecated_member_use`: `onReorder` → `onReorderItem`, `TickerMode.of`). Mục tiêu: `flutter analyze` sạch hoàn toàn.

@@ -253,7 +253,7 @@ class _MapPreview extends ConsumerWidget {
   }
 }
 
-/// Thêm người theo dõi bằng email tài khoản STRIDE đã xác minh (backend xác nhận và trả userId).
+/// Thêm người theo dõi bằng email tài khoản STRIDE đã xác minh (tra cứu `userLookup` trên Firestore để lấy userId).
 class _AddContactSheet extends ConsumerStatefulWidget {
   const _AddContactSheet();
 

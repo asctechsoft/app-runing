@@ -122,7 +122,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
   }
 }
 
-/// Danh sách quy tắc mật khẩu cập nhật theo từng ký tự gõ — chỉ các quy tắc backend thực sự kiểm tra.
+/// Danh sách quy tắc mật khẩu cập nhật theo từng ký tự gõ — chỉ các quy tắc thực sự được kiểm tra khi đăng ký.
 class PasswordRulesList extends StatelessWidget {
   const PasswordRulesList({super.key, required this.password});
   final String password;
