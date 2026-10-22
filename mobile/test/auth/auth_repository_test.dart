@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/core/network/api_client.dart';
-import 'package:stride/core/time/clock.dart';
-import 'package:stride/features/auth/auth_repository.dart';
+import 'package:stride/services/application/api_client.dart';
+import 'package:stride/utils/clock.dart';
+import 'package:stride/repository/auth_repository.dart';
 
 void main() {
   group('AuthRepository khi Firebase chưa sẵn sàng (E02)', () {
@@ -42,7 +42,12 @@ void main() {
     });
     test('emailLowerOf và newUserDoc đúng schema', () {
       expect(emailLowerOf('  Foo@Bar.COM '), 'foo@bar.com');
-      expect(newUserDoc(email: 'Foo@Bar.com', displayName: 'An', nowMs: 5), {'displayName': 'An', 'email': 'Foo@Bar.com', 'emailLower': 'foo@bar.com', 'createdAt': 5});
+      expect(newUserDoc(email: 'Foo@Bar.com', displayName: 'An', nowMs: 5), {
+        'displayName': 'An',
+        'email': 'Foo@Bar.com',
+        'emailLower': 'foo@bar.com',
+        'createdAt': 5,
+      });
       expect(newUserDoc(email: 'a@b.co', nowMs: 1)['displayName'], '');
     });
     test('AuthUser toJson/fromJson khứ hồi', () {

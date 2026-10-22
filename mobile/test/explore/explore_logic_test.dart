@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/core/network/api_client.dart';
-import 'package:stride/domain/models/activity.dart';
-import 'package:stride/features/explore/explore_logic.dart';
-import 'package:stride/features/explore/explore_models.dart';
-import 'package:stride/features/explore/explore_repository.dart';
+import 'package:stride/services/application/api_client.dart';
+import 'package:stride/models/data_models/activity.dart';
+import 'package:stride/controller/explore/explore_logic.dart';
+import 'package:stride/models/ui_models/explore_models.dart';
+import 'package:stride/repository/explore_repository.dart';
 
 Activity _act(
   String id, {

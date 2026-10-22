@@ -1,7 +1,7 @@
 # Build, flavor và vòng đời khởi động (STRIDE)
 
 ## Flavor
-`alpha` (không quảng cáo), `dev`, `product`, `claude` — khai ở `mobile/android/app/build.gradle.kts`, đọc trong code qua `AppFigs` (`lib/core/base/app_figs.dart`).
+`alpha` (không quảng cáo), `dev`, `product`, `claude` — khai ở `mobile/android/app/build.gradle.kts`, đọc trong code qua `AppFigs` (`lib/configs/app_figs.dart`).
 Cùng `applicationId` (`com.asc.app_runing`) nên chỉ cần một `android/app/google-services.json`.
 
 ```bash

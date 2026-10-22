@@ -18,6 +18,7 @@ project có cùng hạ tầng, cấu trúc build tự động và vòng đời k
 | Quảng cáo | Chưa dùng. Không gọi `DspAdsController.start` (sẽ bật UMP/GDPR + AdMob). Manifest vẫn khai AdMob app ID (mặc định ID test) vì plugin crash khi thiếu. |
 | Flavor | `alpha` (không quảng cáo), `dev`, `product`, `claude` — khớp `AscBuildFlavor`. Cùng `applicationId` nên một `google-services.json` dùng cho mọi flavor. |
 | Build tự động | `mobile/build.py` + `mobile/tool/` (APK → Firebase App Distribution, Telegram/email). Secret chỉ từ biến môi trường. |
+| Cấu trúc `lib/` | Cùng bố cục smart_drink: `configs/ values/ utils/ models/ repository/ services/ controller/ presentation/ xml_strings/` (chi tiết ở `CLAUDE.md`). Thay cho `app/ core/ data/ domain/ features/` của ADR 0001; công nghệ (Riverpod + go_router) không đổi. |
 | Localization | `AscLocale` (XML kiểu Android, `lib/xml_strings/values*`) cấu hình sẵn; UI hiện còn chuỗi cứng, chuyển dần sang `.tr`. |
 
 ## Hệ quả

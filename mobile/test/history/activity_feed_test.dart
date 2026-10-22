@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:stride/core/db/app_database.dart';
-import 'package:stride/core/time/clock.dart';
-import 'package:stride/data/activity_repository.dart';
-import 'package:stride/domain/models/activity.dart';
-import 'package:stride/features/history/activity_feed_controller.dart';
+import 'package:stride/services/storage/app_database.dart';
+import 'package:stride/utils/clock.dart';
+import 'package:stride/repository/activity_repository.dart';
+import 'package:stride/models/data_models/activity.dart';
+import 'package:stride/controller/history/activity_feed_controller.dart';
 
 import '../activity/fixtures.dart';
 

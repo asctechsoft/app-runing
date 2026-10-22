@@ -2,14 +2,14 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/core/network/api_client.dart';
-import 'package:stride/data/owner_repository.dart';
-import 'package:stride/domain/models/activity.dart';
-import 'package:stride/domain/models/profile.dart';
-import 'package:stride/domain/models/sync.dart';
-import 'package:stride/features/sync/sha256.dart';
-import 'package:stride/features/sync/sync_remote.dart';
-import 'package:stride/features/sync/sync_service.dart';
+import 'package:stride/services/application/api_client.dart';
+import 'package:stride/repository/owner_repository.dart';
+import 'package:stride/models/data_models/activity.dart';
+import 'package:stride/models/data_models/profile.dart';
+import 'package:stride/models/data_models/sync.dart';
+import 'package:stride/services/application/sha256.dart';
+import 'package:stride/services/application/sync_remote.dart';
+import 'package:stride/services/application/sync_service.dart';
 
 import 'sync_test_utils.dart';
 
@@ -194,7 +194,12 @@ void main() {
     });
 
     test('profile: lấy revision server làm expected, không đè displayName/email', () async {
-      h.remote.users[userId] = {'displayName': 'Dũng', 'email': 'a@example.com', 'profileRevision': 3, 'profile': <String, Object?>{'locale': 'vi'}};
+      h.remote.users[userId] = {
+        'displayName': 'Dũng',
+        'email': 'a@example.com',
+        'profileRevision': 3,
+        'profile': <String, Object?>{'locale': 'vi'},
+      };
       await h.sync.enqueueProfile(await h.settings.load(userId));
       await h.sync.syncNow();
       final u = h.remote.users[userId]!;
@@ -205,13 +210,19 @@ void main() {
     });
 
     test('profile: máy khác sửa trước → xung đột giữ cả hai bản', () async {
-      h.remote.users[userId] = {'profileRevision': 3, 'profile': <String, Object?>{'displayName': 'Server'}};
+      h.remote.users[userId] = {
+        'profileRevision': 3,
+        'profile': <String, Object?>{'displayName': 'Server'},
+      };
       await h.sync.enqueueProfile(await h.settings.load(userId));
       // Chốt expectedRevision = 3 rồi máy khác ghi thêm.
       h.remote.hook = (m) async {
         if (m == 'pushProfile') {
           h.remote.hook = null;
-          h.remote.users[userId] = {'profileRevision': 5, 'profile': <String, Object?>{'displayName': 'Other'}};
+          h.remote.users[userId] = {
+            'profileRevision': 5,
+            'profile': <String, Object?>{'displayName': 'Other'},
+          };
         }
       };
       await h.sync.syncNow();

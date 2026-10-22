@@ -5,19 +5,19 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'app/router.dart';
-import 'core/base/locale_config.dart';
-import 'core/base/stride_base.dart';
-import 'core/db/app_database.dart';
-import 'core/firebase/firebase_providers.dart';
-import 'core/lifecycle/app_lifecycle.dart';
-import 'core/logging/logger.dart';
-import 'core/providers.dart';
-import 'core/run_plugins.dart';
-import 'features/auth/google_sign_in_service.dart';
-import 'features/devices/devices_providers.dart';
-import 'features/live/live_share_providers.dart';
-import 'core/theme/stride_theme.dart';
+import 'values/router.dart';
+import 'configs/locale_config.dart';
+import 'services/application/stride_base.dart';
+import 'services/storage/app_database.dart';
+import 'services/application/firebase_providers.dart';
+import 'services/application/app_lifecycle.dart';
+import 'utils/logger.dart';
+import 'controller/providers.dart';
+import 'controller/run_plugins.dart';
+import 'services/application/google_sign_in_service.dart';
+import 'controller/devices/devices_providers.dart';
+import 'controller/live/live_share_providers.dart';
+import 'values/stride_theme.dart';
 
 /// Luồng khởi động (offline-first: chỉ chạm tài nguyên cục bộ trước khi vào app, không chờ mạng — F01):
 /// 1. binding + cấu hình locale  2. SharedPreferences + SQLite  3. base dùng chung (Firebase/App Check/Crashlytics, RC chạy nền)

@@ -34,7 +34,7 @@ jobs:
       - name: Analyze
         run: flutter analyze
       - name: No placeholder screens
-        run: "! grep -rl TodoScreen lib/features"
+        run: "! grep -rl TodoScreen lib --exclude=todo_screen.dart"
       - name: Unit + widget tests
         run: flutter test
       - uses: actions/setup-java@v4

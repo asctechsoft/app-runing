@@ -1,14 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/core/format/formatters.dart';
-import 'package:stride/core/logging/logger.dart';
-import 'package:stride/core/time/clock.dart';
-import 'package:stride/domain/calc/calories.dart';
-import 'package:stride/domain/calc/records.dart';
-import 'package:stride/domain/calc/step_aggregate.dart';
-import 'package:stride/domain/models/activity.dart';
-import 'package:stride/domain/models/profile.dart';
-import 'package:stride/domain/models/steps.dart';
-import 'package:stride/domain/session/session_state.dart';
+import 'package:stride/utils/formatters.dart';
+import 'package:stride/utils/logger.dart';
+import 'package:stride/utils/clock.dart';
+import 'package:stride/utils/calc/calories.dart';
+import 'package:stride/utils/calc/records.dart';
+import 'package:stride/utils/calc/step_aggregate.dart';
+import 'package:stride/models/data_models/activity.dart';
+import 'package:stride/models/data_models/profile.dart';
+import 'package:stride/models/data_models/steps.dart';
+import 'package:stride/models/data_models/session_state.dart';
 
 void main() {
   group('session state machine (C05)', () {

@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/core/permissions/permission_coordinator.dart';
-import 'package:stride/domain/models/profile.dart';
-import 'package:stride/domain/models/steps.dart';
-import 'package:stride/features/home/home_logic.dart';
-import 'package:stride/features/steps/step_tracking_service.dart';
+import 'package:stride/services/native/permission_coordinator.dart';
+import 'package:stride/models/data_models/profile.dart';
+import 'package:stride/models/data_models/steps.dart';
+import 'package:stride/controller/home/home_logic.dart';
+import 'package:stride/services/application/step_tracking_service.dart';
 
 StepDay _day(String date, StepDayStatus status, [int? steps]) =>
     StepDay(date: date, status: status, steps: steps, hourly: steps == null ? null : List.filled(24, 0));

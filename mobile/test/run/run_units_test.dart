@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/domain/models/activity.dart';
-import 'package:stride/domain/models/profile.dart';
-import 'package:stride/features/run/engine/auto_pause.dart';
-import 'package:stride/features/run/engine/run_audio.dart';
-import 'package:stride/features/run/engine/run_session_state.dart';
-import 'package:stride/features/run/engine/run_sources.dart';
+import 'package:stride/models/data_models/activity.dart';
+import 'package:stride/models/data_models/profile.dart';
+import 'package:stride/controller/run/engine/auto_pause.dart';
+import 'package:stride/controller/run/engine/run_audio.dart';
+import 'package:stride/controller/run/engine/run_session_state.dart';
+import 'package:stride/controller/run/engine/run_sources.dart';
 
 class _SlowAudio implements RunAudio {
   final spoken = <String>[];

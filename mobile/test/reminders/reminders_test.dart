@@ -2,12 +2,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:stride/core/db/app_database.dart';
-import 'package:stride/core/permissions/permission_coordinator.dart';
-import 'package:stride/core/providers.dart';
-import 'package:stride/features/reminders/reminder_logic.dart';
-import 'package:stride/features/reminders/reminder_repository.dart';
-import 'package:stride/features/reminders/reminder_scheduler.dart';
+import 'package:stride/services/storage/app_database.dart';
+import 'package:stride/services/native/permission_coordinator.dart';
+import 'package:stride/controller/providers.dart';
+import 'package:stride/controller/reminders/reminder_logic.dart';
+import 'package:stride/repository/reminder_repository.dart';
+import 'package:stride/services/application/reminder_scheduler.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 
 class _FakeScheduler implements ReminderScheduler {

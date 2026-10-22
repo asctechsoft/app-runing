@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/core/analytics/analytics.dart';
-import 'package:stride/core/config/env.dart';
-import 'package:stride/core/lifecycle/app_lifecycle.dart';
+import 'package:stride/utils/analytics.dart';
+import 'package:stride/configs/env.dart';
+import 'package:stride/services/application/app_lifecycle.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

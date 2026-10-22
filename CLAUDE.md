@@ -30,8 +30,23 @@ Repo hiện chỉ chứa tài liệu đặc tả và ảnh UI; **chưa có sourc
 - `asc_common/` (submodule ở gốc repo) và `mobile/dsp_base/` (submodule) cùng commit với smart_drink. **Không sửa trong repo này** — sửa ở repo gốc của base rồi cập nhật con trỏ submodule. Clone mới: `git submodule update --init --recursive`.
 - Phiên bản Firebase (`firebase_core ^4`, `firebase_auth ^6`, `cloud_firestore ^6`) và `permission_handler ^13` phải khớp họ phiên bản của `dsp_base`/`asc_common`; đừng nâng riêng lẻ.
 - STRIDE giữ Riverpod + go_router; GetX chỉ là hạ tầng của base (`Get.put` service, `.tr` cho chuỗi XML). Không viết màn hình/state mới bằng GetX.
-- Khởi động: `lib/main.dart` → `core/base/stride_base.dart` (Firebase, App Check, Crashlytics, Remote Config chạy nền). Chưa có quảng cáo: không gọi `DspAdsController.start` khi chưa có quyết định sản phẩm. Vòng đời: `core/lifecycle/app_lifecycle.dart`. Analytics: `core/analytics/` (không đưa id/tọa độ vào event).
-- Flavor `alpha | dev | product | claude` (bắt buộc truyền `--flavor`); cờ trong code: `core/base/app_figs.dart`. Build tự động, secret và AdMob: `docs/build.md`.
+- Khởi động: `lib/main.dart` → `services/application/stride_base.dart` (Firebase, App Check, Crashlytics, Remote Config chạy nền). Chưa có quảng cáo: không gọi `DspAdsController.start` khi chưa có quyết định sản phẩm. Vòng đời: `services/application/app_lifecycle.dart`. Analytics: `utils/analytics.dart`, `utils/route_analytics.dart` (không đưa id/tọa độ vào event).
+- Flavor `alpha | dev | product | claude` (bắt buộc truyền `--flavor`); cờ trong code: `configs/app_figs.dart`. Build tự động, secret và AdMob: `docs/build.md`.
+
+## Cấu trúc `mobile/lib` (cùng bố cục với smart_drink)
+```
+main.dart
+configs/        env, app_figs, pref_const, locale_config
+values/         theme + design tokens (stride_theme, tokens), routes, router (go_router)
+utils/          analytics, route_analytics, logger, formatters, clock, activity_format, progress_data, route_geometry; utils/calc/ (tính toán thuần: calo, geo, gps_filter, records...)
+models/         data_models/ (activity, profile, steps, sync, session_state), ui_models/ (period, explore_models, live_share_models, workout_models)
+repository/     *_repository.dart (truy cập dữ liệu: SQLite + Firestore)
+services/       application/ (stride_base, app_lifecycle, sync_service, step_tracking_service, plugin/scheduler/export...), native/ (permission), storage/ (app_database)
+controller/     providers.dart, run_plugins.dart, <feature>/ (Riverpod providers, *_logic, controller; run/engine = engine ghi chạy)
+presentation/   common_components/ (widget dùng chung), screen_shell/ (AppShell 5 tab), screen_<feature>/ hoặc screens_<feature>/ (+ components/)
+xml_strings/    values*/strings.xml (AscLocale)
+```
+Quy ước: màn hình chỉ ở `presentation/`, truy cập dữ liệu qua `repository/`, logic/state qua `controller/` (Riverpod, không phải GetX controller), hạ tầng ở `services/`. File mới đặt đúng tầng theo bảng này.
 
 ## Lệnh
 - Mobile (`mobile/`): `flutter pub get`, `flutter analyze`, `flutter test`, `flutter run --flavor dev`, build tự động `python build.py` (xem `docs/build.md`).

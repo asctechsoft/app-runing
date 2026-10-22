@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/features/progress/period.dart';
+import 'package:stride/models/ui_models/period.dart';
 
 void main() {
   // Thứ Năm 15/10/2026.

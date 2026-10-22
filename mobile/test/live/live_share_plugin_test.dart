@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/core/time/clock.dart';
-import 'package:stride/domain/models/activity.dart';
-import 'package:stride/features/live/live_share_models.dart';
-import 'package:stride/features/live/live_share_plugin.dart';
-import 'package:stride/features/live/live_share_repository.dart';
+import 'package:stride/utils/clock.dart';
+import 'package:stride/models/data_models/activity.dart';
+import 'package:stride/models/ui_models/live_share_models.dart';
+import 'package:stride/services/application/live_share_plugin.dart';
+import 'package:stride/repository/live_share_repository.dart';
 
 class FakeLiveRepo extends LiveShareRepository {
   FakeLiveRepo(this.clock) : super(ready: () => true, firestore: () => throw UnimplementedError(), uid: () => 'user-1');

@@ -6,7 +6,7 @@ Quyết định chủ sản phẩm 2026-10-19: bỏ backend, dùng Firebase Auth
 Quy ước chung:
 - Thời gian lưu **epoch ms (int)**, giống API cũ. Trường đồng bộ dùng thêm `serverUpdatedAt` (Firestore `Timestamp`, `FieldValue.serverTimestamp()`).
 - `uid` = Firebase Auth uid. ID bản ghi do client sinh (UUID v4) → ghi lại cùng ID là idempotent.
-- Mọi lỗi Firebase đi qua `guardFirebase` / `mapFirebaseError` (`lib/core/network/api_client.dart`) thành `ApiException`.
+- Mọi lỗi Firebase đi qua `guardFirebase` / `mapFirebaseError` (`lib/services/application/api_client.dart`) thành `ApiException`.
 - Không bao giờ ghi token/mật khẩu vào Firestore.
 
 ## Người dùng

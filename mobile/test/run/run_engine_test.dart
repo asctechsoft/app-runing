@@ -1,15 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/core/time/clock.dart';
-import 'package:stride/domain/calc/geo.dart';
-import 'package:stride/domain/calc/gps_filter.dart';
-import 'package:stride/domain/calc/run_metrics.dart';
-import 'package:stride/domain/models/activity.dart';
-import 'package:stride/domain/models/profile.dart';
-import 'package:stride/domain/session/session_state.dart';
-import 'package:stride/core/providers.dart';
-import 'package:stride/features/run/engine/run_session_controller.dart';
-import 'package:stride/features/workout/workout_models.dart';
-import 'package:stride/features/workout/workout_repository.dart';
+import 'package:stride/utils/clock.dart';
+import 'package:stride/utils/calc/geo.dart';
+import 'package:stride/utils/calc/gps_filter.dart';
+import 'package:stride/utils/calc/run_metrics.dart';
+import 'package:stride/models/data_models/activity.dart';
+import 'package:stride/models/data_models/profile.dart';
+import 'package:stride/models/data_models/session_state.dart';
+import 'package:stride/controller/providers.dart';
+import 'package:stride/controller/run/engine/run_session_controller.dart';
+import 'package:stride/models/ui_models/workout_models.dart';
+import 'package:stride/repository/workout_repository.dart';
 
 import 'run_harness.dart';
 

@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/domain/calc/geo.dart';
-import 'package:stride/domain/calc/gps_filter.dart';
-import 'package:stride/domain/calc/run_metrics.dart';
-import 'package:stride/domain/models/activity.dart';
+import 'package:stride/utils/calc/geo.dart';
+import 'package:stride/utils/calc/gps_filter.dart';
+import 'package:stride/utils/calc/run_metrics.dart';
+import 'package:stride/models/data_models/activity.dart';
 
 /// Fixture: đi thẳng hướng bắc với tốc độ đều, mỗi 5 s một điểm.
 List<TrackPoint> straightRun({
