@@ -1,0 +1,64 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build APK (menu)",
+      "type": "shell",
+      "command": "python build.py",
+      "options": { "cwd": "${workspaceFolder}/mobile" },
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "shared", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build AAB (Product Release)",
+      "type": "shell",
+      "command": "python tool/build_aab.py",
+      "options": { "cwd": "${workspaceFolder}/mobile" },
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Translate strings",
+      "type": "shell",
+      "command": "python build.py translate",
+      "options": { "cwd": "${workspaceFolder}/mobile" },
+      "presentation": { "reveal": "always", "panel": "shared", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Analyze",
+      "type": "shell",
+      "command": "flutter analyze",
+      "options": { "cwd": "${workspaceFolder}/mobile" },
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run tests",
+      "type": "shell",
+      "command": "flutter test",
+      "options": { "cwd": "${workspaceFolder}/mobile" },
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "shared", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Fix and format",
+      "type": "shell",
+      "command": "dart fix --apply && dart format -l 160 lib test",
+      "options": { "cwd": "${workspaceFolder}/mobile" },
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Git submodules update",
+      "type": "shell",
+      "command": "git submodule update --init --recursive",
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    }
+  ]
+}
