@@ -1225,7 +1225,7 @@
     <string name="run_live_keep_paused">Tiếp tục tạm dừng</string>
     <string name="run_live_finish_failed">Không thể kết thúc hoạt động. Bản ghi của bạn vẫn an toàn — hãy thử lại.</string>
     <string name="run_live_target_reached">Đã đạt mục tiêu! Cứ tiếp tục, hoặc kết thúc khi bạn sẵn sàng.</string>
-    <string name="run_live_back_hint">Hãy tạm dừng trước, rồi giữ để kết thúc.</string>
+    <string name="run_live_back_hint">Hãy tạm dừng trước, rồi nhấn Quay lại để kết thúc.</string>
     <string name="run_live_tab_metrics">Số liệu</string>
     <string name="run_live_tab_map">Bản đồ</string>
     <string name="run_live_gps_lost_title">Mất tín hiệu GPS</string>
@@ -1263,6 +1263,7 @@
     <string name="run_recovery_check_failed_message">Dữ liệu của bạn vẫn còn trên thiết bị này. Hãy thử lại.</string>
     <string name="run_recovery_empty_title">Không có gì để khôi phục</string>
     <string name="run_recovery_empty_message">Tất cả hoạt động của bạn đã hoàn tất.</string>
+    <string name="run_recovery_back_hint">Hãy chọn cách xử lý hoạt động này ở bên dưới.</string>
     <string name="run_back_home">Về trang chủ</string>
     <string name="run_recovery_title">Hoạt động gần nhất của bạn đã bị gián đoạn</string>
     <string name="run_recovery_stopped">STRIDE đã dừng trước khi hoạt động của bạn kết thúc.</string>

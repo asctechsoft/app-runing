@@ -1225,7 +1225,7 @@
     <string name="run_live_keep_paused">Keep paused</string>
     <string name="run_live_finish_failed">Couldn't finish the activity. Your recording is safe — try again.</string>
     <string name="run_live_target_reached">Target reached! Keep going, or finish when you're ready.</string>
-    <string name="run_live_back_hint">Pause first, then hold to finish.</string>
+    <string name="run_live_back_hint">Pause first, then press Back to finish.</string>
     <string name="run_live_tab_metrics">Metrics</string>
     <string name="run_live_tab_map">Map</string>
     <string name="run_live_gps_lost_title">GPS signal lost</string>
@@ -1263,6 +1263,7 @@
     <string name="run_recovery_check_failed_message">Your data is still on this device. Try again.</string>
     <string name="run_recovery_empty_title">Nothing to recover</string>
     <string name="run_recovery_empty_message">All your activities are finished.</string>
+    <string name="run_recovery_back_hint">Choose how to handle this activity below.</string>
     <string name="run_back_home">Back to home</string>
     <string name="run_recovery_title">Your last activity was interrupted</string>
     <string name="run_recovery_stopped">STRIDE stopped before your activity finished.</string>

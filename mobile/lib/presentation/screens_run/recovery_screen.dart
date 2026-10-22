@@ -140,6 +140,10 @@ class _RecoveryScreenState extends ConsumerState<RecoveryScreen> {
     final indoor = a.type == ActivityType.indoorRun;
     return PopScope(
       canPop: false,
+      // Phải chọn một cách xử lý hoạt động dở (không thoát lặng lẽ): Back chỉ nhắc người dùng chọn bên dưới.
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) showStrideSnack(context, 'run_recovery_back_hint'.tr);
+      },
       child: StrideScreen(
         showBack: false,
         body: Column(

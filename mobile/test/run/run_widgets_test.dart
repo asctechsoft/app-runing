@@ -175,6 +175,45 @@ void main() {
       await tester.runAsync(() => h.close());
     });
 
+    testWidgets('Back khi đang ghi chỉ nhắc; khi tạm dừng mở hộp thoại kết thúc (không kẹt); Giữ tạm dừng thì ở lại', (tester) async {
+      await phone(tester);
+      final h = await harness(tester);
+      await tester.runAsync(() async {
+        await h.start();
+        await h.run(seconds: 30);
+      });
+      await tester.pumpWidget(_app(h, '/live-real'));
+      await tester.pump();
+
+      // Đang ghi: Back không kết thúc, chỉ hiện gợi ý.
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(find.text('Pause first, then press Back to finish.'), findsOneWidget);
+      expect(find.text('Finish this run?'), findsNothing);
+
+      // Tạm dừng: Back mở hộp thoại xác nhận kết thúc.
+      await tester.runAsync(() => h.ctl.pause());
+      await tester.pump(const Duration(seconds: 5));
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(find.text('Finish this run?'), findsOneWidget);
+
+      // "Keep paused": đóng hộp thoại, vẫn ở màn tạm dừng, phiên chưa kết thúc.
+      await tester.tap(find.text('Keep paused'));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Finish this run?'), findsNothing);
+      expect(find.text('Hold to finish'), findsOneWidget);
+
+      // Khóa màn hình: Back bị bỏ qua (không hộp thoại).
+      await tester.runAsync(() => h.ctl.lock());
+      await tester.pump();
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(find.text('Finish this run?'), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      await tester.runAsync(() => h.close());
+    });
+
     testWidgets('Results + Recovery + Prepare + Workout render', (tester) async {
       await phone(tester);
       final h = await harness(tester);

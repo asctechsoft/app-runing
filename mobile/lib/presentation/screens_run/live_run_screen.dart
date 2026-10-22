@@ -169,8 +169,15 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        // Back không kết thúc phiên ghi.
-        if (!st.locked) showStrideSnack(context, 'run_live_back_hint'.tr);
+        // Khóa màn hình: giữ nguyên (phải giữ nút mở khóa), tránh thoát nhầm.
+        if (st.locked) return;
+        // Đang tạm dừng: Back mở hộp thoại kết thúc (có "Giữ tạm dừng") thay vì kẹt ở màn này; không bao giờ kết thúc ngay không hỏi.
+        if (st.phase == SessionPhase.paused) {
+          _confirmFinish();
+          return;
+        }
+        // Đang ghi: Back không kết thúc phiên.
+        showStrideSnack(context, 'run_live_back_hint'.tr);
       },
       child: body,
     );
