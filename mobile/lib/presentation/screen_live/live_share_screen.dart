@@ -11,6 +11,7 @@ import '../common_components/widgets.dart';
 import '../../models/ui_models/live_share_models.dart';
 import '../../controller/live/live_share_providers.dart';
 import '../../repository/live_share_repository.dart';
+import '../../utils/l10n.dart';
 
 /// Run → Share live location (M07). Chỉ cấu hình + đồng ý cho buổi chạy kế tiếp; share thật bắt đầu khi phiên bắt đầu.
 class LiveShareScreen extends ConsumerWidget {
@@ -23,35 +24,27 @@ class LiveShareScreen extends ConsumerWidget {
     final configured = ref.watch(liveShareRepositoryProvider).configured;
 
     if (!flags.liveSharing) {
-      return const StrideScreen(
-        title: 'Share live location',
-        body: EmptyState(
-          icon: Icons.location_off_outlined,
-          title: 'Live sharing isn\'t available',
-          message: 'This version of STRIDE doesn\'t include live sharing.',
-        ),
+      return StrideScreen(
+        title: 'live_title'.tr,
+        body: EmptyState(icon: Icons.location_off_outlined, title: 'live_unavailable_title'.tr, message: 'live_unavailable_message'.tr),
       );
     }
     if (owner.isGuest) {
       return StrideScreen(
-        title: 'Share live location',
+        title: 'live_title'.tr,
         body: EmptyState(
           icon: Icons.person_outline,
-          title: 'Sign in to share live location',
-          message: 'Live sharing sends your location to people you choose, so it needs a STRIDE account. Your runs still record without signing in.',
-          actionLabel: 'Sign in',
+          title: 'live_signin_title'.tr,
+          message: 'live_signin_message'.tr,
+          actionLabel: 'live_signin'.tr,
           onAction: () => context.push(Routes.login),
         ),
       );
     }
     if (!configured) {
-      return const StrideScreen(
-        title: 'Share live location',
-        body: EmptyState(
-          icon: Icons.cloud_off_outlined,
-          title: 'Live sharing isn\'t set up',
-          message: 'This build isn\'t connected to STRIDE servers, so live sharing can\'t be used.',
-        ),
+      return StrideScreen(
+        title: 'live_title'.tr,
+        body: EmptyState(icon: Icons.cloud_off_outlined, title: 'live_not_setup_title'.tr, message: 'live_not_setup_message'.tr),
       );
     }
     return const _LiveShareForm();
@@ -71,10 +64,10 @@ class _LiveShareForm extends ConsumerWidget {
       bottom: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          PrimaryButton(label: 'Start sharing for this run', trailingIcon: Icons.arrow_forward, onPressed: canStart ? () => _confirm(context, ref) : null),
+          PrimaryButton(label: 'live_start'.tr, trailingIcon: Icons.arrow_forward, onPressed: canStart ? () => _confirm(context, ref) : null),
           const SizedBox(height: StrideSpace.s8),
           OutlineButton(
-            label: 'Cancel',
+            label: 'action_cancel'.tr,
             onPressed: () {
               notifier.clear();
               context.pop();
@@ -85,12 +78,9 @@ class _LiveShareForm extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('Share live location', style: StrideText.title),
+          Text('live_title'.tr, style: StrideText.title),
           const SizedBox(height: StrideSpace.s8),
-          const Text(
-            'Let trusted people follow your run in real time. They\'ll see your live location and activity status while sharing is active.',
-            style: StrideText.bodySecondary,
-          ),
+          Text('live_intro'.tr, style: StrideText.bodySecondary),
           const SizedBox(height: StrideSpace.s16),
           const _MapPreview(),
           const SizedBox(height: StrideSpace.s16),
@@ -99,15 +89,15 @@ class _LiveShareForm extends ConsumerWidget {
             child: SwitchListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               secondary: const Icon(Icons.location_on_outlined, color: StrideColors.primary),
-              title: Text('Live sharing', style: StrideText.body.copyWith(fontWeight: FontWeight.w600)),
-              subtitle: Text('Share your live location for this run', style: StrideText.caption.copyWith(fontSize: 13, color: StrideColors.textSecondary)),
+              title: Text('live_switch_title'.tr, style: StrideText.body.copyWith(fontWeight: FontWeight.w600)),
+              subtitle: Text('live_switch_subtitle'.tr, style: StrideText.caption.copyWith(fontSize: 13, color: StrideColors.textSecondary)),
               value: config.enabled,
               onChanged: notifier.setEnabled,
             ),
           ),
           if (config.enabled) ...[
             const SizedBox(height: StrideSpace.s16),
-            const SectionHeader(title: 'Choose who can follow this run', subtitle: 'Only people you select can view your live location.'),
+            SectionHeader(title: 'live_choose_title'.tr, subtitle: 'live_choose_subtitle'.tr),
             const SizedBox(height: StrideSpace.s8),
             SettingsGroup(
               children: [
@@ -115,26 +105,30 @@ class _LiveShareForm extends ConsumerWidget {
                   SettingsRow(
                     icon: Icons.person_outline,
                     title: v.label,
-                    subtitle: 'Can follow this run',
+                    subtitle: 'live_viewer_subtitle'.tr,
                     showChevron: false,
-                    trailing: IconButton(tooltip: 'Remove ${v.label}', icon: const Icon(Icons.close), onPressed: () => notifier.removeViewer(v)),
+                    trailing: IconButton(
+                      tooltip: 'live_remove_viewer'.trArgs([v.label]),
+                      icon: const Icon(Icons.close),
+                      onPressed: () => notifier.removeViewer(v),
+                    ),
                   ),
-                SettingsRow(icon: Icons.person_add_alt_1_outlined, title: 'Add contact', onTap: () => _addContact(context, ref)),
+                SettingsRow(icon: Icons.person_add_alt_1_outlined, title: 'live_add_contact'.tr, onTap: () => _addContact(context, ref)),
               ],
             ),
             const SizedBox(height: StrideSpace.s16),
             SettingsGroup(
               children: [
-                SettingsRow(icon: Icons.schedule, title: 'Sharing expires', subtitle: config.expiry.label, onTap: () => _pickExpiry(context, ref)),
-                const SettingsRow(icon: Icons.description_outlined, title: 'Shared data', subtitle: 'Live location and activity status'),
+                SettingsRow(icon: Icons.schedule, title: 'live_expires'.tr, subtitle: config.expiry.label, onTap: () => _pickExpiry(context, ref)),
+                SettingsRow(icon: Icons.description_outlined, title: 'live_shared_data'.tr, subtitle: 'live_shared_data_value'.tr),
               ],
             ),
             const SizedBox(height: StrideSpace.s16),
-            const Row(
+            Row(
               children: [
-                Icon(Icons.lock_outline, size: 18, color: StrideColors.textSecondary),
-                SizedBox(width: StrideSpace.s8),
-                Expanded(child: Text('Only selected people can view while sharing is active.', style: StrideText.bodySecondary)),
+                const Icon(Icons.lock_outline, size: 18, color: StrideColors.textSecondary),
+                const SizedBox(width: StrideSpace.s8),
+                Expanded(child: Text('live_privacy_note'.tr, style: StrideText.bodySecondary)),
               ],
             ),
           ],
@@ -146,18 +140,18 @@ class _LiveShareForm extends ConsumerWidget {
   Future<void> _confirm(BuildContext context, WidgetRef ref) async {
     final config = ref.read(liveShareConfigProvider);
     final names = config.viewers.map((v) => v.label).join(', ');
-    final until = config.expiry == LiveShareExpiry.whenRunEnds ? 'until this run ends' : config.expiry.label.toLowerCase().replaceFirst('after', 'for');
+    final until = config.expiry.untilPhrase;
     final ok = await confirmDialog(
       context,
       icon: Icons.location_on_outlined,
-      title: 'Share your live location?',
-      message: '$names will see your live location and activity status $until. Sharing starts when you start your run and stops when the run ends.',
-      confirmLabel: 'Share for this run',
-      cancelLabel: 'Not now',
+      title: 'live_confirm_title'.tr,
+      message: 'live_confirm_message'.trArgs([names, until]),
+      confirmLabel: 'live_confirm_share'.tr,
+      cancelLabel: 'live_not_now'.tr,
     );
     if (!ok || !context.mounted) return;
     ref.read(liveShareConfigProvider.notifier).consent(ref.read(clockProvider).nowMs());
-    showStrideSnack(context, 'Live sharing will start when your run starts');
+    showStrideSnack(context, 'live_will_start'.tr);
     context.pop();
   }
 
@@ -165,7 +159,7 @@ class _LiveShareForm extends ConsumerWidget {
     final current = ref.read(liveShareConfigProvider).expiry;
     final picked = await showStrideSheet<LiveShareExpiry>(
       context,
-      title: 'Sharing expires',
+      title: 'live_expires'.tr,
       builder: (ctx) => RadioGroup<LiveShareExpiry>(
         groupValue: current,
         onChanged: (v) => Navigator.of(ctx).pop(v),
@@ -185,10 +179,10 @@ class _LiveShareForm extends ConsumerWidget {
   }
 
   Future<void> _addContact(BuildContext context, WidgetRef ref) async {
-    final viewer = await showStrideSheet<LiveShareViewer>(context, title: 'Add contact', builder: (_) => const _AddContactSheet());
+    final viewer = await showStrideSheet<LiveShareViewer>(context, title: 'live_add_contact'.tr, builder: (_) => const _AddContactSheet());
     if (viewer == null || !context.mounted) return;
     final added = ref.read(liveShareConfigProvider.notifier).addViewer(viewer);
-    if (!added) showStrideSnack(context, '${viewer.label} is already added or the list is full (20 people).');
+    if (!added) showStrideSnack(context, 'live_add_failed'.trArgs([viewer.label]));
   }
 }
 
@@ -218,11 +212,11 @@ class _MapPreview extends ConsumerWidget {
         height: 180,
         child: pos.when(
           loading: () => const Skeleton(height: 180, radius: StrideRadius.card),
-          error: (_, _) => placeholder('Your live location will appear here during the run.'),
+          error: (_, _) => placeholder('live_map_placeholder'.tr),
           data: (p) => p == null
-              ? placeholder('Your live location will appear here during the run.')
+              ? placeholder('live_map_placeholder'.tr)
               : Semantics(
-                  label: 'Map preview of your current area',
+                  label: 'live_map_semantic'.tr,
                   child: FlutterMap(
                     options: MapOptions(
                       initialCenter: p,
@@ -283,12 +277,12 @@ class _AddContactSheetState extends ConsumerState<_AddContactSheet> {
   Future<void> _submit() => _guard.run(() async {
     final email = _email.text.trim();
     if (!_emailRe.hasMatch(email)) {
-      setState(() => _error = 'Enter a valid email address.');
+      setState(() => _error = 'live_err_invalid_email'.tr);
       return;
     }
     final mine = ref.read(ownerProvider).email;
     if (mine != null && mine.toLowerCase() == email.toLowerCase()) {
-      setState(() => _error = 'You can\'t add yourself.');
+      setState(() => _error = 'live_err_add_self'.tr);
       return;
     }
     setState(() {
@@ -302,7 +296,7 @@ class _AddContactSheetState extends ConsumerState<_AddContactSheet> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = e.isNetwork ? 'No connection. Check your internet and try again.' : e.message;
+          _error = e.isNetwork ? 'live_err_no_connection'.tr : e.message;
         });
       }
     }
@@ -314,7 +308,7 @@ class _AddContactSheetState extends ConsumerState<_AddContactSheet> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text('Enter the email of their STRIDE account. Only verified accounts can follow your run.', style: StrideText.bodySecondary),
+        Text('live_add_hint'.tr, style: StrideText.bodySecondary),
         const SizedBox(height: StrideSpace.s12),
         TextField(
           controller: _email,
@@ -322,10 +316,10 @@ class _AddContactSheetState extends ConsumerState<_AddContactSheet> {
           autocorrect: false,
           textInputAction: TextInputAction.done,
           onSubmitted: (_) => _submit(),
-          decoration: InputDecoration(labelText: 'Email', errorText: _error),
+          decoration: InputDecoration(labelText: 'live_email'.tr, errorText: _error),
         ),
         const SizedBox(height: StrideSpace.s16),
-        PrimaryButton(label: 'Add', loading: _loading, onPressed: _submit),
+        PrimaryButton(label: 'live_add'.tr, loading: _loading, onPressed: _submit),
       ],
     );
   }

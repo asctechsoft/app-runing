@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../utils/l10n.dart';
 import '../../values/routes.dart';
 import '../../utils/formatters.dart';
 import '../../controller/providers.dart';
@@ -12,9 +13,9 @@ import '../../repository/explore_repository.dart';
 import 'components/explore_widgets.dart';
 
 String challengeTypeLabel(String t) => switch (t) {
-  'run' => 'Outdoor runs',
-  'indoorRun' => 'Indoor runs',
-  'walk' => 'Walks',
+  'run' => 'explore_type_outdoor_runs'.tr,
+  'indoorRun' => 'explore_type_indoor_runs'.tr,
+  'walk' => 'explore_type_walks'.tr,
   _ => t,
 };
 
@@ -22,7 +23,7 @@ String challengeTypeLabel(String t) => switch (t) {
 String challengeValue(ChallengeTarget t, double v, StrideFormat fmt) => switch (t) {
   ChallengeTarget.distance => fmt.distance(v),
   ChallengeTarget.time => formatDurationShort(v.round()),
-  ChallengeTarget.count => v.round() == 1 ? '1 activity' : '${v.round()} activities',
+  ChallengeTarget.count => v.round() == 1 ? 'explore_activity_one'.tr : 'explore_activity_other'.trArgs([v.round()]),
 };
 
 /// Challenges catalog (M05).
@@ -33,14 +34,18 @@ class ChallengesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final flags = ref.watch(flagsProvider);
     return StrideScreen(
-      title: 'Challenges',
+      title: 'explore_challenges_title'.tr,
       body: !flags.exploreChallenges
-          ? const EmptyState(icon: Icons.emoji_events_outlined, title: 'Challenges aren’t available', message: 'Challenges aren’t turned on in this version.')
-          : const ExploreGuestGate(
+          ? EmptyState(
               icon: Icons.emoji_events_outlined,
-              title: 'Sign in to join challenges',
-              message: 'Progress is calculated from your synced activities, so you need an account.',
-              child: _ChallengesBody(),
+              title: 'explore_challenges_unavailable_title'.tr,
+              message: 'explore_challenges_unavailable_message'.tr,
+            )
+          : ExploreGuestGate(
+              icon: Icons.emoji_events_outlined,
+              title: 'explore_challenges_guest_title'.tr,
+              message: 'explore_challenges_guest_message'.tr,
+              child: const _ChallengesBody(),
             ),
     );
   }
@@ -82,9 +87,9 @@ class _ChallengesBodyState extends ConsumerState<_ChallengesBody> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const ExploreHeader(title: 'Challenges', subtitle: 'Set yourself a new challenge.'),
+        ExploreHeader(title: 'explore_challenges_title'.tr, subtitle: 'explore_challenges_subtitle'.tr),
         if (items.isEmpty)
-          const EmptyState(icon: Icons.emoji_events_outlined, title: 'No challenges right now', message: 'Check back soon for new challenges.'),
+          EmptyState(icon: Icons.emoji_events_outlined, title: 'explore_challenges_empty_title'.tr, message: 'explore_challenges_empty_message'.tr),
         for (final c in items) ...[
           StrideCard(
             onTap: () async {
@@ -125,7 +130,7 @@ class _ProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
-    label: p.completed ? 'Completed' : '${p.percent} percent complete',
+    label: p.completed ? 'explore_completed'.tr : 'explore_percent_complete'.trArgs([p.percent]),
     excludeSemantics: true,
     child: Row(
       children: [
@@ -136,7 +141,7 @@ class _ProgressBar extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Text(p.completed ? 'Done' : '${p.percent}%', style: StrideText.label.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
+        Text(p.completed ? 'explore_done'.tr : '${p.percent}%', style: StrideText.label.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
       ],
     ),
   );
@@ -151,13 +156,17 @@ class ChallengeDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final flags = ref.watch(flagsProvider);
     return StrideScreen(
-      title: 'Challenge',
+      title: 'explore_challenge_title'.tr,
       body: !flags.exploreChallenges
-          ? const EmptyState(icon: Icons.emoji_events_outlined, title: 'Challenges aren’t available', message: 'Challenges aren’t turned on in this version.')
+          ? EmptyState(
+              icon: Icons.emoji_events_outlined,
+              title: 'explore_challenges_unavailable_title'.tr,
+              message: 'explore_challenges_unavailable_message'.tr,
+            )
           : ExploreGuestGate(
               icon: Icons.emoji_events_outlined,
-              title: 'Sign in to join challenges',
-              message: 'Progress is calculated from your synced activities, so you need an account.',
+              title: 'explore_challenges_guest_title'.tr,
+              message: 'explore_challenges_guest_message'.tr,
               child: _ChallengeDetailBody(id: challengeId),
             ),
     );
@@ -206,7 +215,7 @@ class _ChallengeDetailBodyState extends ConsumerState<_ChallengeDetailBody> {
       final c = await ref.read(exploreRepositoryProvider).joinChallenge(widget.id);
       if (!mounted) return;
       setState(() => _c = c);
-      showStrideSnack(context, 'You joined ${c.title}');
+      showStrideSnack(context, 'explore_challenge_joined'.trArgs([c.title]));
     } catch (e) {
       if (mounted) showExploreError(context, e);
     } finally {
@@ -217,10 +226,10 @@ class _ChallengeDetailBodyState extends ConsumerState<_ChallengeDetailBody> {
   Future<void> _leave() async {
     final ok = await confirmDialog(
       context,
-      title: 'Leave challenge?',
-      message: 'Your progress won’t be shown while you’re not taking part.',
-      confirmLabel: 'Leave',
-      cancelLabel: 'Stay',
+      title: 'explore_challenge_leave_title'.tr,
+      message: 'explore_challenge_leave_message'.tr,
+      confirmLabel: 'explore_leave'.tr,
+      cancelLabel: 'explore_stay'.tr,
       destructive: true,
     );
     if (!ok || !mounted) return;
@@ -229,7 +238,7 @@ class _ChallengeDetailBodyState extends ConsumerState<_ChallengeDetailBody> {
       final c = await ref.read(exploreRepositoryProvider).leaveChallenge(widget.id);
       if (!mounted) return;
       setState(() => _c = c);
-      showStrideSnack(context, 'You left the challenge');
+      showStrideSnack(context, 'explore_challenge_left'.tr);
     } catch (e) {
       if (mounted) showExploreError(context, e);
     } finally {
@@ -257,25 +266,25 @@ class _ChallengeDetailBodyState extends ConsumerState<_ChallengeDetailBody> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (p.completed) ...[
-                  const Row(
+                  Row(
                     children: [
-                      IconBadge(icon: Icons.military_tech, size: 48),
-                      SizedBox(width: 12),
-                      Expanded(child: Text('Challenge complete! Badge earned.', style: StrideText.subheading)),
+                      const IconBadge(icon: Icons.military_tech, size: 48),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text('explore_challenge_complete'.tr, style: StrideText.subheading)),
                     ],
                   ),
                   const Gap(12),
                 ],
-                Text('Your progress', style: StrideText.label),
+                Text('explore_your_progress'.tr, style: StrideText.label),
                 const Gap(4),
                 Text(
-                  '${challengeValue(c.targetType, p.progressValue, fmt)} of ${challengeValue(c.targetType, c.targetValue, fmt)}',
+                  'explore_progress_of'.trArgs([challengeValue(c.targetType, p.progressValue, fmt), challengeValue(c.targetType, c.targetValue, fmt)]),
                   style: StrideText.metricSmall,
                 ),
                 const Gap(8),
                 _ProgressBar(p: p),
                 const Gap(8),
-                Text('Progress is calculated by STRIDE from eligible activities after they sync.', style: StrideText.caption),
+                Text('explore_progress_note'.tr, style: StrideText.caption),
               ],
             ),
           ),
@@ -284,9 +293,9 @@ class _ChallengeDetailBodyState extends ConsumerState<_ChallengeDetailBody> {
         ChallengeRules(c: c, fmt: fmt),
         const Gap(16),
         if (p == null)
-          PrimaryButton(label: 'Join challenge', loading: _busy, onPressed: _busy ? null : _join)
+          PrimaryButton(label: 'explore_challenge_join'.tr, loading: _busy, onPressed: _busy ? null : _join)
         else
-          SecondaryButton(label: 'Leave challenge', onPressed: _busy ? null : _leave),
+          SecondaryButton(label: 'explore_challenge_leave'.tr, onPressed: _busy ? null : _leave),
       ],
     );
   }
@@ -323,13 +332,13 @@ class ChallengeRules extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Rules', style: StrideText.subheading),
-          row(Icons.flag_outlined, 'Target', challengeValue(c.targetType, c.targetValue, fmt)),
-          row(Icons.directions_run, 'Eligible activities', c.activityTypes.isEmpty ? missingValue : c.activityTypes.map(challengeTypeLabel).join(', ')),
-          row(Icons.date_range_outlined, 'Dates', '${formatLocalDate(c.startDate)} – ${formatLocalDate(c.endDate)}'),
-          row(Icons.public, 'Time zone', c.tzId),
+          Text('explore_rules'.tr, style: StrideText.subheading),
+          row(Icons.flag_outlined, 'explore_rules_target'.tr, challengeValue(c.targetType, c.targetValue, fmt)),
+          row(Icons.directions_run, 'explore_rules_eligible'.tr, c.activityTypes.isEmpty ? missingValue : c.activityTypes.map(challengeTypeLabel).join(', ')),
+          row(Icons.date_range_outlined, 'explore_rules_dates'.tr, '${formatLocalDate(c.startDate)} – ${formatLocalDate(c.endDate)}'),
+          row(Icons.public, 'explore_rules_time_zone'.tr, c.tzId),
           const Gap(4),
-          Text('Only activities started within these dates in this time zone count. Activities outside the dates don’t count.', style: StrideText.caption),
+          Text('explore_rules_note'.tr, style: StrideText.caption),
         ],
       ),
     );

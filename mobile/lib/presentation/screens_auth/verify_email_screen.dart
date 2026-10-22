@@ -8,6 +8,7 @@ import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
 import '../../repository/auth_repository.dart';
 import 'components/auth_widgets.dart';
+import '../../utils/l10n.dart';
 
 /// Xác minh email. Route `/auth/verify?email=` (hiển thị hướng dẫn + gửi lại) hoặc `?token=` từ link email.
 class VerifyEmailScreen extends ConsumerStatefulWidget {
@@ -60,7 +61,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     });
     try {
       await ref.read(authRepositoryProvider).resendVerification();
-      if (mounted) showStrideSnack(context, 'Verification email sent.');
+      if (mounted) showStrideSnack(context, 'auth_verify_resent'.tr);
     } catch (e) {
       if (mounted) setState(() => _message = authErrorMessage(e, AuthAction.other));
     } finally {
@@ -74,8 +75,8 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     final email = widget.email ?? owner.email;
     final available = ref.watch(authRepositoryProvider).available;
     return AuthScaffold(
-      title: 'Verify your email',
-      subtitle: email == null ? 'Open the link we sent to your email to verify your account.' : 'We sent a verification link to $email.',
+      title: 'auth_verify_title'.tr,
+      subtitle: email == null ? 'auth_verify_subtitle_no_email'.tr : 'auth_snack_verification_sent'.trArgs([email]),
       fallback: Routes.home,
       children: [
         if (!available)
@@ -89,22 +90,22 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
             _VerifyState.verified => Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const StatusBanner(tone: BannerTone.success, title: 'Email verified', message: 'Thanks! Your email address is confirmed.'),
+                StatusBanner(tone: BannerTone.success, title: 'auth_verified_title'.tr, message: 'auth_verified_msg'.tr),
                 const SizedBox(height: StrideSpace.s24),
-                PrimaryButton(label: 'Continue', onPressed: () => context.go(owner.isGuest ? Routes.login : Routes.home)),
+                PrimaryButton(label: 'auth_continue'.tr, onPressed: () => context.go(owner.isGuest ? Routes.login : Routes.home)),
               ],
             ),
             _ => Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (_message != null) ...[StatusBanner(tone: BannerTone.error, message: _message!), const SizedBox(height: StrideSpace.s16)],
-                const Text(
-                  "Didn't get it? Check your spam folder, or send a new link. You can keep using STRIDE while you wait.",
-                  style: StrideText.bodySecondary,
-                ),
+                Text('auth_verify_hint'.tr, style: StrideText.bodySecondary),
                 const SizedBox(height: StrideSpace.s24),
-                if (!owner.isGuest) ...[PrimaryButton(label: 'Send a new link', loading: _sending, onPressed: _resend), const SizedBox(height: StrideSpace.s8)],
-                SecondaryButton(label: owner.isGuest ? 'Log in' : 'Done', onPressed: () => context.go(owner.isGuest ? Routes.login : Routes.home)),
+                if (!owner.isGuest) ...[PrimaryButton(label: 'auth_send_new_link'.tr, loading: _sending, onPressed: _resend), SizedBox(height: StrideSpace.s8)],
+                SecondaryButton(
+                  label: owner.isGuest ? 'auth_log_in'.tr : 'auth_done'.tr,
+                  onPressed: () => context.go(owner.isGuest ? Routes.login : Routes.home),
+                ),
               ],
             ),
           },

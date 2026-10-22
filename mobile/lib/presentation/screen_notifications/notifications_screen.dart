@@ -8,6 +8,7 @@ import '../../controller/providers.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
 import '../../repository/notification_repository.dart';
+import '../../utils/l10n.dart';
 
 /// Inbox thông báo (J02). Chạm → đánh dấu đã đọc và mở deep link (router áp auth guard).
 class NotificationsScreen extends ConsumerWidget {
@@ -19,17 +20,17 @@ class NotificationsScreen extends ConsumerWidget {
     final owner = ref.watch(ownerProvider).ownerId;
     final hasUnread = async.value?.any((n) => !n.isRead) ?? false;
     return StrideScreen(
-      title: 'Notifications',
+      title: 'notifications_title'.tr,
       scroll: false,
       actions: [
-        if (hasUnread) TextButton(onPressed: () => ref.read(notificationsRepositoryProvider).markAllRead(owner), child: const Text('Mark all read')),
-        TextButton(onPressed: () => context.go(Routes.reminders), child: const Text('Manage')),
+        if (hasUnread) TextButton(onPressed: () => ref.read(notificationsRepositoryProvider).markAllRead(owner), child: Text('notifications_mark_all_read'.tr)),
+        TextButton(onPressed: () => context.go(Routes.reminders), child: Text('notifications_manage'.tr)),
       ],
       body: async.when(
         loading: () => const Column(children: [Gap(16), LoadingCard(height: 72), Gap(12), LoadingCard(height: 72)]),
         error: (e, _) => ErrorState(
-          title: "Couldn't load notifications",
-          message: 'Notifications saved on this device could not be read.',
+          title: 'notifications_error_title'.tr,
+          message: 'notifications_error_message'.tr,
           onRetry: () => ref.invalidate(notificationsListProvider),
         ),
         data: (items) {
@@ -38,9 +39,9 @@ class NotificationsScreen extends ConsumerWidget {
               child: SingleChildScrollView(
                 child: EmptyState(
                   icon: Icons.notifications_none,
-                  title: 'No notifications yet',
-                  message: 'Reminders and updates about your activity will show up here.',
-                  actionLabel: 'Manage reminders',
+                  title: 'notifications_empty_title'.tr,
+                  message: 'notifications_empty_message'.tr,
+                  actionLabel: 'notifications_manage_reminders'.tr,
                   onAction: () => context.go(Routes.reminders),
                 ),
               ),
@@ -83,7 +84,7 @@ class _NotificationTile extends StatelessWidget {
     final when = sameDay ? DateFormat.jm().format(t) : DateFormat('MMM d').format(t);
     return StrideCard(
       onTap: onTap,
-      semanticLabel: '${item.isRead ? '' : 'Unread. '}${item.title}. ${item.body}. $when',
+      semanticLabel: '${item.isRead ? '' : 'notifications_unread_prefix'.tr}${item.title}. ${item.body}. $when',
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -103,7 +104,7 @@ class _NotificationTile extends StatelessWidget {
                 ),
                 const Gap(StrideSpace.s4),
                 Text(item.body, style: StrideText.bodySecondary),
-                if (!item.isRead) ...[const Gap(StrideSpace.s4), Text('New', style: StrideText.label.copyWith(color: StrideColors.primary))],
+                if (!item.isRead) ...[const Gap(StrideSpace.s4), Text('notifications_new'.tr, style: StrideText.label.copyWith(color: StrideColors.primary))],
               ],
             ),
           ),

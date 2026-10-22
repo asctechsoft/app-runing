@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/l10n.dart';
 import '../../values/tokens.dart';
 
 /// Màn con: back + tiêu đề + tối đa hai action; nội dung giới hạn 560 và gutter 20 (16 khi máy nhỏ).
@@ -49,7 +50,7 @@ class StrideScreen extends StatelessWidget {
           : AppBar(
               automaticallyImplyLeading: false,
               leading: showBack
-                  ? IconButton(tooltip: 'Back', icon: const Icon(Icons.arrow_back), onPressed: onBack ?? () => Navigator.of(context).maybePop())
+                  ? IconButton(tooltip: 'common_back'.tr, icon: const Icon(Icons.arrow_back), onPressed: onBack ?? () => Navigator.of(context).maybePop())
                   : null,
               titleSpacing: showBack ? 0 : g,
               title: title == null ? null : Text(title!, style: largeTitle ? StrideText.title : StrideText.heading),

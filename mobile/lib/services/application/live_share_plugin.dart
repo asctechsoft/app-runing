@@ -7,6 +7,7 @@ import '../../utils/clock.dart';
 import '../../models/data_models/activity.dart';
 import '../../models/ui_models/live_share_models.dart';
 import '../../repository/live_share_repository.dart';
+import '../../utils/l10n.dart';
 
 /// M07: chia sẻ vị trí trực tiếp cho người được chọn trong đúng một phiên chạy.
 /// - Chỉ bắt đầu khi cấu hình đã được đồng ý (consent) trước phiên; cấu hình bị xóa ngay khi phiên bắt đầu → mặc định tắt cho run sau.
@@ -144,13 +145,7 @@ class LiveSharePlugin extends RunPlugin {
     } on LiveShareException catch (e) {
       if (gen != _gen || !_running) return false;
       if (e.isNetwork) {
-        _emit(
-          LiveShareStatus(
-            phase: LiveSharePhase.interrupted,
-            message: 'Live sharing couldn\'t start — no connection. Trying again.',
-            lastUpdateAt: _lastSuccessAt,
-          ),
-        );
+        _emit(LiveShareStatus(phase: LiveSharePhase.interrupted, message: 'sync_live_start_no_connection'.tr, lastUpdateAt: _lastSuccessAt));
       } else {
         _running = false;
         _pending = null;
@@ -184,7 +179,7 @@ class LiveSharePlugin extends RunPlugin {
       if (!ok) return;
     }
     if (_expired) {
-      _markEnded('Live sharing has ended.');
+      _markEnded('sync_live_ended'.tr);
       return;
     }
     final p = _pending;
@@ -243,7 +238,7 @@ class LiveSharePlugin extends RunPlugin {
     _running = false;
     _pending = null;
     if (id != null) _track(_safeStop(id));
-    if (wasRunning) _emit(LiveShareStatus(phase: LiveSharePhase.ended, lastUpdateAt: _lastSuccessAt, message: 'You stopped live sharing.'));
+    if (wasRunning) _emit(LiveShareStatus(phase: LiveSharePhase.ended, lastUpdateAt: _lastSuccessAt, message: 'sync_live_stopped_by_you'.tr));
   }
 
   Future<void> _safeStop(String id) async {
@@ -265,7 +260,7 @@ class LiveSharePlugin extends RunPlugin {
     _reset();
     _emit(
       had
-          ? LiveShareStatus(phase: LiveSharePhase.ended, message: discarded ? 'Run discarded. Live sharing stopped.' : 'Run ended. Live sharing stopped.')
+          ? LiveShareStatus(phase: LiveSharePhase.ended, message: discarded ? 'sync_live_run_discarded'.tr : 'sync_live_run_ended'.tr)
           : const LiveShareStatus(),
     );
   }

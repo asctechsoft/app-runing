@@ -7,6 +7,7 @@ import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
 import '../../repository/auth_repository.dart';
 import 'components/auth_widgets.dart';
+import '../../utils/l10n.dart';
 
 /// Quên mật khẩu: luôn hiển thị kết quả chung để không lộ email có tài khoản hay không (F02).
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
@@ -50,22 +51,18 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   Widget build(BuildContext context) {
     final available = ref.watch(authRepositoryProvider).available;
     return AuthScaffold(
-      title: 'Reset your password',
-      subtitle: "Enter the email you use for STRIDE and we'll send you a link to reset your password.",
+      title: 'auth_forgot_title'.tr,
+      subtitle: 'auth_forgot_subtitle'.tr,
       fallback: Routes.login,
       children: [
         if (!available)
           const AccountsUnavailable()
         else if (_sent) ...[
-          StatusBanner(
-            tone: BannerTone.success,
-            title: 'Check your email',
-            message: 'If an account exists for ${_email.text.trim()}, a reset link is on its way. The link is valid for 30 minutes.',
-          ),
+          StatusBanner(tone: BannerTone.success, title: 'auth_check_email'.tr, message: 'auth_reset_sent'.trArgs([_email.text.trim()])),
           const SizedBox(height: StrideSpace.s24),
-          PrimaryButton(label: 'Back to log in', onPressed: () => popOr(context, Routes.login)),
+          PrimaryButton(label: 'auth_back_to_login'.tr, onPressed: () => popOr(context, Routes.login)),
           const SizedBox(height: StrideSpace.s8),
-          SecondaryButton(label: 'Send again', onPressed: () => setState(() => _sent = false)),
+          SecondaryButton(label: 'auth_send_again'.tr, onPressed: () => setState(() => _sent = false)),
         ] else
           Form(
             key: _form,
@@ -75,7 +72,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 if (_error != null) ...[StatusBanner(tone: BannerTone.error, message: _error!), const SizedBox(height: StrideSpace.s12)],
                 AuthTextField(
                   controller: _email,
-                  label: 'Email',
+                  label: 'auth_email'.tr,
                   icon: Icons.mail_outline,
                   keyboardType: TextInputType.emailAddress,
                   autofillHints: const [AutofillHints.email],
@@ -85,7 +82,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   enabled: !_busy,
                 ),
                 const SizedBox(height: StrideSpace.s8),
-                PrimaryButton(label: 'Send reset link', loading: _busy, onPressed: _submit),
+                PrimaryButton(label: 'auth_send_reset_link'.tr, loading: _busy, onPressed: _submit),
               ],
             ),
           ),
@@ -140,20 +137,20 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     final token = widget.token;
     final available = ref.watch(authRepositoryProvider).available;
     return AuthScaffold(
-      title: 'Choose a new password',
-      subtitle: 'Changing your password signs you out on all devices.',
+      title: 'auth_reset_title'.tr,
+      subtitle: 'auth_reset_subtitle'.tr,
       fallback: Routes.login,
       children: [
         if (!available)
           const AccountsUnavailable()
         else if (token == null || token.length < 16) ...[
-          const StatusBanner(tone: BannerTone.error, message: 'This reset link is invalid or has expired. Request a new one.'),
+          StatusBanner(tone: BannerTone.error, message: 'auth_reset_link_invalid'.tr),
           const SizedBox(height: StrideSpace.s16),
-          PrimaryButton(label: 'Request a new link', onPressed: () => context.go(Routes.forgotPassword)),
+          PrimaryButton(label: 'auth_request_new_link'.tr, onPressed: () => context.go(Routes.forgotPassword)),
         ] else if (_done) ...[
-          const StatusBanner(tone: BannerTone.success, title: 'Password updated', message: 'Log in with your new password.'),
+          StatusBanner(tone: BannerTone.success, title: 'auth_password_updated'.tr, message: 'auth_password_updated_msg'.tr),
           const SizedBox(height: StrideSpace.s24),
-          PrimaryButton(label: 'Log in', onPressed: () => context.go(Routes.login)),
+          PrimaryButton(label: 'auth_log_in'.tr, onPressed: () => context.go(Routes.login)),
         ] else
           Form(
             key: _form,
@@ -163,27 +160,27 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 if (_error != null) ...[StatusBanner(tone: BannerTone.error, message: _error!), const SizedBox(height: StrideSpace.s12)],
                 AuthTextField(
                   controller: _password,
-                  label: 'New password',
+                  label: 'auth_new_password'.tr,
                   icon: Icons.lock_outline,
                   password: true,
                   autofillHints: const [AutofillHints.newPassword],
                   onChanged: (_) => setState(() {}),
-                  validator: (v) => passwordValid(v ?? '') ? null : "Password doesn't meet the requirements below.",
+                  validator: (v) => passwordValid(v ?? '') ? null : 'auth_err_password_requirements'.tr,
                   enabled: !_busy,
                 ),
                 AuthTextField(
                   controller: _confirm,
-                  label: 'Confirm new password',
+                  label: 'auth_confirm_new_password'.tr,
                   icon: Icons.lock_outline,
                   password: true,
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => _submit(),
-                  validator: (v) => v == _password.text ? null : "Passwords don't match.",
+                  validator: (v) => v == _password.text ? null : 'auth_err_passwords_mismatch'.tr,
                   enabled: !_busy,
                 ),
                 PasswordRulesList(password: _password.text),
                 const SizedBox(height: StrideSpace.s16),
-                PrimaryButton(label: 'Update password', loading: _busy, onPressed: _submit),
+                PrimaryButton(label: 'auth_update_password'.tr, loading: _busy, onPressed: _submit),
               ],
             ),
           ),

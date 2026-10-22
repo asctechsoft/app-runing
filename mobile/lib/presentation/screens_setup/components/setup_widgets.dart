@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../values/tokens.dart';
+import '../../../utils/l10n.dart';
 
 /// Thanh tiến trình 3 bước của thiết lập: Profile → Goal → Ready.
 class SetupSteps extends StatelessWidget {
@@ -9,12 +10,13 @@ class SetupSteps extends StatelessWidget {
   /// 0 = Profile, 1 = Goal, 2 = Ready.
   final int current;
 
-  static const labels = ['Profile', 'Goal', 'Ready'];
+  /// Khóa chuỗi (không phải chữ hiển thị) — gọi `.tr` ở nơi hiển thị.
+  static const labels = ['setup_step_profile', 'setup_step_goal', 'setup_step_ready'];
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: 'Step ${current + 1} of ${labels.length}: ${labels[current]}',
+      label: 'setup_step_semantic'.trArgs([current + 1, labels.length, labels[current].tr]),
       excludeSemantics: true,
       child: Row(
         children: [
@@ -39,7 +41,7 @@ class SetupSteps extends StatelessWidget {
                         ),
                 ),
                 const SizedBox(height: 4),
-                Text(labels[i], style: StrideText.caption.copyWith(color: i == current ? StrideColors.primary : StrideColors.textMuted)),
+                Text(labels[i].tr, style: StrideText.caption.copyWith(color: i == current ? StrideColors.primary : StrideColors.textMuted)),
               ],
             ),
             if (i < labels.length - 1)

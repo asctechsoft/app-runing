@@ -3,6 +3,7 @@ import '../../utils/clock.dart';
 import '../../models/data_models/profile.dart';
 import '../../models/data_models/steps.dart';
 import '../../services/application/step_tracking_service.dart';
+import '../../utils/l10n.dart';
 
 /// Trạng thái khối bước trên Home (Design System §06).
 enum HomeStepState {
@@ -90,8 +91,8 @@ WeekStreak computeWeekStreak({required DateTime today, required int weekStart, r
 /// Lời chào theo giờ địa phương; không có tên → chỉ lời chào.
 String greetingFor(DateTime local, String? name) {
   final h = local.hour;
-  final g = h < 5 ? 'Good evening' : (h < 12 ? 'Good morning' : (h < 18 ? 'Good afternoon' : 'Good evening'));
+  final g = h < 5 ? 'home_greeting_evening'.tr : (h < 12 ? 'home_greeting_morning'.tr : (h < 18 ? 'home_greeting_afternoon'.tr : 'home_greeting_evening'.tr));
   final n = name?.trim() ?? '';
   if (n.isEmpty) return g;
-  return '$g, ${n.split(RegExp(r'\s+')).first}';
+  return 'home_greeting_name'.trArgs([g, n.split(RegExp(r'\s+')).first]);
 }

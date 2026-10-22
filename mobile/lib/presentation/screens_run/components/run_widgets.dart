@@ -2,18 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../utils/formatters.dart';
+import '../../../utils/l10n.dart';
 import '../../../values/tokens.dart';
 import '../../../models/data_models/activity.dart';
 import '../../../models/ui_models/workout_models.dart';
 import '../../../controller/run/engine/run_sources.dart';
 
 String runGoalLabel(RunGoal g, StrideFormat fmt) => switch (g.type) {
-  RunGoalType.free => 'Free run',
-  RunGoalType.distance => '${fmt.distance(g.value)} goal',
-  RunGoalType.time => '${((g.value ?? 0) / 60000).round()} min goal',
+  RunGoalType.free => 'run_goal_free'.tr,
+  RunGoalType.distance => 'run_goal_distance'.trArgs([fmt.distance(g.value)]),
+  RunGoalType.time => 'run_goal_time'.trArgs([((g.value ?? 0) / 60000).round()]),
 };
 
-String workoutLabel(WorkoutPlan? plan) => plan == null ? 'Free run' : '${plan.name} · ${formatStepDuration(plan.totalMs)}';
+String workoutLabel(WorkoutPlan? plan) => plan == null ? 'run_goal_free'.tr : 'run_workout_label'.trArgs([plan.name, formatStepDuration(plan.totalMs)]);
 
 String longDate(int utcMs) => DateFormat('EEEE, MMMM d, y').format(DateTime.fromMillisecondsSinceEpoch(utcMs));
 String clockTime(int utcMs) => DateFormat.jm().format(DateTime.fromMillisecondsSinceEpoch(utcMs));
@@ -27,11 +28,11 @@ class GpsStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (icon, text, color) = switch (quality) {
-      GpsQuality.good => (Icons.gps_fixed, 'GPS good', StrideColors.success),
-      GpsQuality.weak => (Icons.gps_not_fixed, 'GPS weak', StrideColors.warning),
-      GpsQuality.lost => (Icons.gps_off, 'GPS lost', StrideColors.error),
-      GpsQuality.searching => (Icons.location_searching, 'Searching for GPS', StrideColors.textSecondary),
-      GpsQuality.notUsed => (Icons.location_disabled, 'GPS not used', StrideColors.textSecondary),
+      GpsQuality.good => (Icons.gps_fixed, 'run_gps_good'.tr, StrideColors.success),
+      GpsQuality.weak => (Icons.gps_not_fixed, 'run_gps_weak'.tr, StrideColors.warning),
+      GpsQuality.lost => (Icons.gps_off, 'run_gps_lost'.tr, StrideColors.error),
+      GpsQuality.searching => (Icons.location_searching, 'run_gps_searching'.tr, StrideColors.textSecondary),
+      GpsQuality.notUsed => (Icons.location_disabled, 'run_gps_not_used'.tr, StrideColors.textSecondary),
     };
     return Semantics(
       label: text,
@@ -62,12 +63,17 @@ class RunMetric extends StatelessWidget {
   final Color? color;
   final bool estimated;
 
+  String _semanticLabel() {
+    final base = unit == null ? 'run_metric_semantic'.trArgs([label, value]) : 'run_metric_semantic_unit'.trArgs([label, value, unit]);
+    return estimated ? 'run_metric_semantic_estimated'.trArgs([base]) : base;
+  }
+
   @override
   Widget build(BuildContext context) {
     final fg = color ?? StrideColors.textPrimary;
     final style = (big ? StrideText.runTimer : StrideText.metricMedium).copyWith(color: fg);
     return Semantics(
-      label: '$label, $value${unit == null ? '' : ' $unit'}${estimated ? ', estimated' : ''}',
+      label: _semanticLabel(),
       excludeSemantics: true,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -88,7 +94,10 @@ class RunMetric extends StatelessWidget {
               maxLines: 1,
             ),
           ),
-          Text(estimated ? '$label · estimated' : label, style: StrideText.caption.copyWith(color: color?.withValues(alpha: 0.8) ?? StrideColors.textMuted)),
+          Text(
+            estimated ? 'run_metric_estimated'.trArgs([label]) : label,
+            style: StrideText.caption.copyWith(color: color?.withValues(alpha: 0.8) ?? StrideColors.textMuted),
+          ),
         ],
       ),
     );
@@ -109,14 +118,14 @@ class PhaseTable extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: Text('Interval phases', style: StrideText.subheading)),
+            Expanded(child: Text('run_phase_title'.tr, style: StrideText.subheading)),
             if (incomplete)
               Semantics(
-                label: 'Workout incomplete',
+                label: 'run_phase_incomplete_semantic'.tr,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(color: StrideColors.warningBg, borderRadius: BorderRadius.circular(StrideRadius.pill)),
-                  child: Text('Incomplete', style: StrideText.label.copyWith(color: StrideColors.warning)),
+                  child: Text('run_phase_incomplete'.tr, style: StrideText.label.copyWith(color: StrideColors.warning)),
                 ),
               ),
           ],
@@ -124,18 +133,18 @@ class PhaseTable extends StatelessWidget {
         const SizedBox(height: 8),
         Row(
           children: [
-            Expanded(flex: 4, child: Text('Phase', style: StrideText.caption)),
+            Expanded(flex: 4, child: Text('run_phase_col_phase'.tr, style: StrideText.caption)),
             Expanded(
               flex: 3,
-              child: Text('Planned', style: StrideText.caption, textAlign: TextAlign.end),
+              child: Text('run_phase_col_planned'.tr, style: StrideText.caption, textAlign: TextAlign.end),
             ),
             Expanded(
               flex: 3,
-              child: Text('Actual', style: StrideText.caption, textAlign: TextAlign.end),
+              child: Text('run_phase_col_actual'.tr, style: StrideText.caption, textAlign: TextAlign.end),
             ),
             Expanded(
               flex: 3,
-              child: Text('Distance', style: StrideText.caption, textAlign: TextAlign.end),
+              child: Text('run_label_distance'.tr, style: StrideText.caption, textAlign: TextAlign.end),
             ),
           ],
         ),
@@ -153,7 +162,7 @@ class PhaseTable extends StatelessWidget {
                         r.completed ? Icons.check_circle : Icons.radio_button_unchecked,
                         size: 16,
                         color: r.completed ? StrideColors.success : StrideColors.textMuted,
-                        semanticLabel: r.completed ? 'Completed' : 'Not completed',
+                        semanticLabel: r.completed ? 'run_phase_completed'.tr : 'run_phase_not_completed'.tr,
                       ),
                       const SizedBox(width: 6),
                       Flexible(

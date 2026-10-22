@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../utils/l10n.dart';
 import '../services/application/firebase_providers.dart';
 import '../services/application/api_client.dart';
 import '../controller/providers.dart';
@@ -21,35 +22,35 @@ class ExploreFailure implements Exception {
   final String message;
 
   String get title => switch (kind) {
-    ExploreErrorKind.offline => 'You’re offline',
-    ExploreErrorKind.notConfigured => 'Not available in this build',
-    ExploreErrorKind.signedOut => 'Sign in required',
-    ExploreErrorKind.notFound => 'Not found',
-    ExploreErrorKind.forbidden => 'Members only',
-    ExploreErrorKind.conflict => 'Couldn’t complete that',
-    ExploreErrorKind.rateLimited => 'Slow down a little',
-    ExploreErrorKind.validation => 'Check your input',
-    ExploreErrorKind.server => 'Something went wrong on our side',
+    ExploreErrorKind.offline => 'explore_err_offline_title'.tr,
+    ExploreErrorKind.notConfigured => 'explore_err_not_configured_title'.tr,
+    ExploreErrorKind.signedOut => 'explore_err_signed_out_title'.tr,
+    ExploreErrorKind.notFound => 'explore_err_not_found_title'.tr,
+    ExploreErrorKind.forbidden => 'explore_err_forbidden_title'.tr,
+    ExploreErrorKind.conflict => 'explore_err_conflict_title'.tr,
+    ExploreErrorKind.rateLimited => 'explore_err_rate_limited_title'.tr,
+    ExploreErrorKind.validation => 'explore_err_validation_title'.tr,
+    ExploreErrorKind.server => 'explore_err_server_title'.tr,
   };
 
   String get userMessage => switch (kind) {
-    ExploreErrorKind.offline => 'Check your connection and try again. Explore needs the internet.',
-    ExploreErrorKind.notConfigured => 'This build isn’t connected to STRIDE online services.',
-    ExploreErrorKind.signedOut => 'Sign in to use clubs, challenges and routes.',
-    ExploreErrorKind.notFound => 'It may have been removed or you no longer have access.',
-    ExploreErrorKind.forbidden => 'Join this club to see its posts and events.',
+    ExploreErrorKind.offline => 'explore_err_offline_message'.tr,
+    ExploreErrorKind.notConfigured => 'explore_err_not_configured_message'.tr,
+    ExploreErrorKind.signedOut => 'explore_err_signed_out_message'.tr,
+    ExploreErrorKind.notFound => 'explore_err_not_found_message'.tr,
+    ExploreErrorKind.forbidden => 'explore_err_forbidden_message'.tr,
     ExploreErrorKind.conflict => _conflictMessage(code, message),
-    ExploreErrorKind.rateLimited => 'You’ve done that a lot recently. Try again in a minute.',
-    ExploreErrorKind.validation => message.isEmpty ? 'Some details aren’t valid.' : message,
-    ExploreErrorKind.server => 'Please try again in a moment.',
+    ExploreErrorKind.rateLimited => 'explore_err_rate_limited_message'.tr,
+    ExploreErrorKind.validation => message.isEmpty ? 'explore_err_validation_message'.tr : message,
+    ExploreErrorKind.server => 'explore_err_server_message'.tr,
   };
 
   static String _conflictMessage(String code, String message) => switch (code) {
-    'owner_cannot_leave' => 'Transfer club ownership before leaving.',
-    'challenge_ended' => 'This challenge has ended.',
-    'event_cancelled' => 'This event was cancelled.',
-    'event_past' => 'This event has already happened.',
-    _ => message.isEmpty ? 'Please refresh and try again.' : message,
+    'owner_cannot_leave' => 'explore_err_owner_cannot_leave'.tr,
+    'challenge_ended' => 'explore_err_challenge_ended'.tr,
+    'event_cancelled' => 'explore_err_event_cancelled'.tr,
+    'event_past' => 'explore_err_event_past'.tr,
+    _ => message.isEmpty ? 'explore_err_conflict_message'.tr : message,
   };
 
   @override
@@ -158,7 +159,7 @@ class ExploreRepository {
     try {
       cur = decodeCursor(cursor);
     } on FormatException {
-      throw const ExploreFailure(ExploreErrorKind.validation, code: 'bad_cursor', message: 'Invalid page cursor.');
+      throw ExploreFailure(ExploreErrorKind.validation, code: 'bad_cursor', message: 'explore_err_bad_cursor'.tr);
     }
     final batch = limit < 20 ? 20 : limit;
     final kept = <(String, Map<String, Object?>)>[];
@@ -286,7 +287,7 @@ class ExploreRepository {
 
   Future<ClubPost> createPost(String clubId, {required String text}) => _run((db, uid) async {
     final t = text.trim();
-    if (t.isEmpty) throw ApiException(400, 'validation_error', 'Write something before posting.');
+    if (t.isEmpty) throw ApiException(400, 'validation_error', 'explore_err_post_empty'.tr);
     final id = _key();
     final data = <String, Object?>{
       'clubId': clubId,
@@ -346,7 +347,7 @@ class ExploreRepository {
 
   Future<PostComment> addComment(String postId, String text) => _run((db, uid) async {
     final t = text.trim();
-    if (t.isEmpty) throw ApiException(400, 'validation_error', 'Write a comment first.');
+    if (t.isEmpty) throw ApiException(400, 'validation_error', 'explore_err_comment_empty'.tr);
     final postRef = db.collection('posts').doc(postId);
     final id = _key();
     final data = <String, Object?>{'authorId': uid, 'authorName': _displayName?.call() ?? '', 'text': t, 'createdAt': _nowMs(), 'deletedAt': null};
@@ -384,7 +385,7 @@ class ExploreRepository {
   });
 
   Future<void> blockUser(String userId) => _run((db, uid) async {
-    if (userId == uid) throw ApiException(400, 'validation_error', 'You can’t block yourself.');
+    if (userId == uid) throw ApiException(400, 'validation_error', 'explore_err_block_self'.tr);
     await db.collection('users').doc(uid).collection('blocks').doc(userId).set({'createdAt': _nowMs()});
   });
 

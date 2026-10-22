@@ -16,6 +16,7 @@ import '../../models/data_models/activity.dart';
 import '../../controller/activity/activity_actions.dart';
 import '../../utils/activity_format.dart';
 import '../../controller/activity/activity_providers.dart';
+import '../../utils/l10n.dart';
 
 const int maxActivityPhotos = 10;
 const int maxNotesLength = 500;
@@ -77,7 +78,7 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
 
   Future<void> _addPhoto() async {
     if (_photoCount >= maxActivityPhotos) {
-      showStrideSnack(context, 'You can add up to $maxActivityPhotos photos.');
+      showStrideSnack(context, 'activity_edit_photo_limit'.trArgs([maxActivityPhotos]));
       return;
     }
     try {
@@ -85,7 +86,7 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
       if (x != null && mounted) setState(() => _added.add(x));
     } on PlatformException {
       if (mounted) {
-        showStrideSnack(context, 'STRIDE can\'t open your photos. Allow photo access in phone settings.', isError: true);
+        showStrideSnack(context, 'activity_edit_photo_access_error'.tr, isError: true);
       }
     }
   }
@@ -135,10 +136,10 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
         }
         if (!mounted) return;
         _done = true; // không hỏi "discard" khi pop
-        showStrideSnack(context, 'Changes saved');
+        showStrideSnack(context, 'activity_edit_saved'.tr);
         context.pop('saved');
       } catch (_) {
-        if (mounted) showStrideSnack(context, 'Couldn\'t save your changes. Please try again.', isError: true);
+        if (mounted) showStrideSnack(context, 'activity_edit_save_failed'.tr, isError: true);
       } finally {
         if (mounted) setState(() => _saving = false);
       }
@@ -151,17 +152,17 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
     final deleted = await confirmAndDeleteActivity(context, ref, a);
     if (deleted && mounted) {
       _done = true;
-      showStrideSnack(context, 'Activity deleted');
+      showStrideSnack(context, 'activity_deleted_snack'.tr);
       context.pop('deleted');
     }
   }
 
   Future<bool> _confirmDiscard() => confirmDialog(
     context,
-    title: 'Discard changes?',
-    message: 'Your edits to this activity haven\'t been saved.',
-    confirmLabel: 'Discard',
-    cancelLabel: 'Keep editing',
+    title: 'activity_edit_discard_title'.tr,
+    message: 'activity_edit_discard_message'.tr,
+    confirmLabel: 'activity_edit_discard'.tr,
+    cancelLabel: 'activity_edit_keep_editing'.tr,
     destructive: true,
   );
 
@@ -172,18 +173,18 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
     final d = async.value;
     if (d != null) _init(d);
     if (async.isLoading && _initial == null) {
-      return const StrideScreen(title: 'Edit activity', body: LoadingCard(height: 240));
+      return StrideScreen(title: 'activity_edit_title'.tr, body: LoadingCard(height: 240));
     }
     if (_initial == null) {
       return StrideScreen(
-        title: 'Edit activity',
+        title: 'activity_edit_title'.tr,
         body: async.hasError
             ? ErrorState(
-                title: 'Couldn\'t open this activity',
-                message: 'Reading it from this device failed.',
+                title: 'activity_open_error_title'.tr,
+                message: 'activity_open_error_message_short'.tr,
                 onRetry: () => ref.invalidate(activityDetailProvider(widget.activityId)),
               )
-            : const EmptyState(icon: Icons.search_off, title: 'Activity not found', message: 'This activity may have been deleted.'),
+            : EmptyState(icon: Icons.search_off, title: 'activity_not_found_title'.tr, message: 'activity_not_found_message_short'.tr),
       );
     }
     final a = _initial!;
@@ -198,8 +199,8 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
         }
       },
       child: StrideScreen(
-        title: 'Edit activity',
-        bottom: PrimaryButton(label: 'Save changes', loading: _saving, onPressed: _save),
+        title: 'activity_edit_title'.tr,
+        bottom: PrimaryButton(label: 'activity_edit_save_changes'.tr, loading: _saving, onPressed: _save),
         body: Form(
           key: _formKey,
           child: Column(
@@ -208,14 +209,14 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _title,
-                decoration: const InputDecoration(labelText: 'Activity title'),
+                decoration: InputDecoration(labelText: 'activity_edit_title_label'.tr),
                 textCapitalization: TextCapitalization.sentences,
                 maxLength: 80,
                 onChanged: (_) => setState(() {}),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter a run title' : null,
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'activity_edit_title_required'.tr : null,
               ),
               const SizedBox(height: 8),
-              Text('How did it feel?', style: StrideText.label),
+              Text('activity_edit_how_feel'.tr, style: StrideText.label),
               const SizedBox(height: 4),
               Wrap(
                 spacing: 8,
@@ -226,25 +227,30 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _notes,
-                decoration: const InputDecoration(labelText: 'Notes', alignLabelWithHint: true),
+                decoration: InputDecoration(labelText: 'activity_row_notes'.tr, alignLabelWithHint: true),
                 minLines: 3,
                 maxLines: 6,
                 maxLength: maxNotesLength,
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 8),
-              SectionHeader(title: 'Photos', subtitle: '$_photoCount of $maxActivityPhotos'),
+              SectionHeader(title: 'activity_photos'.tr, subtitle: 'activity_edit_photo_count'.trArgs([_photoCount, maxActivityPhotos])),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
                   for (final p in kept)
-                    _PhotoTile(image: p.fileExists ? FileImage(File(p.localPath!)) : null, label: 'Photo', onRemove: () => setState(() => _removed.add(p.id))),
-                  for (final x in _added) _PhotoTile(image: FileImage(File(x.path)), label: 'New photo', onRemove: () => setState(() => _added.remove(x))),
+                    _PhotoTile(
+                      image: p.fileExists ? FileImage(File(p.localPath!)) : null,
+                      label: 'activity_photo'.tr,
+                      onRemove: () => setState(() => _removed.add(p.id)),
+                    ),
+                  for (final x in _added)
+                    _PhotoTile(image: FileImage(File(x.path)), label: 'activity_edit_new_photo'.tr, onRemove: () => setState(() => _added.remove(x))),
                   if (_photoCount < maxActivityPhotos)
                     Semantics(
                       button: true,
-                      label: 'Add photo',
+                      label: 'activity_edit_add_photo'.tr,
                       child: InkWell(
                         onTap: _addPhoto,
                         borderRadius: BorderRadius.circular(StrideRadius.control),
@@ -256,12 +262,12 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
                             borderRadius: BorderRadius.circular(StrideRadius.control),
                             border: Border.all(color: StrideColors.borderSubtle),
                           ),
-                          child: const Column(
+                          child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(Icons.add_photo_alternate_outlined, color: StrideColors.primary),
                               SizedBox(height: 4),
-                              Text('Add photo', style: StrideText.caption),
+                              Text('activity_edit_add_photo'.tr, style: StrideText.caption),
                             ],
                           ),
                         ),
@@ -270,7 +276,7 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-              const SectionHeader(title: 'Privacy'),
+              SectionHeader(title: 'activity_privacy'.tr),
               SettingsGroup(
                 children: [
                   for (final p in Privacy.values)
@@ -287,7 +293,7 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-              const SectionHeader(title: 'Recorded data'),
+              SectionHeader(title: 'activity_edit_recorded_data'.tr),
               StrideCard(
                 color: StrideColors.subtle,
                 child: Column(
@@ -297,19 +303,19 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
                       children: [
                         Expanded(
                           child: MetricTile(
-                            label: 'Distance',
+                            label: 'activity_metric_distance'.tr,
                             value: f.distanceValue(a.distanceM),
                             unit: f.distanceUnitLabel,
                             estimated: a.distanceSource != DistanceSource.gps,
                           ),
                         ),
                         Expanded(
-                          child: MetricTile(label: 'Moving time', value: formatDuration(a.movingMs)),
+                          child: MetricTile(label: 'activity_metric_moving_time'.tr, value: formatDuration(a.movingMs)),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Text('Route, distance and time come from your recording and can\'t be edited.', style: StrideText.caption),
+                    Text('activity_edit_readonly_note'.tr, style: StrideText.caption),
                   ],
                 ),
               ),
@@ -318,7 +324,7 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
                 onPressed: _delete,
                 style: TextButton.styleFrom(foregroundColor: StrideColors.error, minimumSize: const Size.fromHeight(48)),
                 icon: const Icon(Icons.delete_outline),
-                label: const Text('Delete activity'),
+                label: Text('activity_delete_activity'.tr),
               ),
             ],
           ),
@@ -356,7 +362,7 @@ class _PhotoTile extends StatelessWidget {
             top: -4,
             right: -4,
             child: IconButton(
-              tooltip: 'Remove photo',
+              tooltip: 'activity_edit_remove_photo'.tr,
               onPressed: onRemove,
               icon: const CircleAvatar(
                 radius: 12,

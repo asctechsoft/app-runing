@@ -10,6 +10,8 @@ import '../../common_components/widgets.dart';
 import '../../../models/data_models/activity.dart';
 import '../../../utils/activity_format.dart';
 import '../../../utils/route_geometry.dart';
+import '../../../utils/l10n.dart';
+import '../../../utils/date_locale.dart';
 
 /// Tuyến rút gọn cho thumbnail (≤ ~150 điểm mỗi hoạt động), đọc từ DB local.
 final activityThumbRouteProvider = FutureProvider.autoDispose.family<RouteLines?, String>((ref, id) async {
@@ -43,13 +45,13 @@ class ActivityCard extends ConsumerWidget {
     final f = ref.watch(formatProvider);
     final route = a.hasGps ? ref.watch(activityThumbRouteProvider(a.id)).value : null;
     final title = activityDisplayTitle(a);
-    final date = DateFormat('EEE, MMM d', 'en_US').format(activityLocalStart(a));
+    final date = DateFormat('EEE, MMM d', appDateLocale).format(activityLocalStart(a));
     final pace = f.pace(a.avgPaceSecPerKm);
     final estimated = a.distanceSource != DistanceSource.gps;
     return StrideCard(
       padding: const EdgeInsets.all(12),
       semanticLabel:
-          '$title, ${activityTypeLabel(a.type)}, $date, ${f.distance(a.distanceM)}${estimated ? ' estimated' : ''}, ${formatDuration(a.movingMs)}, $pace',
+          '$title, ${activityTypeLabel(a.type)}, $date, ${f.distance(a.distanceM)}${estimated ? ' ${'activity_semantic_estimated'.tr}' : ''}, ${formatDuration(a.movingMs)}, $pace',
       onTap: () => context.push(activityPathFor(context, a.id)),
       child: ExcludeSemantics(
         child: Row(
@@ -83,13 +85,13 @@ class ActivityCard extends ConsumerWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: _Stat(value: f.distance(a.distanceM), label: estimated ? 'Distance · est.' : 'Distance'),
+                        child: _Stat(value: f.distance(a.distanceM), label: estimated ? 'activity_metric_distance_est'.tr : 'activity_metric_distance'.tr),
                       ),
                       Expanded(
-                        child: _Stat(value: formatDuration(a.movingMs), label: 'Moving time'),
+                        child: _Stat(value: formatDuration(a.movingMs), label: 'activity_metric_moving_time'.tr),
                       ),
                       Expanded(
-                        child: _Stat(value: pace, label: 'Avg. pace'),
+                        child: _Stat(value: pace, label: 'activity_metric_avg_pace'.tr),
                       ),
                     ],
                   ),

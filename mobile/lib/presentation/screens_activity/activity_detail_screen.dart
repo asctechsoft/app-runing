@@ -20,6 +20,7 @@ import '../../utils/activity_format.dart';
 import 'components/activity_map_view.dart';
 import '../../controller/activity/activity_providers.dart';
 import '../../utils/route_geometry.dart';
+import '../../utils/l10n.dart';
 
 enum _DetailTab { overview, splits, charts }
 
@@ -64,7 +65,7 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
       case _MenuAction.delete:
         final deleted = await confirmAndDeleteActivity(context, ref, d.activity);
         if (deleted && mounted) {
-          showStrideSnack(context, 'Activity deleted');
+          showStrideSnack(context, 'activity_deleted_snack'.tr);
           _back();
         }
     }
@@ -81,8 +82,8 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
       error: (e, _) => StrideScreen(
         onBack: _back,
         body: ErrorState(
-          title: 'Couldn\'t open this activity',
-          message: 'Reading it from this device failed. Your data has not been changed.',
+          title: 'activity_open_error_title'.tr,
+          message: 'activity_open_error_message_detail'.tr,
           onRetry: () => ref.invalidate(activityDetailProvider(widget.activityId)),
         ),
       ),
@@ -92,9 +93,9 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
             onBack: _back,
             body: EmptyState(
               icon: Icons.search_off,
-              title: 'Activity not found',
-              message: 'This activity may have been deleted or isn\'t available on this device.',
-              actionLabel: 'Back to history',
+              title: 'activity_not_found_title'.tr,
+              message: 'activity_not_found_message_detail'.tr,
+              actionLabel: 'activity_back_to_history'.tr,
               onAction: () => context.go(Routes.history),
             ),
           );
@@ -112,17 +113,17 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
       title: activityDisplayTitle(a),
       actions: [
         PopupMenuButton<_MenuAction>(
-          tooltip: 'More options',
+          tooltip: 'activity_more_options'.tr,
           icon: const Icon(Icons.more_vert),
           onSelected: (v) => _onMenu(v, d),
           itemBuilder: (_) => [
-            const PopupMenuItem(value: _MenuAction.edit, child: Text('Edit')),
-            const PopupMenuItem(value: _MenuAction.share, child: Text('Share image')),
-            if (canGpx) const PopupMenuItem(value: _MenuAction.gpx, child: Text('Export GPX')),
-            const PopupMenuItem(value: _MenuAction.csv, child: Text('Export CSV summary')),
+            PopupMenuItem(value: _MenuAction.edit, child: Text('activity_edit'.tr)),
+            PopupMenuItem(value: _MenuAction.share, child: Text('activity_share_image'.tr)),
+            if (canGpx) PopupMenuItem(value: _MenuAction.gpx, child: Text('activity_export_gpx'.tr)),
+            PopupMenuItem(value: _MenuAction.csv, child: Text('activity_export_csv'.tr)),
             PopupMenuItem(
               value: _MenuAction.delete,
-              child: Text('Delete', style: StrideText.body.copyWith(color: StrideColors.error)),
+              child: Text('activity_delete'.tr, style: StrideText.body.copyWith(color: StrideColors.error)),
             ),
           ],
         ),
@@ -130,11 +131,11 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
       bottom: Row(
         children: [
           Expanded(
-            child: PrimaryButton(label: 'Share', icon: Icons.ios_share, onPressed: () => context.push(Routes.activityShare(a.id))),
+            child: PrimaryButton(label: 'activity_share'.tr, icon: Icons.ios_share, onPressed: () => context.push(Routes.activityShare(a.id))),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: SecondaryButton(label: 'Edit', icon: Icons.edit_outlined, onPressed: _edit),
+            child: SecondaryButton(label: 'activity_edit'.tr, icon: Icons.edit_outlined, onPressed: _edit),
           ),
         ],
       ),
@@ -147,9 +148,9 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
             values: _DetailTab.values,
             selected: _tab,
             labelOf: (t) => switch (t) {
-              _DetailTab.overview => 'Overview',
-              _DetailTab.splits => 'Splits',
-              _DetailTab.charts => 'Charts',
+              _DetailTab.overview => 'activity_tab_overview'.tr,
+              _DetailTab.splits => 'activity_tab_splits'.tr,
+              _DetailTab.charts => 'activity_tab_charts'.tr,
             },
             onChanged: (t) => setState(() => _tab = t),
           ),
@@ -194,7 +195,11 @@ class _Overview extends ConsumerWidget {
                     child: Material(
                       color: StrideColors.surface,
                       shape: const CircleBorder(),
-                      child: IconButton(tooltip: 'Expand map', icon: const Icon(Icons.open_in_full), onPressed: () => context.push(Routes.activityMap(a.id))),
+                      child: IconButton(
+                        tooltip: 'activity_expand_map'.tr,
+                        icon: const Icon(Icons.open_in_full),
+                        onPressed: () => context.push(Routes.activityMap(a.id)),
+                      ),
                     ),
                   ),
                 ],
@@ -205,10 +210,8 @@ class _Overview extends ConsumerWidget {
           StatusBanner(
             tone: BannerTone.info,
             icon: Icons.location_off_outlined,
-            title: 'No GPS route',
-            message: a.type == ActivityType.indoorRun
-                ? 'Indoor runs are recorded without GPS. Distance is estimated from steps.'
-                : 'This activity was saved without a usable GPS route, so there is no map.',
+            title: 'activity_no_gps_title'.tr,
+            message: a.type == ActivityType.indoorRun ? 'activity_no_gps_indoor_message'.tr : 'activity_no_gps_saved_message'.tr,
           ),
         const SizedBox(height: 16),
         StrideCard(
@@ -219,7 +222,7 @@ class _Overview extends ConsumerWidget {
                   Expanded(
                     child: MetricTile(
                       icon: Icons.route_outlined,
-                      label: 'Distance',
+                      label: 'activity_metric_distance'.tr,
                       value: f.distanceValue(a.distanceM),
                       unit: a.distanceM == null ? null : f.distanceUnitLabel,
                       estimated: estimatedDistance,
@@ -227,10 +230,10 @@ class _Overview extends ConsumerWidget {
                     ),
                   ),
                   Expanded(
-                    child: MetricTile(icon: Icons.timer_outlined, label: 'Moving time', value: formatDuration(a.movingMs), center: true),
+                    child: MetricTile(icon: Icons.timer_outlined, label: 'activity_metric_moving_time'.tr, value: formatDuration(a.movingMs), center: true),
                   ),
                   Expanded(
-                    child: MetricTile(icon: Icons.schedule, label: 'Elapsed time', value: formatDuration(elapsed), center: true),
+                    child: MetricTile(icon: Icons.schedule, label: 'activity_metric_elapsed_time'.tr, value: formatDuration(elapsed), center: true),
                   ),
                 ],
               ),
@@ -240,19 +243,19 @@ class _Overview extends ConsumerWidget {
                   Expanded(
                     child: MetricTile(
                       icon: Icons.speed,
-                      label: 'Avg. pace',
+                      label: 'activity_metric_avg_pace'.tr,
                       value: paceValue,
                       unit: paceValue == missingValue ? null : f.paceUnitLabel,
                       center: true,
                     ),
                   ),
                   Expanded(
-                    child: MetricTile(icon: Icons.directions_walk, label: 'Steps', value: f.steps(a.steps), center: true),
+                    child: MetricTile(icon: Icons.directions_walk, label: 'activity_metric_steps'.tr, value: f.steps(a.steps), center: true),
                   ),
                   Expanded(
                     child: MetricTile(
                       icon: Icons.local_fire_department_outlined,
-                      label: 'Calories',
+                      label: 'activity_metric_calories'.tr,
                       value: a.caloriesKcal == null ? missingValue : f.kcal(a.caloriesKcal).replaceAll(' kcal', ''),
                       unit: a.caloriesKcal == null ? null : 'kcal',
                       estimated: a.caloriesKcal != null,
@@ -263,7 +266,7 @@ class _Overview extends ConsumerWidget {
               ),
               if (a.caloriesKcal == null) ...[
                 const SizedBox(height: 8),
-                Text('Calories need your weight. Add it in Profile to estimate future activities.', style: StrideText.caption, textAlign: TextAlign.center),
+                Text('activity_calories_need_weight'.tr, style: StrideText.caption, textAlign: TextAlign.center),
               ],
             ],
           ),
@@ -271,34 +274,34 @@ class _Overview extends ConsumerWidget {
         const SizedBox(height: 16),
         SettingsGroup(
           children: [
-            SettingsRow(icon: Icons.sentiment_satisfied_alt_outlined, title: 'Feeling', subtitle: feelingLabel(a.feeling), onTap: onEdit),
+            SettingsRow(icon: Icons.sentiment_satisfied_alt_outlined, title: 'activity_row_feeling'.tr, subtitle: feelingLabel(a.feeling), onTap: onEdit),
             SettingsRow(
               icon: Icons.notes,
-              title: 'Notes',
-              subtitle: (a.notes == null || a.notes!.trim().isEmpty) ? 'No notes' : a.notes!.trim(),
+              title: 'activity_row_notes'.tr,
+              subtitle: (a.notes == null || a.notes!.trim().isEmpty) ? 'activity_no_notes'.tr : a.notes!.trim(),
               onTap: onEdit,
             ),
-            SettingsRow(icon: Icons.lock_outline, title: 'Privacy', subtitle: privacyLabel(a.privacy), onTap: onEdit),
+            SettingsRow(icon: Icons.lock_outline, title: 'activity_privacy'.tr, subtitle: privacyLabel(a.privacy), onTap: onEdit),
             SettingsRow(
               icon: Icons.sync,
-              title: 'Sync status',
+              title: 'activity_row_sync_status'.tr,
               trailing: SyncBadge(state: a.syncState.name),
               showChevron: false,
             ),
             SettingsRow(
               icon: Icons.sensors,
-              title: 'Distance source',
+              title: 'activity_row_distance_source'.tr,
               subtitle: switch (a.distanceSource) {
-                DistanceSource.gps => 'GPS',
-                DistanceSource.steps => 'Steps (estimated)',
-                DistanceSource.manual => 'Entered manually',
+                DistanceSource.gps => 'activity_source_gps'.tr,
+                DistanceSource.steps => 'activity_source_steps'.tr,
+                DistanceSource.manual => 'activity_source_manual'.tr,
               },
               showChevron: false,
             ),
           ],
         ),
         if (data.photos.isNotEmpty) ...[
-          const SectionHeader(title: 'Photos'),
+          SectionHeader(title: 'activity_photos'.tr),
           SizedBox(
             height: 96,
             child: ListView.separated(
@@ -313,7 +316,7 @@ class _Overview extends ConsumerWidget {
                     width: 96,
                     height: 96,
                     child: p.fileExists
-                        ? Image.file(File(p.localPath!), fit: BoxFit.cover, semanticLabel: 'Activity photo ${i + 1}')
+                        ? Image.file(File(p.localPath!), fit: BoxFit.cover, semanticLabel: 'activity_photo_n'.trArgs([i + 1]))
                         : const ColoredBox(
                             color: StrideColors.subtle,
                             child: Icon(Icons.broken_image_outlined, color: StrideColors.textMuted),
@@ -337,16 +340,12 @@ class _Splits extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final f = ref.watch(formatProvider);
     if (!data.hasRoute) {
-      return const StatusBanner(
-        tone: BannerTone.info,
-        title: 'Splits need GPS',
-        message: 'Splits are calculated from GPS points. This activity has no usable GPS route.',
-      );
+      return StatusBanner(tone: BannerTone.info, title: 'activity_splits_need_gps_title'.tr, message: 'activity_splits_need_gps_message'.tr);
     }
     final splitM = f.distanceUnit == DistanceUnit.km ? 1000.0 : metersPerMile;
     final splits = computeSplits(data.points, splitM: splitM);
     if (splits.isEmpty) {
-      return const StatusBanner(tone: BannerTone.info, title: 'No splits yet', message: 'This activity is too short to calculate splits.');
+      return StatusBanner(tone: BannerTone.info, title: 'activity_no_splits_title'.tr, message: 'activity_no_splits_message'.tr);
     }
     final paces = splits.map((s) => s.paceSecPerKm).whereType<double>().toList();
     final fastest = paces.isEmpty ? null : paces.reduce((a, b) => a < b ? a : b);
@@ -360,11 +359,11 @@ class _Splits extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
-                SizedBox(width: 56, child: Text(unit == 'km' ? 'Km' : 'Mile', style: StrideText.label)),
-                Expanded(child: Text('Pace (${f.paceUnitLabel})', style: StrideText.label)),
+                SizedBox(width: 56, child: Text(unit == 'km' ? 'activity_split_col_km'.tr : 'activity_split_col_mile'.tr, style: StrideText.label)),
+                Expanded(child: Text('activity_split_col_pace'.trArgs([f.paceUnitLabel]), style: StrideText.label)),
                 SizedBox(
                   width: 72,
-                  child: Text('Time', style: StrideText.label, textAlign: TextAlign.end),
+                  child: Text('activity_time'.tr, style: StrideText.label, textAlign: TextAlign.end),
                 ),
               ],
             ),
@@ -384,8 +383,8 @@ class _Splits extends ConsumerWidget {
                 }
                 return Semantics(
                   label: partial
-                      ? 'Final partial split, ${f.distance(s.distanceM)}, pace $paceText, time ${formatDuration(s.movingMs)}'
-                      : 'Split ${s.index + 1}, pace $paceText, time ${formatDuration(s.movingMs)}',
+                      ? 'activity_split_semantic_partial'.trArgs([f.distance(s.distanceM), paceText, formatDuration(s.movingMs)])
+                      : 'activity_split_semantic'.trArgs([s.index + 1, paceText, formatDuration(s.movingMs)]),
                   excludeSemantics: true,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -430,7 +429,7 @@ class _Splits extends ConsumerWidget {
             ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Text('Splits use GPS moving time only. Paused time and GPS gaps are not counted.', style: StrideText.caption),
+            child: Text('activity_splits_footnote'.tr, style: StrideText.caption),
           ),
         ],
       ),
@@ -452,43 +451,43 @@ class _Charts extends ConsumerWidget {
 
     ChartSeries convertX(ChartSeries s) => s.available ? ChartSeries.ok([for (final p in s.samples) ChartSample(toUnit(p.x), p.y)]) : s;
 
-    final pace = data.hasRoute ? convertX(paceSeries(data.points)) : const ChartSeries.unavailable('Pace charts need a GPS route. This activity has none.');
-    final elevation = data.hasRoute ? convertX(elevationSeries(data.points)) : const ChartSeries.unavailable('Elevation needs a GPS route with altitude data.');
+    final pace = data.hasRoute ? convertX(paceSeries(data.points)) : const ChartSeries.unavailable('activity_chart_pace_no_route');
+    final elevation = data.hasRoute ? convertX(elevationSeries(data.points)) : const ChartSeries.unavailable('activity_chart_elevation_no_route');
     final hr = heartRateSeries(data.heartRate, a.startedAt);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SeriesChartCard(
-          title: 'Pace',
+          title: 'activity_pace'.tr,
           series: pace,
           xLabel: unit,
-          yLabel: 'min/$unit',
+          yLabel: 'activity_chart_pace_unit'.trArgs([unit]),
           invertY: true,
           formatY: (v) => f.paceValue(v),
           formatX: fmtX,
-          helper: 'Pace over distance, from GPS.',
-          semanticSummary: 'Pace chart. Average pace ${f.pace(a.avgPaceSecPerKm)}.',
+          helper: 'activity_chart_pace_helper'.tr,
+          semanticSummary: 'activity_chart_pace_semantic'.trArgs([f.pace(a.avgPaceSecPerKm)]),
         ),
         const SizedBox(height: 12),
         SeriesChartCard(
-          title: 'Elevation',
+          title: 'activity_chart_elevation'.tr,
           series: elevation,
           xLabel: unit,
-          yLabel: 'm',
+          yLabel: 'activity_unit_m'.tr,
           formatY: (v) => v.toStringAsFixed(0),
           formatX: fmtX,
-          semanticSummary: 'Elevation chart in meters over distance.',
+          semanticSummary: 'activity_chart_elevation_semantic'.tr,
         ),
         const SizedBox(height: 12),
         SeriesChartCard(
-          title: 'Heart rate',
+          title: 'activity_chart_hr'.tr,
           series: hr,
-          xLabel: 'min',
-          yLabel: 'bpm',
+          xLabel: 'activity_unit_min'.tr,
+          yLabel: 'activity_unit_bpm'.tr,
           formatY: (v) => v.toStringAsFixed(0),
           formatX: (v) => v.toStringAsFixed(0),
-          semanticSummary: 'Heart rate chart in beats per minute over time.',
+          semanticSummary: 'activity_chart_hr_semantic'.tr,
         ),
       ],
     );

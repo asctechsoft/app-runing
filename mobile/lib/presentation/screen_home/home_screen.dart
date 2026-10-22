@@ -22,6 +22,7 @@ import '../../controller/steps/steps_logic.dart';
 import '../../controller/steps/steps_providers.dart';
 import '../../controller/home/home_logic.dart';
 import '../../controller/home/home_providers.dart';
+import '../../utils/l10n.dart';
 
 /// Home (E06): bước hôm nay theo trạng thái DS §06, biểu đồ giờ, buổi gần nhất, chuỗi tuần.
 class HomeScreen extends ConsumerStatefulWidget {
@@ -130,8 +131,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                     loading: () => const LoadingCard(height: 320),
                     error: (e, _) => StrideCard(
                       child: ErrorState(
-                        title: "Couldn't load today's steps",
-                        message: 'Step data on this device could not be read.',
+                        title: 'home_steps_error_title'.tr,
+                        message: 'home_steps_error_message'.tr,
                         onRetry: () => ref.invalidate(stepsDayProvider(todayKey)),
                       ),
                     ),
@@ -140,14 +141,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                   if (view != null && state != HomeStepState.noPermission && state != HomeStepState.unavailable) ...[
                     const Gap(StrideSpace.s16),
                     SectionHeader(
-                      title: 'Steps today',
-                      subtitle: 'Your activity throughout the day',
-                      actionLabel: 'View details',
+                      title: 'home_steps_today_title'.tr,
+                      subtitle: 'home_steps_today_subtitle'.tr,
+                      actionLabel: 'home_view_details'.tr,
                       onAction: () => context.push('${Routes.dailySteps}?date=$todayKey'),
                     ),
                     StrideCard(
                       onTap: () => context.push('${Routes.dailySteps}?date=$todayKey'),
-                      semanticLabel: 'Open daily steps',
+                      semanticLabel: 'home_open_daily_steps'.tr,
                       child: view.day.hasValue
                           ? HourlyStepsChart(
                               entries: hourEntries(view.day, todayKey: todayKey, nowHour: now.hour),
@@ -159,11 +160,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                           : SizedBox(
                               height: 72,
                               child: Center(
-                                child: Text(
-                                  'Your hourly steps will appear here once data arrives.',
-                                  style: StrideText.bodySecondary,
-                                  textAlign: TextAlign.center,
-                                ),
+                                child: Text('home_hourly_empty'.tr, style: StrideText.bodySecondary, textAlign: TextAlign.center),
                               ),
                             ),
                     ),
@@ -197,7 +194,7 @@ class _Header extends ConsumerWidget {
         const Spacer(),
         Semantics(
           button: true,
-          label: 'Profile',
+          label: 'home_profile'.tr,
           excludeSemantics: true,
           child: InkResponse(
             onTap: () => context.go(Routes.profile),
@@ -218,7 +215,7 @@ class _Header extends ConsumerWidget {
         ),
         if (flags.notificationsInbox)
           IconButton(
-            tooltip: unread > 0 ? 'Notifications, $unread unread' : 'Notifications',
+            tooltip: unread > 0 ? 'home_notifications_unread'.trArgs([unread]) : 'home_notifications'.tr,
             onPressed: () => context.push(Routes.notifications),
             icon: Badge(isLabelVisible: unread > 0, label: Text('$unread'), child: const Icon(Icons.notifications_none)),
           ),
@@ -241,8 +238,11 @@ class _Greeting extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(achieved ? (first.isEmpty ? 'You did it!' : 'You did it, $first!') : greetingFor(now, name), style: StrideText.title),
-          Text(achieved ? 'Daily goal achieved' : DateFormat('EEEE, MMMM d, y').format(now), style: StrideText.bodySecondary),
+          Text(
+            achieved ? (first.isEmpty ? 'home_achieved_title'.tr : 'home_achieved_title_name'.trArgs([first])) : greetingFor(now, name),
+            style: StrideText.title,
+          ),
+          Text(achieved ? 'home_goal_achieved'.tr : DateFormat('EEEE, MMMM d, y').format(now), style: StrideText.bodySecondary),
         ],
       ),
     );
@@ -267,15 +267,11 @@ class _StepsCard extends StatelessWidget {
             children: [
               const IconBadge(icon: Icons.directions_walk, size: 56),
               const Gap(StrideSpace.s12),
-              Text('Turn on step tracking', style: StrideText.subheading, textAlign: TextAlign.center),
+              Text('home_enable_title'.tr, style: StrideText.subheading, textAlign: TextAlign.center),
               const Gap(StrideSpace.s8),
-              Text(
-                'STRIDE uses your phone\'s motion sensor to count daily steps. Location is only used when you start a run.',
-                style: StrideText.bodySecondary,
-                textAlign: TextAlign.center,
-              ),
+              Text('home_enable_message'.tr, style: StrideText.bodySecondary, textAlign: TextAlign.center),
               const Gap(StrideSpace.s16),
-              PrimaryButton(label: blocked ? 'Open phone settings' : 'Enable access', onPressed: onEnable),
+              PrimaryButton(label: blocked ? 'home_open_phone_settings'.tr : 'home_enable_access'.tr, onPressed: onEnable),
             ],
           ),
         );
@@ -285,9 +281,9 @@ class _StepsCard extends StatelessWidget {
             children: [
               const IconBadge(icon: Icons.sensors_off_outlined, size: 56),
               const Gap(StrideSpace.s12),
-              Text("Step counting isn't available on this device", style: StrideText.subheading, textAlign: TextAlign.center),
+              Text('home_unavailable_title'.tr, style: StrideText.subheading, textAlign: TextAlign.center),
               const Gap(StrideSpace.s8),
-              Text('You can still record runs and walks with GPS.', style: StrideText.bodySecondary, textAlign: TextAlign.center),
+              Text('home_unavailable_message'.tr, style: StrideText.bodySecondary, textAlign: TextAlign.center),
             ],
           ),
         );
@@ -308,8 +304,8 @@ class _StepsCard extends StatelessWidget {
     final pct = progress == null ? null : (progress * 100).round();
     final trackingOff = day.hasValue && !isMotionGranted(view.permission);
     final semantic = steps == null
-        ? 'No step data yet'
-        : '${format.steps(steps)} steps${goal == null ? '' : ' of ${format.steps(goal)} goal'}${pct == null ? '' : ', $pct percent'}';
+        ? 'home_no_step_data'.tr
+        : '${'home_semantic_steps'.trArgs([format.steps(steps)])}${goal == null ? '' : 'home_semantic_of_goal'.trArgs([format.steps(goal)])}${pct == null ? '' : 'home_semantic_percent'.trArgs([pct])}';
 
     return StrideCard(
       child: Column(
@@ -321,12 +317,12 @@ class _StepsCard extends StatelessWidget {
               TextButton.icon(
                 onPressed: () => context.push(Routes.homeGoals),
                 icon: const Icon(Icons.edit_outlined, size: 18),
-                label: Text(goal == null ? 'Set goal' : 'Edit goal'),
+                label: Text(goal == null ? 'home_set_goal'.tr : 'home_edit_goal'.tr),
               ),
             ],
           ),
           if (trackingOff) ...[
-            StatusBanner(tone: BannerTone.warning, message: 'Step tracking is off. Showing steps recorded earlier.', actionLabel: 'Enable', onAction: onEnable),
+            StatusBanner(tone: BannerTone.warning, message: 'home_tracking_off'.tr, actionLabel: 'home_enable'.tr, onAction: onEnable),
             const Gap(StrideSpace.s12),
           ],
           InkWell(
@@ -343,11 +339,14 @@ class _StepsCard extends StatelessWidget {
                     const Icon(Icons.directions_walk, color: StrideColors.primary),
                     Text(steps == null ? missingValue : format.steps(steps), style: StrideText.metric.copyWith(fontSize: 40)),
                     if (steps == null)
-                      Text('No step data yet', style: StrideText.caption)
+                      Text('home_no_step_data'.tr, style: StrideText.caption)
                     else if (achieved)
-                      Text('steps · $pct%', style: StrideText.label.copyWith(color: StrideColors.primary))
+                      Text('home_steps_percent'.trArgs([pct]), style: StrideText.label.copyWith(color: StrideColors.primary))
                     else
-                      Text(goal == null ? 'steps' : '/ ${format.steps(goal)}', style: StrideText.label.copyWith(color: StrideColors.textSecondary)),
+                      Text(
+                        goal == null ? 'home_steps_unit'.tr : 'home_of_goal'.trArgs([format.steps(goal)]),
+                        style: StrideText.label.copyWith(color: StrideColors.textSecondary),
+                      ),
                   ],
                 ),
               ),
@@ -366,9 +365,9 @@ class _StepsCard extends StatelessWidget {
           if (achieved) ...[
             const Gap(StrideSpace.s16),
             // Không tự tăng mục tiêu, không che CTA chạy (DS §06).
-            PrimaryButton(label: 'Keep moving', trailingIcon: Icons.arrow_forward, onPressed: () => context.go(Routes.run)),
+            PrimaryButton(label: 'home_keep_moving'.tr, trailingIcon: Icons.arrow_forward, onPressed: () => context.go(Routes.run)),
             const Gap(StrideSpace.s8),
-            SecondaryButton(label: 'Adjust goal', onPressed: () => context.push(Routes.homeGoals)),
+            SecondaryButton(label: 'home_adjust_goal'.tr, onPressed: () => context.push(Routes.homeGoals)),
           ],
         ],
       ),
@@ -377,11 +376,11 @@ class _StepsCard extends StatelessWidget {
 
   String _statusLine() {
     final day = view.day;
-    if (!day.hasValue) return 'Last checked ${DateFormat.jm().format(DateTime.fromMillisecondsSinceEpoch(view.checkedAt))}';
-    final goalText = view.goal == null ? 'No daily goal set' : '${format.steps(view.goal)} steps goal';
+    if (!day.hasValue) return 'home_last_checked'.trArgs([DateFormat.jm().format(DateTime.fromMillisecondsSinceEpoch(view.checkedAt))]);
+    final goalText = view.goal == null ? 'home_no_goal'.tr : 'home_goal_steps'.trArgs([format.steps(view.goal)]);
     final last = day.lastSampleAt;
     if (last == null) return goalText;
-    return '$goalText · Updated ${DateFormat.jm().format(DateTime.fromMillisecondsSinceEpoch(last))}';
+    return 'home_goal_updated'.trArgs([goalText, DateFormat.jm().format(DateTime.fromMillisecondsSinceEpoch(last))]);
   }
 }
 
@@ -397,11 +396,7 @@ class _LatestActivitySection extends ConsumerWidget {
       skipLoadingOnReload: true,
       loading: () => const LoadingCard(height: 96),
       error: (e, _) => StrideCard(
-        child: ErrorState(
-          title: "Couldn't load your runs",
-          message: 'Activities on this device could not be read.',
-          onRetry: () => ref.invalidate(homeLatestActivityProvider),
-        ),
+        child: ErrorState(title: 'home_runs_error_title'.tr, message: 'home_runs_error_message'.tr, onRetry: () => ref.invalidate(homeLatestActivityProvider)),
       ),
       data: (a) {
         if (a == null) {
@@ -412,11 +407,16 @@ class _LatestActivitySection extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('No runs yet', style: StrideText.subheading),
+                      Text('home_no_runs_title'.tr, style: StrideText.subheading),
                       const Gap(StrideSpace.s4),
-                      Text('Get moving with your first run.', style: StrideText.bodySecondary),
+                      Text('home_no_runs_message'.tr, style: StrideText.bodySecondary),
                       const Gap(StrideSpace.s12),
-                      PrimaryButton(label: 'Start your first run', trailingIcon: Icons.arrow_forward, expand: false, onPressed: () => context.go(Routes.run)),
+                      PrimaryButton(
+                        label: 'home_start_first_run'.tr,
+                        trailingIcon: Icons.arrow_forward,
+                        expand: false,
+                        onPressed: () => context.go(Routes.run),
+                      ),
                     ],
                   ),
                 ),
@@ -429,7 +429,7 @@ class _LatestActivitySection extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SectionHeader(title: 'Latest activity', actionLabel: 'View all', onAction: () => context.go(Routes.history)),
+            SectionHeader(title: 'home_latest_activity'.tr, actionLabel: 'home_view_all'.tr, onAction: () => context.go(Routes.history)),
             _ActivityCard(activity: a, format: fmt, onTap: () => context.push(Routes.homeActivity(a.id))),
           ],
         );
@@ -448,9 +448,9 @@ class _ActivityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final a = activity;
     final typeLabel = switch (a.type) {
-      ActivityType.run => 'Run',
-      ActivityType.walk => 'Walk',
-      ActivityType.indoorRun => 'Indoor run',
+      ActivityType.run => 'home_type_run'.tr,
+      ActivityType.walk => 'home_type_walk'.tr,
+      ActivityType.indoorRun => 'home_type_indoor_run'.tr,
     };
     final title = a.title.trim().isEmpty ? typeLabel : a.title;
     final start = DateTime.fromMillisecondsSinceEpoch(a.startedAt, isUtc: true).add(Duration(minutes: a.tzOffsetMin));
@@ -478,18 +478,18 @@ class _ActivityCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: MetricTile(
-                        label: 'Distance',
+                        label: 'home_distance'.tr,
                         value: format.distanceValue(a.distanceM),
                         unit: a.distanceM == null ? null : format.distanceUnitLabel,
                         estimated: estimated,
                       ),
                     ),
                     Expanded(
-                      child: MetricTile(label: 'Moving time', value: formatDuration(a.movingMs)),
+                      child: MetricTile(label: 'home_moving_time'.tr, value: formatDuration(a.movingMs)),
                     ),
                     Expanded(
                       child: MetricTile(
-                        label: 'Avg. pace',
+                        label: 'home_avg_pace'.tr,
                         value: format.paceValue(a.avgPaceSecPerKm),
                         unit: a.avgPaceSecPerKm == null ? null : format.paceUnitLabel,
                       ),
@@ -516,9 +516,9 @@ class _WeekStreakSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(
-          title: 'Your week streak',
-          subtitle: 'Reach your step goal each day to build your streak.',
-          actionLabel: 'View details',
+          title: 'home_streak_title'.tr,
+          subtitle: 'home_streak_subtitle'.tr,
+          actionLabel: 'home_view_details'.tr,
           onAction: () => context.go(Routes.progress),
         ),
         async.when(
@@ -527,8 +527,8 @@ class _WeekStreakSection extends ConsumerWidget {
           loading: () => const LoadingCard(height: 88),
           error: (e, _) => StrideCard(
             child: ErrorState(
-              title: "Couldn't load your streak",
-              message: 'Step data on this device could not be read.',
+              title: 'home_streak_error_title'.tr,
+              message: 'home_steps_error_message'.tr,
               onRetry: () => ref.invalidate(homeWeekStreakProvider),
             ),
           ),
@@ -536,7 +536,7 @@ class _WeekStreakSection extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${w.achievedCount} of 7 days', style: StrideText.label),
+                Text('home_streak_days'.trArgs([w.achievedCount]), style: StrideText.label),
                 const Gap(StrideSpace.s12),
                 Row(
                   children: [for (final d in w.days) Expanded(child: _StreakDot(day: d))],
@@ -558,13 +558,18 @@ class _StreakDot extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = DateFormat('E').format(day.date);
     final (Color bg, Color border, Widget inner, String status) = switch (day.status) {
-      StreakDayStatus.achieved => (StrideColors.lime, StrideColors.lime, const Icon(Icons.check, size: 18, color: StrideColors.primary), 'goal reached'),
-      StreakDayStatus.missed => (StrideColors.surface, StrideColors.borderControl, const SizedBox.shrink(), 'goal not reached'),
-      StreakDayStatus.noData => (StrideColors.surface, StrideColors.borderSubtle, Text(missingValue, style: StrideText.caption), 'no step data'),
-      StreakDayStatus.future => (StrideColors.subtle, StrideColors.subtle, const SizedBox.shrink(), 'upcoming'),
+      StreakDayStatus.achieved => (
+        StrideColors.lime,
+        StrideColors.lime,
+        const Icon(Icons.check, size: 18, color: StrideColors.primary),
+        'home_day_goal_reached'.tr,
+      ),
+      StreakDayStatus.missed => (StrideColors.surface, StrideColors.borderControl, const SizedBox.shrink(), 'home_day_goal_missed'.tr),
+      StreakDayStatus.noData => (StrideColors.surface, StrideColors.borderSubtle, Text(missingValue, style: StrideText.caption), 'home_day_no_data'.tr),
+      StreakDayStatus.future => (StrideColors.subtle, StrideColors.subtle, const SizedBox.shrink(), 'home_day_upcoming'.tr),
     };
     return Semantics(
-      label: '${DateFormat('EEEE').format(day.date)}, $status',
+      label: 'home_day_semantic'.trArgs([DateFormat('EEEE').format(day.date), status]),
       excludeSemantics: true,
       child: Column(
         children: [

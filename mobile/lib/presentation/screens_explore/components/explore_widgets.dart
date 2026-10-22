@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../../../utils/l10n.dart';
 import '../../../values/routes.dart';
 import '../../../controller/providers.dart';
 import '../../../values/tokens.dart';
@@ -13,10 +14,10 @@ import '../../../repository/explore_repository.dart';
 
 /// Màn lỗi Explore theo nguyên nhân; hết phiên/khách → CTA đăng nhập.
 class ExploreFailureView extends StatelessWidget {
-  const ExploreFailureView({super.key, required this.failure, this.onRetry, this.signInLabel = 'Sign in'});
+  const ExploreFailureView({super.key, required this.failure, this.onRetry, this.signInLabel});
   final ExploreFailure failure;
   final VoidCallback? onRetry;
-  final String signInLabel;
+  final String? signInLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +26,7 @@ class ExploreFailureView extends StatelessWidget {
         icon: Icons.lock_outline,
         title: failure.title,
         message: failure.userMessage,
-        actionLabel: signInLabel,
+        actionLabel: signInLabel ?? 'explore_sign_in'.tr,
         onAction: () => context.push(Routes.login),
       );
     }
@@ -34,7 +35,7 @@ class ExploreFailureView extends StatelessWidget {
       icon: failure.kind == ExploreErrorKind.offline ? Icons.cloud_off_outlined : Icons.error_outline,
       title: failure.title,
       message: failure.userMessage,
-      actionLabel: retry == null ? null : 'Try again',
+      actionLabel: retry == null ? null : 'explore_try_again'.tr,
       onAction: retry,
     );
   }
@@ -51,13 +52,13 @@ class ExploreGuestGate extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!ref.watch(ownerProvider).isGuest) return child;
-    return EmptyState(icon: icon, title: title, message: message, actionLabel: 'Sign in', onAction: () => context.push(Routes.login));
+    return EmptyState(icon: icon, title: title, message: message, actionLabel: 'explore_sign_in'.tr, onAction: () => context.push(Routes.login));
   }
 }
 
 void showExploreError(BuildContext context, Object e) {
   final f = mapExploreError(e);
-  showStrideSnack(context, f.kind == ExploreErrorKind.offline ? 'You’re offline. Try again when connected.' : f.userMessage, isError: true);
+  showStrideSnack(context, f.kind == ExploreErrorKind.offline ? 'explore_offline_snack'.tr : f.userMessage, isError: true);
 }
 
 bool _tzReady = false;
@@ -113,7 +114,7 @@ class ExploreLoadMore extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 8),
     child: Center(
-      child: loading ? const CircularProgressIndicator() : TextButton(onPressed: onPressed, child: const Text('Load more')),
+      child: loading ? const CircularProgressIndicator() : TextButton(onPressed: onPressed, child: Text('explore_load_more'.tr)),
     ),
   );
 }

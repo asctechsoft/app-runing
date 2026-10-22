@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../utils/formatters.dart';
+import '../../utils/l10n.dart';
 import '../../controller/providers.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
@@ -10,6 +11,7 @@ import '../../models/data_models/activity.dart';
 import '../screens_activity/components/activity_card.dart';
 import '../../controller/history/activity_feed_controller.dart';
 import '../../utils/progress_data.dart';
+import '../../utils/date_locale.dart';
 
 enum _RunsFilter { all, run }
 
@@ -62,7 +64,7 @@ class _FilteredRunsScreenState extends ConsumerState<FilteredRunsScreen> {
     if (widget.fromMs == null || widget.toMs == null) return null;
     final s = DateTime.fromMillisecondsSinceEpoch(widget.fromMs!);
     final e = DateTime.fromMillisecondsSinceEpoch(widget.toMs!).subtract(const Duration(milliseconds: 1));
-    final fmt = DateFormat('MMM d, y', 'en_US');
+    final fmt = DateFormat('MMM d, y', appDateLocale);
     return s.year == e.year && s.month == e.month && s.day == e.day ? fmt.format(s) : '${fmt.format(s)} – ${fmt.format(e)}';
   }
 
@@ -72,7 +74,7 @@ class _FilteredRunsScreenState extends ConsumerState<FilteredRunsScreen> {
     final f = ref.watch(formatProvider);
     final t = _feed.totals;
     return StrideScreen(
-      title: widget.title ?? 'Runs',
+      title: widget.title ?? 'progress_runs_title'.tr,
       scroll: false,
       body: CustomScrollView(
         controller: _scroll,
@@ -88,7 +90,7 @@ class _FilteredRunsScreenState extends ConsumerState<FilteredRunsScreen> {
             child: StrideSegmented<_RunsFilter>(
               values: _RunsFilter.values,
               selected: _filter,
-              labelOf: (v) => v == _RunsFilter.all ? 'All' : 'Run',
+              labelOf: (v) => v == _RunsFilter.all ? 'history_filter_all'.tr : 'history_filter_run'.tr,
               onChanged: (v) {
                 setState(() => _filter = v);
                 _load();
@@ -103,16 +105,16 @@ class _FilteredRunsScreenState extends ConsumerState<FilteredRunsScreen> {
                   : Row(
                       children: [
                         Expanded(
-                          child: MetricTile(value: f.distanceValue(t.distanceM), unit: f.distanceUnitLabel, label: 'Total distance', center: true),
+                          child: MetricTile(value: f.distanceValue(t.distanceM), unit: f.distanceUnitLabel, label: 'progress_total_distance'.tr, center: true),
                         ),
                         Expanded(
-                          child: MetricTile(value: formatDurationShort(t.movingMs), label: 'Moving time', center: true),
+                          child: MetricTile(value: formatDurationShort(t.movingMs), label: 'progress_moving_time'.tr, center: true),
                         ),
                         Expanded(
                           child: MetricTile(
                             value: f.paceValue(periodPaceSecPerKm(t)),
                             unit: periodPaceSecPerKm(t) == null ? null : f.paceUnitLabel,
-                            label: 'Avg. pace',
+                            label: 'progress_avg_pace_label'.tr,
                             center: true,
                           ),
                         ),
@@ -123,7 +125,7 @@ class _FilteredRunsScreenState extends ConsumerState<FilteredRunsScreen> {
           const SliverToBoxAdapter(child: SizedBox(height: 12)),
           if (_feed.error != null && _feed.items.isEmpty)
             SliverToBoxAdapter(
-              child: ErrorState(title: 'Couldn\'t load activities', message: 'Reading activities saved on this device failed.', onRetry: _load),
+              child: ErrorState(title: 'progress_runs_error_title'.tr, message: 'progress_activities_read_failed'.tr, onRetry: _load),
             )
           else if (_feed.loading && _feed.items.isEmpty)
             const SliverToBoxAdapter(child: LoadingCard(height: 108))
@@ -131,8 +133,8 @@ class _FilteredRunsScreenState extends ConsumerState<FilteredRunsScreen> {
             SliverToBoxAdapter(
               child: EmptyState(
                 icon: Icons.directions_run,
-                title: 'No activities in this period',
-                message: _filter == _RunsFilter.run ? 'No runs were saved in this period.' : 'Nothing was saved in this period.',
+                title: 'progress_runs_empty_title'.tr,
+                message: _filter == _RunsFilter.run ? 'progress_runs_empty_run'.tr : 'progress_runs_empty_all'.tr,
               ),
             )
           else ...[
@@ -148,7 +150,7 @@ class _FilteredRunsScreenState extends ConsumerState<FilteredRunsScreen> {
                   child: _feed.loadingMore
                       ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5))
                       : _feed.hasMore
-                      ? TextButton(onPressed: _feed.loadMore, child: const Text('Load more'))
+                      ? TextButton(onPressed: _feed.loadMore, child: Text('history_load_more'.tr))
                       : const SizedBox.shrink(),
                 ),
               ),

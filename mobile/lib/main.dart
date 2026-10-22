@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'values/router.dart';
@@ -40,6 +41,8 @@ Future<void> main() async {
 
   await AppLocaleConfig.ensureConfigured();
   await AscLocale.loadTranslations();
+  // Tên thứ/tháng cho DateFormat theo ngôn ngữ app (utils/date_locale.dart).
+  await initializeDateFormatting();
 
   runApp(
     ProviderScope(

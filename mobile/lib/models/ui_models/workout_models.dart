@@ -1,23 +1,25 @@
 import 'dart:convert';
 
+import '../../utils/l10n.dart';
+
 /// Loại bước trong giáo án interval (docs/domain-model.md: warmup/run/walk/rest/cooldown/repeat).
 enum IntervalKind { warmup, run, walk, rest, cooldown, repeat }
 
 String intervalKindLabel(IntervalKind k) => switch (k) {
-  IntervalKind.warmup => 'Warm-up',
-  IntervalKind.run => 'Run',
-  IntervalKind.walk => 'Walk',
-  IntervalKind.rest => 'Rest',
-  IntervalKind.cooldown => 'Cool-down',
-  IntervalKind.repeat => 'Repeat',
+  IntervalKind.warmup => 'model_interval_warmup'.tr,
+  IntervalKind.run => 'model_interval_run'.tr,
+  IntervalKind.walk => 'model_interval_walk'.tr,
+  IntervalKind.rest => 'model_interval_rest'.tr,
+  IntervalKind.cooldown => 'model_interval_cooldown'.tr,
+  IntervalKind.repeat => 'model_interval_repeat'.tr,
 };
 
 String intervalKindHint(IntervalKind k) => switch (k) {
-  IntervalKind.warmup => 'Easy pace',
-  IntervalKind.run => 'Comfortable pace',
-  IntervalKind.walk => 'Easy pace',
-  IntervalKind.rest => 'Stand or walk slowly',
-  IntervalKind.cooldown => 'Easy pace',
+  IntervalKind.warmup => 'model_interval_hint_easy'.tr,
+  IntervalKind.run => 'model_interval_hint_comfortable'.tr,
+  IntervalKind.walk => 'model_interval_hint_easy'.tr,
+  IntervalKind.rest => 'model_interval_hint_rest'.tr,
+  IntervalKind.cooldown => 'model_interval_hint_easy'.tr,
   IntervalKind.repeat => '',
 };
 
@@ -87,7 +89,7 @@ class WorkoutPlan {
 
   factory WorkoutPlan.fromJson(Map<String, Object?> j) => WorkoutPlan(
     id: j['id'] as String?,
-    name: j['name'] as String? ?? 'Interval workout',
+    name: j['name'] as String? ?? 'model_workout_default_name'.tr,
     audioCues: j['audioCues'] as bool? ?? true,
     steps: ((j['steps'] as List?) ?? const []).map((s) => IntervalStep.fromJson((s as Map).cast<String, Object?>())).toList(),
   );
@@ -97,7 +99,7 @@ class WorkoutPlan {
 
   /// Giáo án mẫu theo mockup: 5 min warm-up + 6 × (2 min run + 1 min walk) + 5 min cool-down = 28 min.
   static WorkoutPlan starter() => WorkoutPlan(
-    name: 'Interval workout',
+    name: 'model_workout_default_name'.tr,
     steps: [
       IntervalStep(kind: IntervalKind.warmup, durationMs: 5 * 60000),
       IntervalStep(
@@ -128,7 +130,7 @@ class PlannedPhase {
 
   int get endMs => startMs + plannedMs;
 
-  String get label => round == null ? intervalKindLabel(kind) : '${intervalKindLabel(kind)} $round of $rounds';
+  String get label => round == null ? intervalKindLabel(kind) : 'model_phase_round_of'.trArgs([intervalKindLabel(kind), round, rounds]);
 }
 
 /// Trải phẳng giáo án; bỏ qua bước không có thời lượng hợp lệ.
@@ -247,7 +249,7 @@ String formatStepDuration(int ms) {
   final s = ms ~/ 1000;
   final m = s ~/ 60;
   final r = s % 60;
-  if (m == 0) return '$r s';
-  if (r == 0) return '$m min';
-  return '$m min $r s';
+  if (m == 0) return 'fmt_step_sec'.trArgs([r]);
+  if (r == 0) return 'fmt_step_min'.trArgs([m]);
+  return 'fmt_step_min_sec'.trArgs([m, r]);
 }

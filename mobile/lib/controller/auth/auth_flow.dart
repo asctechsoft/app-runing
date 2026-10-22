@@ -15,6 +15,7 @@ import '../sync/sync_providers.dart';
 import '../../services/application/sync_service.dart';
 import '../../repository/auth_repository.dart';
 import '../../services/application/google_sign_in_service.dart';
+import '../../utils/l10n.dart';
 
 /// Chuyển dữ liệu khách sang tài khoản (E03). Idempotent: chạy lại không nhân đôi, không đụng owner khác.
 class GuestTransferService {
@@ -140,6 +141,6 @@ Future<String?> signInWithGoogleWidget(WidgetRef ref) async {
 
 /// Thông báo lỗi cho luồng Google.
 String googleSignInErrorMessage(Object error) {
-  if (error is GoogleSignInFailure) return "Couldn't sign in with Google. Check your connection and try again.";
+  if (error is GoogleSignInFailure) return 'auth_err_google_signin_failed'.tr;
   return authErrorMessage(error, AuthAction.login);
 }

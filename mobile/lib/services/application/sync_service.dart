@@ -15,6 +15,7 @@ import '../../models/data_models/activity.dart';
 import '../../models/data_models/profile.dart';
 import '../../models/data_models/sync.dart';
 import 'sync_remote.dart';
+import '../../utils/l10n.dart';
 
 enum SyncPhase { idle, syncing, error, offline, signedOut, disabled }
 
@@ -60,8 +61,8 @@ class SyncConflict {
 
   String get title {
     final t = (local['title'] as String?)?.trim();
-    if (entity == 'activity') return (t == null || t.isEmpty) ? 'Activity' : t;
-    if (entity == 'profile' || entity == 'settings') return 'Profile and settings';
+    if (entity == 'activity') return (t == null || t.isEmpty) ? 'sync_conflict_activity'.tr : t;
+    if (entity == 'profile' || entity == 'settings') return 'sync_conflict_profile_settings'.tr;
     return entity;
   }
 
@@ -287,21 +288,21 @@ class SyncService {
         lastSyncedAt: errors == 0 ? _clock.nowMs() : null,
       );
     } on _Offline {
-      s = status.value.copyWith(phase: SyncPhase.offline, lastError: "You're offline. Changes will sync when you're back online.");
+      s = status.value.copyWith(phase: SyncPhase.offline, lastError: 'sync_offline'.tr);
     } on _AuthLost {
-      s = status.value.copyWith(phase: SyncPhase.signedOut, lastError: 'Your session has expired. Log in again to sync.');
+      s = status.value.copyWith(phase: SyncPhase.signedOut, lastError: 'sync_session_expired'.tr);
     } on ApiException catch (e) {
       // Lỗi ở bước pull (push đã xử lý lỗi theo từng op).
       if (e.isNetwork) {
-        s = status.value.copyWith(phase: SyncPhase.offline, lastError: "You're offline. Changes will sync when you're back online.");
+        s = status.value.copyWith(phase: SyncPhase.offline, lastError: 'sync_offline'.tr);
       } else if (e.isUnauthorized) {
-        s = status.value.copyWith(phase: SyncPhase.signedOut, lastError: 'Your session has expired. Log in again to sync.');
+        s = status.value.copyWith(phase: SyncPhase.signedOut, lastError: 'sync_session_expired'.tr);
       } else {
-        s = status.value.copyWith(phase: SyncPhase.error, lastError: lastError ?? "Couldn't download changes from the server. We'll retry.");
+        s = status.value.copyWith(phase: SyncPhase.error, lastError: lastError ?? 'sync_download_failed'.tr);
       }
     } catch (e, st) {
       StrideLog.e('sync', e, st);
-      s = status.value.copyWith(phase: SyncPhase.error, lastError: "Couldn't sync. Try again later.");
+      s = status.value.copyWith(phase: SyncPhase.error, lastError: 'sync_failed_later'.tr);
     }
     _emit(s.copyWith(pending: await pendingCount(o.ownerId), conflicts: (await conflicts(o.ownerId)).length));
     return status.value;
@@ -385,7 +386,7 @@ class SyncService {
       }
       final transient = e.status >= 500 || e.status == 429;
       await _fail(op, e.code, permanent: !transient);
-      return transient ? "Couldn't reach the server. We'll retry." : "Some changes couldn't be synced (${e.code}).";
+      return transient ? 'sync_server_unreachable'.tr : 'sync_changes_failed'.trArgs([e.code]);
     }
   }
 
@@ -455,7 +456,7 @@ class SyncService {
     }
     await _fail(op, code, permanent: true);
     await _raw.update('activities', {'sync_state': SyncState.error.name}, where: 'id = ? AND owner_id = ?', whereArgs: [op.entityId, op.ownerId]);
-    return "An activity couldn't be synced ($code).";
+    return 'sync_activity_failed'.trArgs([code]);
   }
 
   Future<String?> _pushGoal(SyncOperation op) async {
@@ -487,7 +488,7 @@ class SyncService {
       return null;
     }
     await _fail(op, code, permanent: true);
-    return "Profile changes couldn't be synced ($code).";
+    return 'sync_profile_failed'.trArgs([code]);
   }
 
   Future<void> _handleConflict(SyncOperation op, String code, Map<String, Object?>? server) async {

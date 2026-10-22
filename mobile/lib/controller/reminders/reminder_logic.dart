@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../../utils/l10n.dart';
+
 /// Loại nhắc (J02).
 enum ReminderKind { dailySteps, run }
 
@@ -152,7 +154,7 @@ DateTime nextSlotTime(ReminderSlot s, DateTime now) {
 String formatMinuteOfDay(int m) {
   final h = m ~/ 60;
   final min = m % 60;
-  final suffix = h < 12 ? 'AM' : 'PM';
+  final suffix = h < 12 ? 'reminders_am'.tr : 'reminders_pm'.tr;
   final h12 = h % 12 == 0 ? 12 : h % 12;
   return '$h12:${min.toString().padLeft(2, '0')} $suffix';
 }

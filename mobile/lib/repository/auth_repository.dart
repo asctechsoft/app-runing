@@ -10,6 +10,7 @@ import '../utils/logger.dart';
 import '../services/application/api_client.dart';
 import '../controller/providers.dart';
 import '../utils/clock.dart';
+import '../utils/l10n.dart';
 
 /// Người dùng đăng nhập; [id] là Firebase uid.
 class AuthUser {
@@ -217,53 +218,51 @@ enum AuthAction { login, register, forgot, reset, verify, reauth, other }
 /// Map lỗi → thông báo cụ thể cho người dùng; không lộ chi tiết kỹ thuật.
 String authErrorMessage(Object error, AuthAction action) {
   if (error is FirebaseException) error = mapFirebaseError(error);
-  if (error is! ApiException) return 'Something went wrong. Please try again.';
-  if (error.code == 'not_configured') return "Accounts aren't available in this build.";
+  if (error is! ApiException) return 'auth_err_generic'.tr;
+  if (error.code == 'not_configured') return 'auth_err_not_configured'.tr;
   if (error.isNetwork) {
     return switch (action) {
-      AuthAction.login => "You're offline. Connect to the internet to sign in.",
-      AuthAction.register => "You're offline. Connect to the internet to create an account.",
-      _ => "You're offline. Connect to the internet and try again.",
+      AuthAction.login => 'auth_err_offline_login'.tr,
+      AuthAction.register => 'auth_err_offline_register'.tr,
+      _ => 'auth_err_offline'.tr,
     };
   }
   switch (error.code) {
     case 'invalid_credentials':
-      return action == AuthAction.reauth ? 'That password is incorrect.' : 'Email or password is incorrect.';
+      return action == AuthAction.reauth ? 'auth_err_wrong_password'.tr : 'auth_err_invalid_credentials'.tr;
     case 'email_taken':
-      return 'An account with this email already exists. Try logging in instead.';
+      return 'auth_err_email_taken'.tr;
     case 'reauth_required':
-      return 'Confirm your password again to continue.';
+      return 'auth_err_reauth_required'.tr;
     case 'account-exists-with-different-credential':
-      return 'An account with this email already exists. Log in with your password first.';
+      return 'auth_err_different_credential'.tr;
     case 'invalid_token':
-      return action == AuthAction.verify || action == AuthAction.reset
-          ? 'This link is invalid or has expired. Request a new one.'
-          : 'Your session has expired. Please log in again.';
+      return action == AuthAction.verify || action == AuthAction.reset ? 'auth_err_link_invalid'.tr : 'auth_err_session_expired'.tr;
     case 'invalid_refresh_token':
     case 'refresh_token_reused':
     case 'unauthorized':
-      return 'Your session has expired. Please log in again.';
+      return 'auth_err_session_expired'.tr;
     case 'rate_limited':
-      return 'Too many attempts. Wait a minute and try again.';
+      return 'auth_err_rate_limited'.tr;
     case 'account_exists_unverified':
-      return "An account with this email already exists but isn't verified. Log in with your password and verify your email first.";
+      return 'auth_err_unverified_exists'.tr;
     case 'email_not_verified':
-      return 'Your Google account email isn\'t verified. Verify it with Google or use your email instead.';
+      return 'auth_err_google_email_unverified'.tr;
     case 'account_disabled':
-      return 'This account is being deleted or has been deleted.';
+      return 'auth_err_account_disabled'.tr;
     case 'invalid_id_token':
-      return "Couldn't confirm your Google sign-in. Please try again.";
+      return 'auth_err_google_invalid'.tr;
     case 'provider_not_configured':
-      return "Sign in with Google isn't available yet. Use your email instead.";
+      return 'auth_err_google_unavailable'.tr;
     case 'account_deletion_pending':
-      return 'This account is being deleted.';
+      return 'auth_err_deletion_pending'.tr;
     case 'account_deleted':
-      return 'This account has been deleted.';
+      return 'auth_err_deleted'.tr;
     case 'validation_error':
-      return _validationMessage(error.details) ?? 'Some details are not valid. Check and try again.';
+      return _validationMessage(error.details) ?? 'auth_err_validation'.tr;
   }
-  if (error.status >= 500) return 'Something went wrong on our side. Please try again.';
-  return error.message.isNotEmpty ? error.message : 'Something went wrong. Please try again.';
+  if (error.status >= 500) return 'auth_err_server'.tr;
+  return error.message.isNotEmpty ? error.message : 'auth_err_generic'.tr;
 }
 
 String? _validationMessage(Object? details) {
@@ -276,15 +275,18 @@ String? _validationMessage(Object? details) {
 
 /// Quy tắc mật khẩu của app (chặt hơn Firebase ≥ 6): ≥ 8 ký tự, có chữ cái, có chữ số, ≤ 72 byte.
 class PasswordRule {
-  const PasswordRule(this.label, this.test);
-  final String label;
+  const PasswordRule(this.labelKey, this.test);
+  final String labelKey;
   final bool Function(String) test;
+
+  /// Nhãn hiển thị theo ngôn ngữ hiện tại (không gọi `.tr` lúc khởi tạo tĩnh).
+  String get label => labelKey.tr;
 }
 
 final passwordRules = <PasswordRule>[
-  PasswordRule('At least 8 characters', (p) => p.length >= 8),
-  PasswordRule('Includes a letter', (p) => RegExp(r'\p{L}', unicode: true).hasMatch(p)),
-  PasswordRule('Includes a number', (p) => RegExp(r'\p{N}', unicode: true).hasMatch(p)),
+  PasswordRule('auth_rule_length', (p) => p.length >= 8),
+  PasswordRule('auth_rule_letter', (p) => RegExp(r'\p{L}', unicode: true).hasMatch(p)),
+  PasswordRule('auth_rule_number', (p) => RegExp(r'\p{N}', unicode: true).hasMatch(p)),
 ];
 
 bool passwordTooLong(String p) => utf8.encode(p).length > 72;
@@ -295,7 +297,7 @@ final _emailRe = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
 
 String? validateEmail(String? v) {
   final s = v?.trim() ?? '';
-  if (s.isEmpty) return 'Enter your email address.';
-  if (s.length > 254 || !_emailRe.hasMatch(s)) return 'Enter a valid email address, like name@example.com.';
+  if (s.isEmpty) return 'auth_err_email_empty'.tr;
+  if (s.length > 254 || !_emailRe.hasMatch(s)) return 'auth_err_email_invalid'.tr;
   return null;
 }

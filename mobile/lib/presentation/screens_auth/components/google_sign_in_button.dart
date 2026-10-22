@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../common_components/widgets.dart';
 import '../../../controller/auth/auth_flow.dart';
+import '../../../utils/l10n.dart';
 
 /// "Continue with Google": chỉ hiển thị khi Firebase sẵn sàng (flags.authGoogle). Hủy chọn tài khoản → im lặng.
 class GoogleSignInButton extends ConsumerStatefulWidget {
@@ -34,8 +35,8 @@ class _GoogleSignInButtonState extends ConsumerState<GoogleSignInButton> {
   @override
   Widget build(BuildContext context) {
     if (widget.primary || _loading) {
-      return PrimaryButton(label: 'Continue with Google', icon: Icons.g_mobiledata, loading: _loading, onPressed: _go);
+      return PrimaryButton(label: 'auth_continue_google'.tr, icon: Icons.g_mobiledata, loading: _loading, onPressed: _go);
     }
-    return OutlineButton(label: 'Continue with Google', icon: Icons.g_mobiledata, onPressed: _go);
+    return OutlineButton(label: 'auth_continue_google'.tr, icon: Icons.g_mobiledata, onPressed: _go);
   }
 }

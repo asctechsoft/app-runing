@@ -17,6 +17,8 @@ import '../../services/application/activity_export.dart';
 import '../../utils/activity_format.dart';
 import '../../controller/activity/activity_providers.dart';
 import '../../utils/route_geometry.dart';
+import '../../utils/l10n.dart';
+import '../../utils/date_locale.dart';
 
 enum ShareTemplate { map, photo, minimal }
 
@@ -119,10 +121,10 @@ class _ShareActivityScreenState extends ConsumerState<ShareActivityScreen> {
         final bytes = await _renderPng();
         final r = await shareBytesAsFile(bytes: Uint8List.fromList(bytes), fileName: '${exportFileStem(a)}.png', mime: 'image/png');
         // Hủy bảng chia sẻ → không báo gì (không bao giờ nói "posted").
-        if (r.status == ShareResultStatus.success && mounted) showStrideSnack(context, 'Image sent to the app you chose.');
+        if (r.status == ShareResultStatus.success && mounted) showStrideSnack(context, 'activity_share_sent'.tr);
       } catch (_) {
         if (mounted) {
-          showStrideSnack(context, 'Couldn\'t create the image. Your settings are kept.', isError: true, actionLabel: 'Try again', onAction: () => _share(a));
+          showStrideSnack(context, 'activity_share_failed'.tr, isError: true, actionLabel: 'activity_share_try_again'.tr, onAction: () => _share(a));
         }
       } finally {
         if (mounted) setState(() => _exporting = false);
@@ -134,20 +136,20 @@ class _ShareActivityScreenState extends ConsumerState<ShareActivityScreen> {
   Widget build(BuildContext context) {
     final async = ref.watch(activityDetailProvider(widget.activityId));
     return async.when(
-      loading: () => const StrideScreen(title: 'Share activity', body: LoadingCard(height: 400)),
+      loading: () => StrideScreen(title: 'activity_share_title'.tr, body: LoadingCard(height: 400)),
       error: (_, _) => StrideScreen(
-        title: 'Share activity',
+        title: 'activity_share_title'.tr,
         body: ErrorState(
-          title: 'Couldn\'t open this activity',
-          message: 'Reading it from this device failed.',
+          title: 'activity_open_error_title'.tr,
+          message: 'activity_open_error_message_short'.tr,
           onRetry: () => ref.invalidate(activityDetailProvider(widget.activityId)),
         ),
       ),
       data: (d) {
         if (d == null) {
-          return const StrideScreen(
-            title: 'Share activity',
-            body: EmptyState(icon: Icons.search_off, title: 'Activity not found', message: 'This activity may have been deleted.'),
+          return StrideScreen(
+            title: 'activity_share_title'.tr,
+            body: EmptyState(icon: Icons.search_off, title: 'activity_not_found_title'.tr, message: 'activity_not_found_message_short'.tr),
           );
         }
         _init(d);
@@ -168,15 +170,20 @@ class _ShareActivityScreenState extends ConsumerState<ShareActivityScreen> {
     final templates = [if (original.isNotEmpty) ShareTemplate.map, if (photos.isNotEmpty) ShareTemplate.photo, ShareTemplate.minimal];
 
     return StrideScreen(
-      title: 'Share activity',
-      bottom: PrimaryButton(label: 'Save or share image', icon: Icons.ios_share, loading: _exporting, onPressed: tooLittle ? null : () => _share(a)),
+      title: 'activity_share_title'.tr,
+      bottom: PrimaryButton(
+        label: 'activity_share_save_or_share'.tr,
+        icon: Icons.ios_share,
+        loading: _exporting,
+        onPressed: tooLittle ? null : () => _share(a),
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 8),
           // Preview = chính widget được xuất (FittedBox chỉ co hiển thị, không đổi nội dung ảnh).
           Semantics(
-            label: 'Preview of the image that will be shared',
+            label: 'activity_share_preview'.tr,
             child: AspectRatio(
               aspectRatio: shareCardSize.width / shareCardSize.height,
               child: FittedBox(
@@ -200,20 +207,20 @@ class _ShareActivityScreenState extends ConsumerState<ShareActivityScreen> {
             const SizedBox(height: 12),
             StatusBanner(
               tone: BannerTone.warning,
-              title: 'Not enough route left',
-              message: 'After hiding your start and finish, too little of the route remains to show.',
-              actionLabel: 'Hide map',
+              title: 'activity_share_not_enough_title'.tr,
+              message: 'activity_share_not_enough_message'.tr,
+              actionLabel: 'activity_share_hide_map'.tr,
               onAction: () => setState(() => _c = _c.copyWith(template: ShareTemplate.minimal)),
             ),
           ],
-          const SectionHeader(title: 'Template'),
+          SectionHeader(title: 'activity_share_template'.tr),
           StrideSegmented<ShareTemplate>(
             values: templates,
             selected: templates.contains(_c.template) ? _c.template : templates.first,
             labelOf: (t) => switch (t) {
-              ShareTemplate.map => 'Map',
-              ShareTemplate.photo => 'Photo',
-              ShareTemplate.minimal => 'Minimal',
+              ShareTemplate.map => 'activity_share_template_map'.tr,
+              ShareTemplate.photo => 'activity_photo'.tr,
+              ShareTemplate.minimal => 'activity_share_template_minimal'.tr,
             },
             onChanged: (t) => setState(() => _c = _c.copyWith(template: t)),
           ),
@@ -231,7 +238,7 @@ class _ShareActivityScreenState extends ConsumerState<ShareActivityScreen> {
                   return Semantics(
                     button: true,
                     selected: sel,
-                    label: 'Photo ${i + 1}',
+                    label: 'activity_share_photo_n'.trArgs([i + 1]),
                     child: GestureDetector(
                       onTap: () => setState(() => _c = _c.copyWith(photoId: p.id)),
                       child: Container(
@@ -249,25 +256,23 @@ class _ShareActivityScreenState extends ConsumerState<ShareActivityScreen> {
               ),
             ),
           ],
-          const SectionHeader(title: 'Show on image'),
+          SectionHeader(title: 'activity_share_show_on_image'.tr),
           SettingsGroup(
             children: [
-              _toggle('Distance', _c.showDistance, (v) => _c = _c.copyWith(showDistance: v)),
-              _toggle('Time', _c.showTime, (v) => _c = _c.copyWith(showTime: v)),
-              _toggle('Pace', _c.showPace, (v) => _c = _c.copyWith(showPace: v)),
-              _toggle('Date', _c.showDate, (v) => _c = _c.copyWith(showDate: v)),
+              _toggle('activity_metric_distance'.tr, _c.showDistance, (v) => _c = _c.copyWith(showDistance: v)),
+              _toggle('activity_time'.tr, _c.showTime, (v) => _c = _c.copyWith(showTime: v)),
+              _toggle('activity_pace'.tr, _c.showPace, (v) => _c = _c.copyWith(showPace: v)),
+              _toggle('activity_date'.tr, _c.showDate, (v) => _c = _c.copyWith(showDate: v)),
             ],
           ),
           if (_c.template == ShareTemplate.map && original.isNotEmpty) ...[
-            const SectionHeader(title: 'Location privacy'),
+            SectionHeader(title: 'activity_share_location_privacy'.tr),
             SettingsGroup(
               children: [
                 SettingsRow(
                   icon: Icons.shield_outlined,
-                  title: 'Hide start & finish',
-                  subtitle: _c.hideEnds
-                      ? 'The route within ${_c.hideRadiusM.round()} m of where you started and finished is removed from the image.'
-                      : 'Your full route, including start and finish, will be visible.',
+                  title: 'activity_share_hide_ends'.tr,
+                  subtitle: _c.hideEnds ? 'activity_share_hide_ends_on'.trArgs([_c.hideRadiusM.round()]) : 'activity_share_hide_ends_off'.tr,
                   showChevron: false,
                   trailing: Switch(
                     value: _c.hideEnds,
@@ -283,7 +288,7 @@ class _ShareActivityScreenState extends ConsumerState<ShareActivityScreen> {
                       children: [
                         for (final r in hideRadiusOptions)
                           StrideChip(
-                            label: '${r.round()} m',
+                            label: 'activity_share_radius_m'.trArgs([r.round()]),
                             selected: _c.hideRadiusM == r,
                             onTap: () => setState(() => _c = _c.copyWith(hideRadiusM: r)),
                           ),
@@ -294,7 +299,7 @@ class _ShareActivityScreenState extends ConsumerState<ShareActivityScreen> {
             ),
           ],
           const SizedBox(height: 8),
-          Text('Sharing creates an image only. It doesn\'t change who can see this activity in STRIDE.', style: StrideText.caption),
+          Text('activity_share_footnote'.tr, style: StrideText.caption),
         ],
       ),
     );
@@ -325,9 +330,10 @@ class ShareCard extends StatelessWidget {
     final fg = onPhoto ? StrideColors.surface : StrideColors.textPrimary;
     final sub = onPhoto ? StrideColors.surface : StrideColors.textSecondary;
     final metrics = <(String, String)>[
-      if (config.showDistance) (format.distance(a.distanceM), a.distanceSource == DistanceSource.gps ? 'Distance' : 'Distance · est.'),
-      if (config.showTime) (formatDuration(a.movingMs), 'Moving time'),
-      if (config.showPace) (format.pace(a.avgPaceSecPerKm), 'Avg. pace'),
+      if (config.showDistance)
+        (format.distance(a.distanceM), a.distanceSource == DistanceSource.gps ? 'activity_metric_distance'.tr : 'activity_metric_distance_est'.tr),
+      if (config.showTime) (formatDuration(a.movingMs), 'activity_metric_moving_time'.tr),
+      if (config.showPace) (format.pace(a.avgPaceSecPerKm), 'activity_metric_avg_pace'.tr),
     ];
     final header = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,7 +344,7 @@ class ShareCard extends StatelessWidget {
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
-        if (config.showDate) Text(DateFormat('EEEE, MMMM d, y', 'en_US').format(activityLocalStart(a)), style: StrideText.label.copyWith(color: sub)),
+        if (config.showDate) Text(DateFormat('EEEE, MMMM d, y', appDateLocale).format(activityLocalStart(a)), style: StrideText.label.copyWith(color: sub)),
       ],
     );
     final metricRow = Row(

@@ -10,6 +10,7 @@ import '../common_components/widgets.dart';
 import '../../controller/reminders/reminder_logic.dart';
 import '../../repository/reminder_repository.dart';
 import '../../services/application/reminder_scheduler.dart';
+import '../../utils/l10n.dart';
 
 /// Quyền notification hiện tại (kiểm tra lại khi coordinator báo đổi).
 final remindersNotificationPermissionProvider = StreamProvider<PermStatus>((ref) async* {
@@ -40,17 +41,13 @@ class RemindersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(_remindersDataProvider);
     return async.when(
-      loading: () => const StrideScreen(
-        title: 'Move reminders',
-        body: Column(children: [Gap(16), LoadingCard(height: 180), Gap(16), LoadingCard(height: 180)]),
+      loading: () => StrideScreen(
+        title: 'reminders_title'.tr,
+        body: const Column(children: [Gap(16), LoadingCard(height: 180), Gap(16), LoadingCard(height: 180)]),
       ),
       error: (e, _) => StrideScreen(
-        title: 'Move reminders',
-        body: ErrorState(
-          title: "Couldn't load reminders",
-          message: 'Reminders saved on this device could not be read.',
-          onRetry: () => ref.invalidate(_remindersDataProvider),
-        ),
+        title: 'reminders_title'.tr,
+        body: ErrorState(title: 'reminders_error_title'.tr, message: 'reminders_error_message'.tr, onRetry: () => ref.invalidate(_remindersDataProvider)),
       ),
       data: (d) => _RemindersForm(initial: d),
     );
@@ -89,10 +86,10 @@ class _RemindersFormState extends ConsumerState<_RemindersForm> {
     if (perm == PermStatus.blocked || perm == PermStatus.restricted) {
       final go = await confirmDialog(
         context,
-        title: 'Notifications are off',
-        message: 'Allow notifications for STRIDE in your phone settings to receive reminders.',
-        confirmLabel: 'Open phone settings',
-        cancelLabel: 'Not now',
+        title: 'reminders_perm_off_title'.tr,
+        message: 'reminders_perm_off_message'.tr,
+        confirmLabel: 'reminders_open_settings'.tr,
+        cancelLabel: 'reminders_not_now'.tr,
       );
       if (go) await perms.openSettings();
     } else {
@@ -123,10 +120,10 @@ class _RemindersFormState extends ConsumerState<_RemindersForm> {
         final perm = await ref.read(permissionsProvider).status(PermKind.notification);
         if (!mounted) return;
         final anyOn = _reminders.values.any((r) => r.enabled);
-        showStrideSnack(context, anyOn && !isNotificationGranted(perm) ? 'Saved. Reminders stay off until notifications are allowed.' : 'Reminders saved');
+        showStrideSnack(context, anyOn && !isNotificationGranted(perm) ? 'reminders_saved_off'.tr : 'reminders_saved'.tr);
         if (context.canPop()) context.pop();
       } catch (e) {
-        if (mounted) showStrideSnack(context, "Couldn't save reminders. Try again.", isError: true);
+        if (mounted) showStrideSnack(context, 'reminders_save_failed'.tr, isError: true);
       } finally {
         if (mounted) setState(() => _saving = false);
       }
@@ -139,8 +136,8 @@ class _RemindersFormState extends ConsumerState<_RemindersForm> {
     final granted = isNotificationGranted(perm);
     final now = ref.watch(clockProvider).nowLocal();
     return StrideScreen(
-      title: 'Move reminders',
-      bottom: PrimaryButton(label: 'Save reminder', loading: _saving, onPressed: _saving ? null : _save),
+      title: 'reminders_title'.tr,
+      bottom: PrimaryButton(label: 'reminders_save'.tr, loading: _saving, onPressed: _saving ? null : _save),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -148,8 +145,8 @@ class _RemindersFormState extends ConsumerState<_RemindersForm> {
           _reminderCard(
             ReminderKind.dailySteps,
             icon: Icons.directions_walk,
-            title: 'Daily step reminder',
-            subtitle: 'Get a reminder to move and reach your daily step goal.',
+            title: 'reminders_daily_title'.tr,
+            subtitle: 'reminders_daily_subtitle'.tr,
             perm: perm,
             granted: granted,
             now: now,
@@ -158,8 +155,8 @@ class _RemindersFormState extends ConsumerState<_RemindersForm> {
           _reminderCard(
             ReminderKind.run,
             icon: Icons.directions_run,
-            title: 'Run reminder',
-            subtitle: 'Get a reminder to go for a run.',
+            title: 'reminders_run_title'.tr,
+            subtitle: 'reminders_run_subtitle'.tr,
             perm: perm,
             granted: granted,
             now: now,
@@ -171,13 +168,13 @@ class _RemindersFormState extends ConsumerState<_RemindersForm> {
             children: [
               SettingsRow(
                 icon: Icons.notifications_none,
-                title: 'Notifications',
-                subtitle: 'Allow STRIDE to send you reminders and updates.',
+                title: 'reminders_notifications_title'.tr,
+                subtitle: 'reminders_notifications_subtitle'.tr,
                 trailing: Text(switch (perm) {
-                  PermStatus.granted || PermStatus.limited => 'Allowed',
-                  PermStatus.blocked || PermStatus.restricted => 'Blocked',
-                  PermStatus.denied => 'Off',
-                  PermStatus.unknown => 'Not set',
+                  PermStatus.granted || PermStatus.limited => 'reminders_perm_allowed'.tr,
+                  PermStatus.blocked || PermStatus.restricted => 'reminders_perm_blocked'.tr,
+                  PermStatus.denied => 'reminders_perm_off'.tr,
+                  PermStatus.unknown => 'reminders_perm_not_set'.tr,
                 }, style: StrideText.label.copyWith(color: granted ? StrideColors.primary : StrideColors.warning)),
                 onTap: granted ? () => ref.read(permissionsProvider).openSettings() : () => _askPermission(perm),
               ),
@@ -188,7 +185,7 @@ class _RemindersFormState extends ConsumerState<_RemindersForm> {
             children: [
               const Icon(Icons.public, size: 18, color: StrideColors.textSecondary),
               const SizedBox(width: StrideSpace.s8),
-              Expanded(child: Text('Follows your local time (${now.timeZoneName}).', style: StrideText.caption)),
+              Expanded(child: Text('reminders_local_time'.trArgs([now.timeZoneName]), style: StrideText.caption)),
             ],
           ),
           const Gap(StrideSpace.s16),
@@ -211,17 +208,17 @@ class _RemindersFormState extends ConsumerState<_RemindersForm> {
     String? status;
     BannerTone tone = BannerTone.info;
     if (r.enabled && !granted) {
-      status = 'Not active — notifications are off';
+      status = 'reminders_status_inactive'.tr;
       tone = BannerTone.warning;
     } else if (r.enabled && r.weekdays.isEmpty) {
-      status = 'Choose at least one day.';
+      status = 'reminders_status_no_day'.tr;
       tone = BannerTone.warning;
     } else if (r.enabled && isInQuietHours(r.minuteOfDay, _quiet)) {
-      status = "This time is during quiet hours, so it won't be sent.";
+      status = 'reminders_status_quiet'.tr;
       tone = BannerTone.warning;
     } else if (active) {
       final next = nextReminderFire(r, _quiet, now);
-      if (next != null) status = 'Next reminder: ${DateFormat('EEE').format(next)} ${formatMinuteOfDay(r.minuteOfDay)}';
+      if (next != null) status = 'reminders_status_next'.trArgs([DateFormat('EEE').format(next), formatMinuteOfDay(r.minuteOfDay)]);
     }
     return StrideCard(
       child: Column(
@@ -246,15 +243,15 @@ class _RemindersFormState extends ConsumerState<_RemindersForm> {
           ),
           if (r.enabled) ...[
             const Gap(StrideSpace.s12),
-            Text('Reminder time', style: StrideText.caption),
+            Text('reminders_time'.tr, style: StrideText.caption),
             const Gap(StrideSpace.s4),
             _TimeField(
               label: formatMinuteOfDay(r.minuteOfDay),
-              semantic: '$title time',
+              semantic: 'reminders_time_semantic'.trArgs([title]),
               onTap: () => _pickTime(r.minuteOfDay, (m) => setState(() => _reminders[k] = r.copyWith(minuteOfDay: m))),
             ),
             const Gap(StrideSpace.s12),
-            Text('Repeat on', style: StrideText.caption),
+            Text('reminders_repeat_on'.tr, style: StrideText.caption),
             const Gap(StrideSpace.s4),
             _WeekdayPicker(
               selected: r.weekdays,
@@ -271,7 +268,7 @@ class _RemindersFormState extends ConsumerState<_RemindersForm> {
               tone: tone,
               message: status,
               // Khi chưa có quyền, switch hiển thị tắt; cho phép bỏ hẳn ý định bật nhắc.
-              actionLabel: r.enabled && !granted ? 'Turn off' : null,
+              actionLabel: r.enabled && !granted ? 'reminders_turn_off'.tr : null,
               onAction: r.enabled && !granted ? () => setState(() => _reminders[k] = r.copyWith(enabled: false)) : null,
             ),
           ],
@@ -292,8 +289,8 @@ class _RemindersFormState extends ConsumerState<_RemindersForm> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Quiet hours', style: StrideText.subheading),
-                  Text('Pause all move reminders during these hours.', style: StrideText.bodySecondary.copyWith(fontSize: 14)),
+                  Text('reminders_quiet_title'.tr, style: StrideText.subheading),
+                  Text('reminders_quiet_subtitle'.tr, style: StrideText.bodySecondary.copyWith(fontSize: 14)),
                 ],
               ),
             ),
@@ -311,11 +308,11 @@ class _RemindersFormState extends ConsumerState<_RemindersForm> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Start time', style: StrideText.caption),
+                    Text('reminders_start_time'.tr, style: StrideText.caption),
                     const Gap(StrideSpace.s4),
                     _TimeField(
                       label: formatMinuteOfDay(_quiet.startMin),
-                      semantic: 'Quiet hours start',
+                      semantic: 'reminders_quiet_start'.tr,
                       onTap: () => _pickTime(_quiet.startMin, (m) => setState(() => _quiet = _quiet.copyWith(startMin: m))),
                     ),
                   ],
@@ -326,11 +323,11 @@ class _RemindersFormState extends ConsumerState<_RemindersForm> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('End time', style: StrideText.caption),
+                    Text('reminders_end_time'.tr, style: StrideText.caption),
                     const Gap(StrideSpace.s4),
                     _TimeField(
                       label: formatMinuteOfDay(_quiet.endMin),
-                      semantic: 'Quiet hours end',
+                      semantic: 'reminders_quiet_end'.tr,
                       onTap: () => _pickTime(_quiet.endMin, (m) => setState(() => _quiet = _quiet.copyWith(endMin: m))),
                     ),
                   ],
@@ -390,8 +387,24 @@ class _WeekdayPicker extends StatelessWidget {
   final Set<int> selected;
   final ValueChanged<int> onToggle;
 
-  static const _short = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  static const _long = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  static const _short = [
+    'reminders_day_short_mon',
+    'reminders_day_short_tue',
+    'reminders_day_short_wed',
+    'reminders_day_short_thu',
+    'reminders_day_short_fri',
+    'reminders_day_short_sat',
+    'reminders_day_short_sun',
+  ];
+  static const _long = [
+    'reminders_day_mon',
+    'reminders_day_tue',
+    'reminders_day_wed',
+    'reminders_day_thu',
+    'reminders_day_fri',
+    'reminders_day_sat',
+    'reminders_day_sun',
+  ];
 
   @override
   Widget build(BuildContext context) => Row(
@@ -401,7 +414,7 @@ class _WeekdayPicker extends StatelessWidget {
           child: Semantics(
             button: true,
             selected: selected.contains(i + 1),
-            label: _long[i],
+            label: _long[i].tr,
             excludeSemantics: true,
             child: InkWell(
               customBorder: const CircleBorder(),
@@ -418,7 +431,7 @@ class _WeekdayPicker extends StatelessWidget {
                       color: selected.contains(i + 1) ? StrideColors.lime : StrideColors.surface,
                       border: Border.all(color: selected.contains(i + 1) ? StrideColors.lime : StrideColors.borderSubtle),
                     ),
-                    child: Text(_short[i], style: StrideText.label),
+                    child: Text(_short[i].tr, style: StrideText.label),
                   ),
                 ),
               ),

@@ -10,16 +10,17 @@ import '../../presentation/common_components/widgets.dart';
 import '../../models/data_models/activity.dart';
 import '../../services/application/activity_export.dart';
 import '../../utils/activity_format.dart';
+import '../../utils/l10n.dart';
 
 /// Xác nhận rồi xóa (tombstone + outbox). Trả true khi đã xóa thật trong DB.
 /// Thống kê/records tự tính lại vì mọi màn đọc lại từ repository khi revision đổi.
 Future<bool> confirmAndDeleteActivity(BuildContext context, WidgetRef ref, Activity a) async {
   final ok = await confirmDialog(
     context,
-    title: 'Delete this activity?',
-    message: 'This run will be removed from your history and progress. Your personal records may change.',
-    confirmLabel: 'Delete activity',
-    cancelLabel: 'Keep activity',
+    title: 'activity_delete_confirm_title'.tr,
+    message: 'activity_delete_confirm_message'.tr,
+    confirmLabel: 'activity_delete_activity'.tr,
+    cancelLabel: 'activity_delete_keep'.tr,
     destructive: true,
     icon: Icons.delete_outline,
   );
@@ -28,7 +29,7 @@ Future<bool> confirmAndDeleteActivity(BuildContext context, WidgetRef ref, Activ
     await ref.read(activityRepositoryProvider).deleteActivity(a.ownerId, a.id);
     return true;
   } catch (_) {
-    if (context.mounted) showStrideSnack(context, 'Couldn\'t delete this activity. Please try again.', isError: true);
+    if (context.mounted) showStrideSnack(context, 'activity_delete_failed'.tr, isError: true);
     return false;
   }
 }
@@ -37,15 +38,15 @@ Future<bool> confirmAndDeleteActivity(BuildContext context, WidgetRef ref, Activ
 Future<void> exportGpx(BuildContext context, Activity a, List<TrackPoint> points) async {
   final gpx = buildGpx(a, points, title: activityDisplayTitle(a));
   if (gpx == null) {
-    showStrideSnack(context, 'This activity has no GPS route to export.');
+    showStrideSnack(context, 'activity_export_no_gps'.tr);
     return;
   }
   final ok = await confirmDialog(
     context,
-    title: 'Export GPX file?',
-    message: 'A GPX file contains your full route, including where you started and finished. Only share it with people you trust.',
-    confirmLabel: 'Export GPX',
-    cancelLabel: 'Cancel',
+    title: 'activity_export_gpx_title'.tr,
+    message: 'activity_export_gpx_message'.tr,
+    confirmLabel: 'activity_export_gpx'.tr,
+    cancelLabel: 'action_cancel'.tr,
     icon: Icons.location_on_outlined,
   );
   if (!ok || !context.mounted) return;
@@ -64,10 +65,10 @@ Future<void> _share(BuildContext context, Uint8List bytes, String name, String m
   try {
     final r = await shareBytesAsFile(bytes: bytes, fileName: name, mime: mime, subject: name);
     // Chỉ báo khi hệ thống xác nhận đã chọn ứng dụng nhận; hủy thì im lặng.
-    if (r.status == ShareResultStatus.success && context.mounted) showStrideSnack(context, 'File sent to the app you chose.');
+    if (r.status == ShareResultStatus.success && context.mounted) showStrideSnack(context, 'activity_file_sent'.tr);
   } catch (_) {
     if (context.mounted) {
-      showStrideSnack(context, 'Couldn\'t create the file. Please try again.', isError: true);
+      showStrideSnack(context, 'activity_file_failed'.tr, isError: true);
     }
   }
 }

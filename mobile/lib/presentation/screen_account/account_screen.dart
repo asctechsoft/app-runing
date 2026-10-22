@@ -18,6 +18,7 @@ import '../../repository/auth_repository.dart';
 import '../../controller/sync/sync_providers.dart';
 import '../../services/application/sync_service.dart';
 import '../../repository/account_repository.dart';
+import '../../utils/l10n.dart';
 
 /// Profile → Account & data (J05, H06, I07, F21): tài khoản, đồng bộ, export, đăng xuất, xóa tài khoản.
 class AccountScreen extends ConsumerWidget {
@@ -28,7 +29,7 @@ class AccountScreen extends ConsumerWidget {
     final owner = ref.watch(ownerProvider);
     final available = ref.watch(authRepositoryProvider).available;
     return StrideScreen(
-      title: 'Account & data',
+      title: 'account_title'.tr,
       onBack: () => context.canPop() ? context.pop() : context.go(Routes.profile),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -39,32 +40,29 @@ class AccountScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Row(
+                  Row(
                     children: [
-                      IconBadge(icon: Icons.phone_iphone),
-                      SizedBox(width: StrideSpace.s12),
-                      Expanded(child: Text('Guest — data saved on this device', style: StrideText.subheading)),
+                      const IconBadge(icon: Icons.phone_iphone),
+                      const SizedBox(width: StrideSpace.s12),
+                      Expanded(child: Text('account_guest_title'.tr, style: StrideText.subheading)),
                     ],
                   ),
                   const SizedBox(height: StrideSpace.s8),
-                  const Text(
-                    'Your activities are stored only on this phone. Create an account to back them up and use them on other devices.',
-                    style: StrideText.bodySecondary,
-                  ),
+                  Text('account_guest_body'.tr, style: StrideText.bodySecondary),
                   const SizedBox(height: StrideSpace.s16),
                   if (!available)
-                    const StatusBanner(tone: BannerTone.info, message: "Accounts aren't available in this build.")
+                    StatusBanner(tone: BannerTone.info, message: 'auth_err_not_configured'.tr)
                   else ...[
-                    PrimaryButton(label: 'Create account', onPressed: () => context.push(Routes.register)),
+                    PrimaryButton(label: 'auth_create_account'.tr, onPressed: () => context.push(Routes.register)),
                     const SizedBox(height: StrideSpace.s8),
-                    SecondaryButton(label: 'Log in', onPressed: () => context.push(Routes.login)),
+                    SecondaryButton(label: 'auth_log_in'.tr, onPressed: () => context.push(Routes.login)),
                   ],
                 ],
               ),
             ),
           ] else ...[
             StrideCard(
-              semanticLabel: 'Signed in as ${owner.email ?? 'your account'}',
+              semanticLabel: 'account_signed_in_as_value'.trArgs([owner.email ?? 'account_your_account_lc'.tr]),
               child: Row(
                 children: [
                   const IconBadge(icon: Icons.person_outline),
@@ -73,8 +71,8 @@ class AccountScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Signed in as', style: StrideText.caption),
-                        Text(owner.email ?? 'Your account', style: StrideText.subheading, overflow: TextOverflow.ellipsis),
+                        Text('account_signed_in_as'.tr, style: StrideText.caption),
+                        Text(owner.email ?? 'account_your_account'.tr, style: StrideText.subheading, overflow: TextOverflow.ellipsis),
                       ],
                     ),
                   ),
@@ -82,19 +80,19 @@ class AccountScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: StrideSpace.s24),
-            const SectionHeader(title: 'Sync'),
+            SectionHeader(title: 'account_section_sync'.tr),
             const _SyncSection(),
             const SizedBox(height: StrideSpace.s24),
-            const SectionHeader(title: 'Your data'),
+            SectionHeader(title: 'account_section_data'.tr),
             const _ExportSection(),
             const SizedBox(height: StrideSpace.s24),
             const _DeletionSection(),
             const SizedBox(height: StrideSpace.s8),
             SettingsGroup(
               children: [
-                SettingsRow(title: 'Sign out', icon: Icons.logout, showChevron: false, onTap: () => signOutFlow(context, ref)),
+                SettingsRow(title: 'account_sign_out'.tr, icon: Icons.logout, showChevron: false, onTap: () => signOutFlow(context, ref)),
                 SettingsRow(
-                  title: 'Delete account',
+                  title: 'account_delete_account'.tr,
                   icon: Icons.delete_outline,
                   destructive: true,
                   showChevron: false,
@@ -121,18 +119,22 @@ class _SyncSection extends ConsumerWidget {
     final status = ref.watch(syncStatusProvider).value ?? ref.read(syncServiceProvider).status.value;
     final conflicts = ref.watch(syncConflictsProvider).value ?? const <SyncConflict>[];
     final (tone, title, message) = switch (status.phase) {
-      SyncPhase.syncing => (BannerTone.info, 'Syncing…', 'Sending your changes.'),
-      SyncPhase.offline => (BannerTone.warning, 'Waiting for connection', status.lastError ?? "You're offline."),
-      SyncPhase.error => (BannerTone.error, 'Sync error', status.lastError ?? "Some changes couldn't be synced."),
-      SyncPhase.signedOut => (BannerTone.warning, 'Not syncing', status.lastError ?? 'Log in again to sync.'),
-      SyncPhase.disabled => (BannerTone.info, 'Sync is off', 'Sync is turned off in this build.'),
+      SyncPhase.syncing => (BannerTone.info, 'account_sync_syncing_title'.tr, 'account_sync_syncing_msg'.tr),
+      SyncPhase.offline => (BannerTone.warning, 'account_sync_waiting_title'.tr, status.lastError ?? 'account_sync_offline_msg'.tr),
+      SyncPhase.error => (BannerTone.error, 'account_sync_error_title'.tr, status.lastError ?? 'account_sync_error_msg'.tr),
+      SyncPhase.signedOut => (BannerTone.warning, 'account_sync_signed_out_title'.tr, status.lastError ?? 'account_sync_signed_out_msg'.tr),
+      SyncPhase.disabled => (BannerTone.info, 'account_sync_off_title'.tr, 'account_sync_off_msg'.tr),
       SyncPhase.idle when status.pending > 0 => (
         BannerTone.warning,
-        'Waiting to sync',
-        '${status.pending} ${status.pending == 1 ? 'change' : 'changes'} not uploaded yet.',
+        'account_sync_pending_title'.tr,
+        (status.pending == 1 ? 'account_sync_pending_one' : 'account_sync_pending_other').trArgs([status.pending]),
       ),
-      SyncPhase.idle when status.lastSyncedAt != null => (BannerTone.success, 'Up to date', 'Last synced ${_when(status.lastSyncedAt!)}.'),
-      SyncPhase.idle => (BannerTone.info, 'Ready to sync', 'Tap Retry sync to check for changes.'),
+      SyncPhase.idle when status.lastSyncedAt != null => (
+        BannerTone.success,
+        'account_sync_uptodate_title'.tr,
+        'account_sync_last_synced'.trArgs([_when(status.lastSyncedAt!)]),
+      ),
+      SyncPhase.idle => (BannerTone.info, 'account_sync_ready_title'.tr, 'account_sync_ready_msg'.tr),
     };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -140,19 +142,19 @@ class _SyncSection extends ConsumerWidget {
         StatusBanner(
           tone: tone,
           title: title,
-          message: status.pending > 0 && status.phase != SyncPhase.idle ? '$message ${status.pending} pending.' : message,
+          message: status.pending > 0 && status.phase != SyncPhase.idle ? 'account_sync_with_pending'.trArgs([message, status.pending]) : message,
           icon: status.phase == SyncPhase.syncing ? Icons.sync : null,
         ),
         const SizedBox(height: StrideSpace.s8),
         OutlineButton(
-          label: 'Retry sync',
+          label: 'account_retry_sync'.tr,
           icon: Icons.sync,
           onPressed: status.phase == SyncPhase.syncing || status.phase == SyncPhase.disabled
               ? null
               : () async {
                   final s = await ref.read(syncServiceProvider).syncNow(manual: true);
                   if (!context.mounted) return;
-                  if (s.phase == SyncPhase.idle && s.pending == 0) showStrideSnack(context, 'Everything is synced.');
+                  if (s.phase == SyncPhase.idle && s.pending == 0) showStrideSnack(context, 'account_sync_all_done'.tr);
                 },
         ),
         for (final c in conflicts) ...[const SizedBox(height: StrideSpace.s12), _ConflictCard(conflict: c)],
@@ -177,15 +179,15 @@ class _ConflictCardState extends ConsumerState<_ConflictCard> {
     if (m == null) return '—';
     if (widget.conflict.entity == 'activity') {
       final parts = <String>[
-        'Title: ${(m['title'] as String?)?.isNotEmpty == true ? m['title'] : '—'}',
-        if (m['notes'] != null && (m['notes'] as String).isNotEmpty) 'Notes: ${m['notes']}',
-        if (m['feeling'] != null) 'Feeling: ${m['feeling']}',
-        'Privacy: ${m['privacy'] ?? '—'}',
+        'account_conflict_field_title'.trArgs([(m['title'] as String?)?.isNotEmpty == true ? m['title'] : '—']),
+        if (m['notes'] != null && (m['notes'] as String).isNotEmpty) 'account_conflict_field_notes'.trArgs([m['notes']]),
+        if (m['feeling'] != null) 'account_conflict_field_feeling'.trArgs([m['feeling']]),
+        'account_conflict_field_privacy'.trArgs([m['privacy'] ?? '—']),
       ];
       return parts.join('\n');
     }
     final name = m['displayName'];
-    return 'Name: ${name is String && name.isNotEmpty ? name : '—'}\nUnits: ${m['distanceUnit'] ?? '—'}';
+    return '${'account_conflict_field_name'.trArgs([name is String && name.isNotEmpty ? name : '—'])}\n${'account_conflict_field_units'.trArgs([m['distanceUnit'] ?? '—'])}';
   }
 
   @override
@@ -211,15 +213,15 @@ class _ConflictCardState extends ConsumerState<_ConflictCard> {
             children: [
               const Icon(Icons.call_split, color: StrideColors.warning),
               const SizedBox(width: StrideSpace.s8),
-              Expanded(child: Text('Conflict: ${c.title}', style: StrideText.subheading)),
+              Expanded(child: Text('account_conflict_title'.trArgs([c.title]), style: StrideText.subheading)),
             ],
           ),
           const SizedBox(height: 4),
-          const Text('This was changed on another device too. Both versions are kept until you choose.', style: StrideText.bodySecondary),
-          option('local', 'This device', _describe(c.local)),
-          option('server', 'Other device', _describe(c.server)),
+          Text('account_conflict_body'.tr, style: StrideText.bodySecondary),
+          option('local', 'account_conflict_this_device'.tr, _describe(c.local)),
+          option('server', 'account_conflict_other_device'.tr, _describe(c.server)),
           PrimaryButton(
-            label: 'Keep selected version',
+            label: 'account_conflict_keep'.tr,
             onPressed: () => _guard.run(() async {
               if (_choice == 'local') {
                 await sync.resolveKeepLocal(c);
@@ -229,7 +231,7 @@ class _ConflictCardState extends ConsumerState<_ConflictCard> {
               ref.invalidate(syncConflictsProvider);
             }),
           ),
-          TextButton(onPressed: () => showStrideSnack(context, 'Both versions are kept. You can decide later here.'), child: const Text('Decide later')),
+          TextButton(onPressed: () => showStrideSnack(context, 'account_conflict_later_snack'.tr), child: Text('account_conflict_decide_later'.tr)),
         ],
       ),
     );
@@ -324,7 +326,7 @@ class _ExportSectionState extends ConsumerState<_ExportSection> {
       await SharePlus.instance.share(
         ShareParams(
           files: [XFile(file.path, mimeType: 'application/json')],
-          subject: 'STRIDE data export',
+          subject: 'account_export_share_subject'.tr,
         ),
       );
     } catch (e) {
@@ -342,41 +344,38 @@ class _ExportSectionState extends ConsumerState<_ExportSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Row(
+          Row(
             children: [
-              IconBadge(icon: Icons.download_outlined),
-              SizedBox(width: StrideSpace.s12),
-              Expanded(child: Text('Export my data', style: StrideText.subheading)),
+              const IconBadge(icon: Icons.download_outlined),
+              const SizedBox(width: StrideSpace.s12),
+              Expanded(child: Text('account_export_title'.tr, style: StrideText.subheading)),
             ],
           ),
           const SizedBox(height: StrideSpace.s8),
-          const Text(
-            'A JSON file with your activities, GPS routes, profile and goals. Routes include your recorded locations — share the file carefully.',
-            style: StrideText.bodySecondary,
-          ),
+          Text('account_export_body'.tr, style: StrideText.bodySecondary),
           const SizedBox(height: StrideSpace.s12),
           if (_loading)
             const Skeleton(height: 48)
           else ...[
             if (_error != null) ...[StatusBanner(tone: BannerTone.error, message: _error!), const SizedBox(height: StrideSpace.s8)],
             if (job != null && job.isOpen) ...[
-              const StatusBanner(tone: BannerTone.info, title: 'Preparing your export', message: 'This can take a few minutes. You can leave this screen.'),
+              StatusBanner(tone: BannerTone.info, title: 'account_export_preparing_title'.tr, message: 'account_export_preparing_msg'.tr),
               const SizedBox(height: StrideSpace.s8),
             ],
             if (job != null && job.failed) ...[
-              StatusBanner(tone: BannerTone.error, title: 'Export failed', message: job.error ?? 'Please try again.'),
+              StatusBanner(tone: BannerTone.error, title: 'account_export_failed_title'.tr, message: job.error ?? 'account_export_failed_default'.tr),
               const SizedBox(height: StrideSpace.s8),
             ],
             if (job != null && job.succeeded && !job.isExpired(now)) ...[
               StatusBanner(
                 tone: BannerTone.success,
-                title: 'Export ready',
-                message: job.expiresAt == null ? 'Download it now.' : 'Available until ${_when(job.expiresAt!)}.',
+                title: 'account_export_ready_title'.tr,
+                message: job.expiresAt == null ? 'account_export_download_now'.tr : 'account_export_available_until'.trArgs([_when(job.expiresAt!)]),
               ),
               const SizedBox(height: StrideSpace.s8),
-              PrimaryButton(label: 'Download export', icon: Icons.download, loading: _busy, onPressed: _download),
+              PrimaryButton(label: 'account_export_download'.tr, icon: Icons.download, loading: _busy, onPressed: _download),
             ] else if (job == null || !job.isOpen)
-              OutlineButton(label: job == null ? 'Create export' : 'Create a new export', onPressed: _busy ? null : _create),
+              OutlineButton(label: job == null ? 'account_export_create'.tr : 'account_export_create_new'.tr, onPressed: _busy ? null : _create),
           ],
         ],
       ),
@@ -403,9 +402,9 @@ class _DeletionSection extends ConsumerWidget {
         padding: const EdgeInsets.only(bottom: StrideSpace.s16),
         child: StatusBanner(
           tone: BannerTone.success,
-          title: 'Account deleted',
-          message: 'Your account and its data were deleted from our cloud storage.',
-          actionLabel: 'Sign out',
+          title: 'account_deleted_title'.tr,
+          message: 'account_deleted_msg'.tr,
+          actionLabel: 'account_sign_out'.tr,
           onAction: () => _localSignOut(context, ref),
         ),
       );
@@ -414,11 +413,9 @@ class _DeletionSection extends ConsumerWidget {
       padding: const EdgeInsets.only(bottom: StrideSpace.s16),
       child: StatusBanner(
         tone: job.failed ? BannerTone.error : BannerTone.warning,
-        title: job.failed ? 'Deletion failed' : 'Deletion requested',
-        message: job.failed
-            ? "We couldn't delete your account. Try again or contact support."
-            : 'Requested ${job.createdAt == null ? '' : _when(job.createdAt!)}. Your account is not deleted until this finishes.',
-        actionLabel: 'Refresh',
+        title: job.failed ? 'account_deletion_failed_title'.tr : 'account_deletion_requested_title'.tr,
+        message: job.failed ? 'account_deletion_failed_msg'.tr : 'account_deletion_requested_msg'.trArgs([job.createdAt == null ? '' : _when(job.createdAt!)]),
+        actionLabel: 'account_refresh'.tr,
         onAction: () => ref.invalidate(_deletionStatusProvider),
       ),
     );
@@ -428,17 +425,15 @@ class _DeletionSection extends ConsumerWidget {
 Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
   final ok = await confirmDialog(
     context,
-    title: 'Delete your account?',
-    message:
-        'This permanently deletes your account, activities, routes, photos and goals from our cloud storage. It can\'t be undone. '
-        'Export your data first if you want a copy.',
-    confirmLabel: 'Continue',
-    cancelLabel: 'Cancel',
+    title: 'account_delete_confirm_title'.tr,
+    message: 'account_delete_confirm_msg'.tr,
+    confirmLabel: 'account_continue'.tr,
+    cancelLabel: 'action_cancel'.tr,
     destructive: true,
     icon: Icons.delete_outline,
   );
   if (!ok || !context.mounted) return;
-  final job = await showStrideSheet<AccountJob>(context, title: 'Confirm your password', builder: (_) => const _ReauthDeleteForm());
+  final job = await showStrideSheet<AccountJob>(context, title: 'account_reauth_title'.tr, builder: (_) => _ReauthDeleteForm());
   if (job == null || !context.mounted) return;
   if (job.succeeded) {
     // Tài khoản Firebase đã bị xóa → đăng xuất cục bộ (dữ liệu trên máy giữ nguyên dưới owner cũ).
@@ -446,7 +441,7 @@ Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
     return;
   }
   ref.invalidate(_deletionStatusProvider);
-  showStrideSnack(context, 'Deletion requested. We\'ll show the status here.');
+  showStrideSnack(context, 'account_deletion_requested_snack'.tr);
 }
 
 class _ReauthDeleteForm extends ConsumerStatefulWidget {
@@ -471,7 +466,7 @@ class _ReauthDeleteFormState extends ConsumerState<_ReauthDeleteForm> {
 
   Future<void> _submit() => _guard.run(() async {
     if (_password.text.isEmpty) {
-      setState(() => _error = 'Enter your password.');
+      setState(() => _error = 'auth_err_password_empty'.tr);
       return;
     }
     setState(() {
@@ -501,7 +496,7 @@ class _ReauthDeleteFormState extends ConsumerState<_ReauthDeleteForm> {
     } on GoogleSignInCancelled {
       // Người dùng hủy: giữ nguyên form.
     } catch (e) {
-      if (mounted) setState(() => _error = e is GoogleSignInFailure ? "Couldn't confirm with Google. Try again." : accountErrorMessage(e));
+      if (mounted) setState(() => _error = e is GoogleSignInFailure ? 'account_reauth_google_failed'.tr : accountErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -512,7 +507,7 @@ class _ReauthDeleteFormState extends ConsumerState<_ReauthDeleteForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('For your security, enter your password to request account deletion.', style: StrideText.bodySecondary),
+        Text('account_reauth_intro'.tr, style: StrideText.bodySecondary),
         const SizedBox(height: StrideSpace.s16),
         if (_error != null) ...[StatusBanner(tone: BannerTone.error, message: _error!), const SizedBox(height: StrideSpace.s12)],
         TextField(
@@ -522,20 +517,20 @@ class _ReauthDeleteFormState extends ConsumerState<_ReauthDeleteForm> {
           autofillHints: const [AutofillHints.password],
           onSubmitted: (_) => _submit(),
           decoration: InputDecoration(
-            labelText: 'Password',
+            labelText: 'auth_password'.tr,
             prefixIcon: const Icon(Icons.lock_outline),
             suffixIcon: IconButton(
-              tooltip: _obscure ? 'Show password' : 'Hide password',
+              tooltip: _obscure ? 'auth_show_password'.tr : 'auth_hide_password'.tr,
               icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
               onPressed: () => setState(() => _obscure = !_obscure),
             ),
           ),
         ),
         const SizedBox(height: StrideSpace.s16),
-        DestructiveButton(label: 'Delete account', loading: _busy, onPressed: _submit),
+        DestructiveButton(label: 'account_delete_account'.tr, loading: _busy, onPressed: _submit),
         if (ref.watch(flagsProvider).authGoogle) ...[
           const SizedBox(height: StrideSpace.s8),
-          OutlineButton(label: 'Signed up with Google? Confirm with Google', icon: Icons.g_mobiledata, onPressed: _busy ? null : _confirmWithGoogle),
+          OutlineButton(label: 'account_reauth_google'.tr, icon: Icons.g_mobiledata, onPressed: _busy ? null : _confirmWithGoogle),
         ],
       ],
     );
@@ -554,9 +549,9 @@ Future<void> signOutFlow(BuildContext context, WidgetRef ref) async {
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Finish your activity first'),
-        content: const Text('You have an activity that is still recording or not saved yet. Save or discard it before signing out.'),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
+        title: Text('account_signout_busy_title'.tr),
+        content: Text('account_signout_busy_msg'.tr),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text('action_ok'.tr))],
       ),
     );
     return;
@@ -568,15 +563,12 @@ Future<void> signOutFlow(BuildContext context, WidgetRef ref) async {
     final choice = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Some changes aren\'t synced'),
-        content: Text(
-          '$pending ${pending == 1 ? 'change hasn\'t' : 'changes haven\'t'} been uploaded yet. '
-          'If you sign out now, ${pending == 1 ? 'it stays' : 'they stay'} on this device with your account and will sync next time you log in.',
-        ),
+        title: Text('account_signout_unsynced_title'.tr),
+        content: Text((pending == 1 ? 'account_signout_unsynced_one' : 'account_signout_unsynced_other').trArgs([pending])),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, 'anyway'), child: const Text('Sign out anyway')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, 'sync'), child: const Text('Sync now')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('action_cancel'.tr)),
+          TextButton(onPressed: () => Navigator.pop(ctx, 'anyway'), child: Text('account_signout_anyway'.tr)),
+          FilledButton(onPressed: () => Navigator.pop(ctx, 'sync'), child: Text('account_sync_now'.tr)),
         ],
       ),
     );
@@ -585,17 +577,17 @@ Future<void> signOutFlow(BuildContext context, WidgetRef ref) async {
       final s = await sync.syncNow(manual: true);
       if (!context.mounted) return;
       if (s.pending > 0) {
-        showStrideSnack(context, s.lastError ?? 'Some changes are still waiting to sync.', isError: true);
+        showStrideSnack(context, s.lastError ?? 'account_sync_still_waiting'.tr, isError: true);
         return;
       }
     }
   } else {
     final ok = await confirmDialog(
       context,
-      title: 'Sign out?',
-      message: 'Your activities stay on this device under your account. Log in again to see them.',
-      confirmLabel: 'Sign out',
-      cancelLabel: 'Cancel',
+      title: 'account_signout_confirm_title'.tr,
+      message: 'account_signout_confirm_msg'.tr,
+      confirmLabel: 'account_sign_out'.tr,
+      cancelLabel: 'action_cancel'.tr,
     );
     if (!ok || !context.mounted) return;
   }

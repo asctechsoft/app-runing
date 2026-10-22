@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 
 import '../../../values/tokens.dart';
 import '../../../utils/clock.dart';
+import '../../../utils/l10n.dart';
+import '../../../utils/date_locale.dart';
 
 /// Lưới tháng dùng cho History (chấm ngày có hoạt động) và Choose period (chọn tuần).
 class MonthCalendar extends StatelessWidget {
@@ -53,7 +55,7 @@ class MonthCalendar extends StatelessWidget {
           children: [
             for (final d in weeks.first)
               Expanded(
-                child: Center(child: Text(DateFormat.E('en_US').format(d), style: StrideText.caption)),
+                child: Center(child: Text(DateFormat.E(appDateLocale).format(d), style: StrideText.caption)),
               ),
           ],
         ),
@@ -111,12 +113,12 @@ class _DayCell extends StatelessWidget {
         : inMonth
         ? StrideColors.textPrimary
         : StrideColors.textMuted;
-    final label = DateFormat('EEEE, MMMM d', 'en_US').format(day);
+    final label = DateFormat('EEEE, MMMM d', appDateLocale).format(day);
     return Semantics(
       button: enabled,
       selected: selected || inRange,
       enabled: enabled,
-      label: count > 0 ? '$label, $count ${count == 1 ? 'activity' : 'activities'}' : label,
+      label: count > 0 ? (count == 1 ? 'history_day_activity_one' : 'history_day_activity_other').trArgs([label, count]) : label,
       excludeSemantics: true,
       child: InkWell(
         onTap: enabled ? onTap : null,

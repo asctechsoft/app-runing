@@ -6,6 +6,7 @@ import '../../controller/providers.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
 import '../../models/data_models/activity.dart';
+import '../../utils/l10n.dart';
 import '../../controller/run/engine/run_session_controller.dart';
 import '../../controller/run/engine/run_session_state.dart';
 
@@ -25,20 +26,20 @@ class _ActivitySelectorScreenState extends ConsumerState<ActivitySelectorScreen>
     final flags = ref.watch(flagsProvider);
     final active = ref.watch(runSessionProvider).isActive;
     final options = <(ActivityType, IconData, String)>[
-      (ActivityType.run, Icons.directions_run, 'Run outside with GPS tracking.'),
-      (ActivityType.walk, Icons.directions_walk, 'Walk outside with GPS tracking.'),
-      if (flags.runIndoor) (ActivityType.indoorRun, Icons.home_outlined, 'Treadmill or indoor track. No GPS map; distance is estimated from steps.'),
+      (ActivityType.run, Icons.directions_run, 'run_activity_run_desc'.tr),
+      (ActivityType.walk, Icons.directions_walk, 'run_activity_walk_desc'.tr),
+      if (flags.runIndoor) (ActivityType.indoorRun, Icons.home_outlined, 'run_activity_indoor_desc'.tr),
     ];
     return StrideScreen(
-      title: 'Activity',
+      title: 'run_activity_title'.tr,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Choose what you\'re recording.', style: StrideText.bodySecondary),
+          Text('run_activity_prompt'.tr, style: StrideText.bodySecondary),
           const SizedBox(height: 16),
           for (final (type, icon, desc) in options) ...[
             StrideCard(
-              semanticLabel: '${activityTypeLabel(type)}${type == _selected ? ', selected' : ''}',
+              semanticLabel: type == _selected ? 'run_activity_selected_semantic'.trArgs([activityTypeLabel(type)]) : activityTypeLabel(type),
               onTap: active ? null : () => setState(() => _selected = type),
               child: Row(
                 children: [
@@ -62,11 +63,11 @@ class _ActivitySelectorScreenState extends ConsumerState<ActivitySelectorScreen>
             ),
             const SizedBox(height: 12),
           ],
-          if (active) const StatusBanner(tone: BannerTone.info, message: 'You can\'t change the activity type while recording.'),
+          if (active) StatusBanner(tone: BannerTone.info, message: 'run_activity_locked'.tr),
         ],
       ),
       bottom: PrimaryButton(
-        label: 'Confirm',
+        label: 'run_confirm'.tr,
         onPressed: active
             ? null
             : () {

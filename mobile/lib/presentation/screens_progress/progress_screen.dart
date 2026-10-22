@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../values/routes.dart';
 import '../../utils/formatters.dart';
+import '../../utils/l10n.dart';
 import '../../services/native/permission_coordinator.dart';
 import '../../controller/providers.dart';
 import '../../values/tokens.dart';
@@ -20,6 +21,7 @@ import '../../models/ui_models/period.dart';
 import 'components/progress_chart.dart';
 import '../../utils/progress_data.dart';
 import '../../services/application/records_service.dart';
+import '../../utils/date_locale.dart';
 
 typedef ProgressKey = ({ProgressPeriod period, String anchor});
 
@@ -131,16 +133,12 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
               key: const PageStorageKey('progress-scroll'),
               padding: EdgeInsets.fromLTRB(g, 16, g, 24),
               children: [
-                Text('Your progress', style: StrideText.title),
+                Text('progress_title'.tr, style: StrideText.title),
                 const SizedBox(height: 12),
                 StrideSegmented<ProgressPeriod>(
                   values: ProgressPeriod.values,
                   selected: _period,
-                  labelOf: (p) => switch (p) {
-                    ProgressPeriod.week => 'Week',
-                    ProgressPeriod.month => 'Month',
-                    ProgressPeriod.year => 'Year',
-                  },
+                  labelOf: periodSegmentLabel,
                   onChanged: (p) => setState(() {
                     _period = p;
                     if (!_range(weekStart).contains(_anchor)) _anchor = dayOnly(now);
@@ -148,7 +146,11 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                 ),
                 Row(
                   children: [
-                    IconButton(tooltip: 'Previous ${periodNoun(_period)}', onPressed: () => _shift(-1), icon: const Icon(Icons.chevron_left)),
+                    IconButton(
+                      tooltip: 'progress_previous_period'.trArgs([periodNounText(_period)]),
+                      onPressed: () => _shift(-1),
+                      icon: const Icon(Icons.chevron_left),
+                    ),
                     Expanded(
                       child: TextButton(
                         onPressed: () => _choose(range, now),
@@ -162,20 +164,29 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                         ),
                       ),
                     ),
-                    IconButton(tooltip: 'Next ${periodNoun(_period)}', onPressed: ongoing ? null : () => _shift(1), icon: const Icon(Icons.chevron_right)),
+                    IconButton(
+                      tooltip: 'progress_next_period'.trArgs([periodNounText(_period)]),
+                      onPressed: ongoing ? null : () => _shift(1),
+                      icon: const Icon(Icons.chevron_right),
+                    ),
                   ],
                 ),
                 StrideSegmented<ProgressKind>(
                   values: ProgressKind.values,
                   selected: _kind,
                   dense: true,
-                  labelOf: (k) => k == ProgressKind.steps ? 'Steps' : 'Running',
+                  labelOf: (k) => k == ProgressKind.steps ? 'progress_kind_steps'.tr : 'progress_kind_running'.tr,
                   onChanged: (k) => setState(() => _kind = k),
                 ),
                 if (ongoing)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
-                    child: Text('This ${periodNoun(_period)} through ${DateFormat('EEE, MMM d', 'en_US').format(now)}', style: StrideText.caption),
+                    child: Text(
+                      periodTr(_period, 'progress_this_through_week', 'progress_this_through_month', 'progress_this_through_year', [
+                        DateFormat('EEE, MMM d', appDateLocale).format(now),
+                      ]),
+                      style: StrideText.caption,
+                    ),
                   ),
                 const SizedBox(height: 12),
                 if (_kind == ProgressKind.running) _RunningSection(progressKey: key, now: now) else _StepsSection(progressKey: key, now: now),
@@ -201,20 +212,15 @@ class _RunningSection extends ConsumerWidget {
       skipLoadingOnReload: true,
       loading: () => const Column(children: [LoadingCard(height: 96), SizedBox(height: 12), LoadingCard(height: 220)]),
       error: (_, _) => ErrorState(
-        title: 'Couldn\'t load your running stats',
-        message: 'Reading activities saved on this device failed.',
+        title: 'progress_running_error_title'.tr,
+        message: 'progress_activities_read_failed'.tr,
         onRetry: () => ref.invalidate(progressRunningProvider(progressKey)),
       ),
       data: (s) {
         final p = s.range.period;
-        final noun = periodNoun(p);
         final t = s.totals;
         final pace = s.paceSecPerKm;
-        final runsTitle = switch (p) {
-          ProgressPeriod.week => 'Runs this week',
-          ProgressPeriod.month => 'Runs this month',
-          ProgressPeriod.year => 'Runs this year',
-        };
+        final runsTitle = periodTr(p, 'progress_runs_this_week', 'progress_runs_this_month', 'progress_runs_this_year');
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -224,28 +230,37 @@ class _RunningSection extends ConsumerWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: MetricTile(icon: Icons.route_outlined, value: f.distanceValue(t.distanceM), unit: f.distanceUnitLabel, label: 'Total distance'),
+                        child: MetricTile(
+                          icon: Icons.route_outlined,
+                          value: f.distanceValue(t.distanceM),
+                          unit: f.distanceUnitLabel,
+                          label: 'progress_total_distance'.tr,
+                        ),
                       ),
                       Expanded(
-                        child: MetricTile(icon: Icons.directions_run, value: '${t.count}', label: t.count == 1 ? 'Run' : 'Runs'),
+                        child: MetricTile(
+                          icon: Icons.directions_run,
+                          value: '${t.count}',
+                          label: t.count == 1 ? 'progress_run_one'.tr : 'progress_run_other'.tr,
+                        ),
                       ),
                       Expanded(
-                        child: MetricTile(icon: Icons.timer_outlined, value: formatDurationShort(t.movingMs), label: 'Moving time'),
+                        child: MetricTile(icon: Icons.timer_outlined, value: formatDurationShort(t.movingMs), label: 'progress_moving_time'.tr),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Semantics(
-                    label: 'Average pace ${f.pace(pace)}, from total moving time and GPS distance',
+                    label: 'progress_avg_pace_semantic'.trArgs([f.pace(pace)]),
                     excludeSemantics: true,
                     child: Row(
                       children: [
                         const Icon(Icons.speed, size: 18, color: StrideColors.primary),
                         const SizedBox(width: 6),
-                        Text('Avg. pace ${f.pace(pace)}', style: StrideText.label),
+                        Text('progress_avg_pace_value'.trArgs([f.pace(pace)]), style: StrideText.label),
                         const SizedBox(width: 6),
                         Expanded(
-                          child: Text('total time ÷ GPS distance', style: StrideText.caption, overflow: TextOverflow.ellipsis),
+                          child: Text('progress_pace_basis'.tr, style: StrideText.caption, overflow: TextOverflow.ellipsis),
                         ),
                       ],
                     ),
@@ -261,7 +276,7 @@ class _RunningSection extends ConsumerWidget {
                 today: now,
                 toDisplay: f.metersToUnit,
                 formatValue: (v) => v == null ? missingValue : f.distance(v),
-                semanticTitle: 'Distance per ${p == ProgressPeriod.year ? 'month' : 'day'}',
+                semanticTitle: p == ProgressPeriod.year ? 'progress_distance_per_month'.tr : 'progress_distance_per_day'.tr,
               ),
             ),
             const SizedBox(height: 12),
@@ -279,7 +294,7 @@ class _RunningSection extends ConsumerWidget {
             ),
             SectionHeader(
               title: runsTitle,
-              actionLabel: t.count > 0 ? 'View all' : null,
+              actionLabel: t.count > 0 ? 'progress_view_all'.tr : null,
               onAction: () {
                 final uri = Uri(path: Routes.progressRuns, queryParameters: {'from': '${s.range.fromMs}', 'to': '${s.range.toMs}', 'title': runsTitle});
                 context.push(uri.toString());
@@ -290,11 +305,14 @@ class _RunningSection extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('No runs this $noun', style: StrideText.body.copyWith(fontWeight: FontWeight.w600)),
-                    Text('Runs you save will show up here.', style: StrideText.bodySecondary),
+                    Text(
+                      periodTr(p, 'progress_no_runs_week', 'progress_no_runs_month', 'progress_no_runs_year'),
+                      style: StrideText.body.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    Text('progress_no_runs_hint'.tr, style: StrideText.bodySecondary),
                     if (s.range.contains(dayOnly(now))) ...[
                       const SizedBox(height: 12),
-                      PrimaryButton(label: 'Start a run', expand: false, onPressed: () => context.go(Routes.run)),
+                      PrimaryButton(label: 'progress_start_run'.tr, expand: false, onPressed: () => context.go(Routes.run)),
                     ],
                   ],
                 ),
@@ -322,11 +340,7 @@ class _GoalCard extends ConsumerWidget {
     final f = ref.watch(formatProvider);
     final target = summary.target;
     final p = summary.range.period;
-    final title = switch (p) {
-      ProgressPeriod.week => 'Weekly goal',
-      ProgressPeriod.month => 'Monthly target',
-      ProgressPeriod.year => 'Yearly target',
-    };
+    final title = periodTr(p, 'progress_goal_week', 'progress_goal_month', 'progress_goal_year');
     if (target == null) {
       return StrideCard(
         child: Column(
@@ -334,8 +348,8 @@ class _GoalCard extends ConsumerWidget {
           children: [
             Text(title, style: StrideText.label),
             const SizedBox(height: 4),
-            Text('No weekly distance goal set.', style: StrideText.bodySecondary),
-            TextButton(onPressed: () => context.go(Routes.profileGoals), child: const Text('Set a goal')),
+            Text('progress_goal_none'.tr, style: StrideText.bodySecondary),
+            TextButton(onPressed: () => context.go(Routes.profileGoals), child: Text('progress_goal_set'.tr)),
           ],
         ),
       );
@@ -343,7 +357,7 @@ class _GoalCard extends ConsumerWidget {
     final progress = summary.totals.distanceM / target;
     final pct = (progress * 100).round();
     return StrideCard(
-      semanticLabel: '$title, ${f.distance(summary.totals.distanceM)} of ${f.distance(target)}, $pct percent',
+      semanticLabel: 'progress_goal_semantic'.trArgs([title, f.distance(summary.totals.distanceM), f.distance(target), pct]),
       child: ExcludeSemantics(
         child: Row(
           children: [
@@ -363,7 +377,10 @@ class _GoalCard extends ConsumerWidget {
                     '${f.distanceValue(summary.totals.distanceM)} / ${f.distance(target)}',
                     style: StrideText.label.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
                   ),
-                  Text(p == ProgressPeriod.week ? '$pct% complete' : '$pct% · from weekly goal', style: StrideText.caption),
+                  Text(
+                    p == ProgressPeriod.week ? 'progress_goal_complete'.trArgs(['$pct%']) : 'progress_goal_from_weekly'.trArgs(['$pct%']),
+                    style: StrideText.caption,
+                  ),
                 ],
               ),
             ),
@@ -383,16 +400,22 @@ class _ComparisonCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final f = ref.watch(formatProvider);
     final c = summary.comparison;
-    final noun = periodNoun(summary.range.period);
+    final period = summary.range.period;
+    final noun = periodNounText(period);
     if (c == null) {
-      return StrideCard(child: Text('Comparison isn\'t available for this $noun.', style: StrideText.bodySecondary));
+      return StrideCard(
+        child: Text(
+          periodTr(period, 'progress_compare_unavailable_week', 'progress_compare_unavailable_month', 'progress_compare_unavailable_year'),
+          style: StrideText.bodySecondary,
+        ),
+      );
     }
     final delta = c.deltaDistanceM;
     final sign = delta > 0 ? '+' : (delta < 0 ? '−' : '');
-    final through = c.coverage.ongoing ? 'Through ${DateFormat('EEEE', 'en_US').format(now)}' : 'Full $noun';
+    final through = c.coverage.ongoing ? 'progress_through_day'.trArgs([DateFormat('EEEE', appDateLocale).format(now)]) : 'progress_full_period'.trArgs([noun]);
     final text = c.previous.count == 0 && c.current.count == 0 ? missingValue : '$sign${f.distance(delta.abs())}';
     return StrideCard(
-      semanticLabel: 'Versus last $noun: $text. $through',
+      semanticLabel: 'progress_compare_semantic'.trArgs([noun, text, through]),
       child: ExcludeSemantics(
         child: Row(
           children: [
@@ -403,7 +426,7 @@ class _ComparisonCard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(text, style: StrideText.label.copyWith(fontSize: 16, fontFeatures: const [FontFeature.tabularFigures()])),
-                  Text('vs last $noun', style: StrideText.caption),
+                  Text('progress_vs_last'.trArgs([noun]), style: StrideText.caption),
                   Text(through, style: StrideText.caption),
                 ],
               ),
@@ -425,14 +448,14 @@ class _RecordsPreview extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeader(title: 'Personal records', actionLabel: 'View all', onAction: () => context.push(Routes.records)),
+        SectionHeader(title: 'progress_records_title'.tr, actionLabel: 'progress_view_all'.tr, onAction: () => context.push(Routes.records)),
         async.when(
           skipLoadingOnReload: true,
           loading: () => const LoadingCard(height: 80),
-          error: (_, _) => Text('Records couldn\'t be calculated right now.', style: StrideText.bodySecondary),
+          error: (_, _) => Text('progress_records_preview_error'.tr, style: StrideText.bodySecondary),
           data: (records) {
             if (records.isEmpty) {
-              return StrideCard(child: Text('Save an outdoor run with GPS to start setting records.', style: StrideText.bodySecondary));
+              return StrideCard(child: Text('progress_records_preview_empty'.tr, style: StrideText.bodySecondary));
             }
             return Row(
               children: [
@@ -479,11 +502,11 @@ class _StepsSection extends ConsumerWidget {
   final DateTime now;
 
   String _sourceLabel(StepSource? s) => switch (s) {
-    StepSource.phoneSensor => 'This phone',
-    StepSource.healthConnect => 'Health Connect',
-    StepSource.healthKit => 'Apple Health',
-    StepSource.device => 'Connected device',
-    null => 'No step data yet',
+    StepSource.phoneSensor => 'steps_source_phone'.tr,
+    StepSource.healthConnect => 'steps_source_health_connect'.tr,
+    StepSource.healthKit => 'steps_source_apple_health'.tr,
+    StepSource.device => 'steps_source_device'.tr,
+    null => 'steps_no_data_title'.tr,
   };
 
   Future<void> _requestPermission(WidgetRef ref) async {
@@ -506,17 +529,17 @@ class _StepsSection extends ConsumerWidget {
       skipLoadingOnReload: true,
       loading: () => const Column(children: [LoadingCard(height: 96), SizedBox(height: 12), LoadingCard(height: 220)]),
       error: (_, _) => ErrorState(
-        title: 'Couldn\'t load your steps',
-        message: 'Reading steps saved on this device failed.',
+        title: 'progress_steps_error_title'.tr,
+        message: 'progress_steps_error_message'.tr,
         onRetry: () => ref.invalidate(progressStepsProvider(progressKey)),
       ),
       data: (s) {
         if (s.noPermissionAndNoData) {
           return PermissionState(
             icon: Icons.directions_walk,
-            title: 'Allow motion access',
-            message: 'STRIDE needs Motion & fitness access to count your daily steps. Without it, step stats stay empty.',
-            actionLabel: 'Allow access',
+            title: 'progress_motion_title'.tr,
+            message: 'progress_motion_message'.tr,
+            actionLabel: 'progress_allow_access'.tr,
             onAction: () => _requestPermission(ref),
           );
         }
@@ -535,8 +558,8 @@ class _StepsSection extends ConsumerWidget {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: StatusBanner(
                   tone: BannerTone.warning,
-                  message: 'Motion access is off. New steps aren\'t being counted.',
-                  actionLabel: 'Allow',
+                  message: 'progress_motion_off'.tr,
+                  actionLabel: 'progress_allow'.tr,
                   onAction: () => _requestPermission(ref),
                 ),
               ),
@@ -544,16 +567,16 @@ class _StepsSection extends ConsumerWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: MetricTile(icon: Icons.directions_walk, value: f.steps(total), label: 'Total steps'),
+                    child: MetricTile(icon: Icons.directions_walk, value: f.steps(total), label: 'progress_total_steps'.tr),
                   ),
                   Expanded(
-                    child: MetricTile(icon: Icons.show_chart, value: f.steps(avg?.round()), label: 'Avg. per day'),
+                    child: MetricTile(icon: Icons.show_chart, value: f.steps(avg?.round()), label: 'progress_avg_per_day'.tr),
                   ),
                   Expanded(
                     child: MetricTile(
                       icon: Icons.flag_outlined,
-                      value: daysWithData == 0 ? missingValue : '${s.goalDaysMet} of $daysWithData',
-                      label: 'Goal days met',
+                      value: daysWithData == 0 ? missingValue : 'progress_of'.trArgs([s.goalDaysMet, daysWithData]),
+                      label: 'progress_goal_days_met'.tr,
                     ),
                   ),
                 ],
@@ -566,14 +589,14 @@ class _StepsSection extends ConsumerWidget {
                 buckets: s.buckets,
                 today: now,
                 toDisplay: (v) => v,
-                formatValue: (v) => v == null ? missingValue : '${f.steps(v.round())} steps',
+                formatValue: (v) => v == null ? missingValue : 'steps_count'.trArgs([f.steps(v.round())]),
                 goalLine: p == ProgressPeriod.year ? null : s.currentDailyGoal,
-                goalLabel: s.currentDailyGoal == null || p == ProgressPeriod.year ? null : 'Goal ${f.steps(s.currentDailyGoal!.round())}',
-                semanticTitle: 'Steps per ${p == ProgressPeriod.year ? 'month' : 'day'}',
+                goalLabel: s.currentDailyGoal == null || p == ProgressPeriod.year ? null : 'progress_goal_label'.trArgs([f.steps(s.currentDailyGoal!.round())]),
+                semanticTitle: p == ProgressPeriod.year ? 'progress_steps_per_month'.tr : 'progress_steps_per_day'.tr,
               ),
             ),
             const SizedBox(height: 4),
-            Text('Days without step data show —. Only days with data count toward goal days.', style: StrideText.caption),
+            Text('progress_steps_footnote'.tr, style: StrideText.caption),
             const SizedBox(height: 12),
             if (estDistance != null) ...[
               StrideCard(
@@ -581,7 +604,7 @@ class _StepsSection extends ConsumerWidget {
                   icon: Icons.route_outlined,
                   value: f.distanceValue(estDistance),
                   unit: f.distanceUnitLabel,
-                  label: 'Distance from steps',
+                  label: 'progress_distance_from_steps'.tr,
                   estimated: true,
                 ),
               ),
@@ -596,14 +619,14 @@ class _StepsSection extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Source', style: StrideText.caption),
+                        Text('progress_source'.tr, style: StrideText.caption),
                         Text(_sourceLabel(s.latestSource), style: StrideText.body.copyWith(fontWeight: FontWeight.w600)),
                       ],
                     ),
                   ),
                   TextButton(
                     onPressed: () => context.go(Uri(path: Routes.dailySteps, queryParameters: {'date': dateForLink}).toString()),
-                    child: const Text('View daily steps'),
+                    child: Text('progress_view_daily_steps'.tr),
                   ),
                 ],
               ),

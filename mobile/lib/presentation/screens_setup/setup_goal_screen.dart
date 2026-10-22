@@ -13,6 +13,7 @@ import '../../models/data_models/profile.dart';
 import '../../controller/sync/sync_providers.dart';
 import '../../controller/setup/setup_logic.dart';
 import 'components/setup_widgets.dart';
+import '../../utils/l10n.dart';
 
 const _metersPerMile = 1609.344;
 
@@ -41,23 +42,26 @@ class _SetupGoalScreenState extends ConsumerState<SetupGoalScreen> {
     final v = await showDialog<int>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Custom daily goal'),
+        title: Text('setup_goal_custom_title'.tr),
         content: TextField(
           controller: controller,
           autofocus: true,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: InputDecoration(labelText: 'Steps per day', helperText: '${_fmt.format(StepGoalLimits.min)}–${_fmt.format(StepGoalLimits.max)}'),
+          decoration: InputDecoration(
+            labelText: 'setup_goal_steps_per_day'.tr,
+            helperText: '${_fmt.format(StepGoalLimits.min)}–${_fmt.format(StepGoalLimits.max)}',
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('action_cancel'.tr)),
           FilledButton(
             onPressed: () {
               final n = int.tryParse(controller.text);
               if (n == null || n < StepGoalLimits.min || n > StepGoalLimits.max) return;
               Navigator.pop(ctx, n);
             },
-            child: const Text('Set goal'),
+            child: Text('setup_goal_set'.tr),
           ),
         ],
       ),
@@ -99,7 +103,7 @@ class _SetupGoalScreenState extends ConsumerState<SetupGoalScreen> {
       }
       if (mounted) context.push(Routes.setupPermissions);
     } catch (e) {
-      if (mounted) setState(() => _error = "Couldn't save your goal on this device. Try again.");
+      if (mounted) setState(() => _error = 'setup_goal_save_error'.tr);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -113,33 +117,29 @@ class _SetupGoalScreenState extends ConsumerState<SetupGoalScreen> {
       bottom: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          PrimaryButton(label: 'Continue', trailingIcon: Icons.arrow_forward, loading: _saving, onPressed: () => _save(skip: false)),
-          TextButton(onPressed: _saving ? null : () => _save(skip: true), child: const Text('Skip for now')),
+          PrimaryButton(label: 'setup_continue'.tr, trailingIcon: Icons.arrow_forward, loading: _saving, onPressed: () => _save(skip: false)),
+          TextButton(onPressed: _saving ? null : () => _save(skip: true), child: Text('setup_skip_for_now'.tr)),
         ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SetupHeader(
-            step: 1,
-            title: 'Set a goal that fits you',
-            subtitle: 'Choose your daily steps goal and, if you like, a weekly running goal. You can change this anytime.',
-          ),
+          SetupHeader(step: 1, title: 'setup_goal_title'.tr, subtitle: 'setup_goal_subtitle'.tr),
           if (_error != null) ...[StatusBanner(tone: BannerTone.error, message: _error!), const SizedBox(height: StrideSpace.s12)],
           SageCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Row(
+                Row(
                   children: [
-                    IconBadge(icon: Icons.directions_walk),
-                    SizedBox(width: StrideSpace.s12),
+                    const IconBadge(icon: Icons.directions_walk),
+                    const SizedBox(width: StrideSpace.s12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Daily steps goal', style: StrideText.subheading),
-                          Text('A great way to stay active and healthy every day.', style: StrideText.bodySecondary),
+                          Text('setup_goal_daily_title'.tr, style: StrideText.subheading),
+                          Text('setup_goal_daily_body'.tr, style: StrideText.bodySecondary),
                         ],
                       ),
                     ),
@@ -148,8 +148,8 @@ class _SetupGoalScreenState extends ConsumerState<SetupGoalScreen> {
                 const SizedBox(height: StrideSpace.s16),
                 ValueStepper(
                   valueText: _fmt.format(_steps),
-                  unitLabel: 'steps per day',
-                  semanticLabel: 'Daily steps goal',
+                  unitLabel: 'setup_goal_steps_per_day_unit'.tr,
+                  semanticLabel: 'setup_goal_daily_title'.tr,
                   onDecrement: _steps - StepGoalLimits.step < StepGoalLimits.min
                       ? null
                       : () => setState(() {
@@ -178,7 +178,7 @@ class _SetupGoalScreenState extends ConsumerState<SetupGoalScreen> {
                           _custom = false;
                         }),
                       ),
-                    StrideChip(label: 'Custom', selected: _custom, onTap: _customSteps),
+                    StrideChip(label: 'setup_goal_custom'.tr, selected: _custom, onTap: _customSteps),
                   ],
                 ),
               ],
@@ -194,12 +194,12 @@ class _SetupGoalScreenState extends ConsumerState<SetupGoalScreen> {
                     children: [
                       const IconBadge(icon: Icons.directions_run),
                       const SizedBox(width: StrideSpace.s12),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Weekly running goal', style: StrideText.subheading),
-                            Text('Set a target to keep you motivated. This is optional.', style: StrideText.bodySecondary),
+                            Text('setup_goal_weekly_title'.tr, style: StrideText.subheading),
+                            Text('setup_goal_weekly_body'.tr, style: StrideText.bodySecondary),
                           ],
                         ),
                       ),
@@ -211,18 +211,18 @@ class _SetupGoalScreenState extends ConsumerState<SetupGoalScreen> {
                   const SizedBox(height: StrideSpace.s16),
                   _MiniStepper(
                     icon: Icons.calendar_today_outlined,
-                    label: 'Runs per week',
+                    label: 'setup_goal_runs_label'.tr,
                     value: '$_runs',
-                    unit: 'runs per week',
+                    unit: 'setup_goal_runs_unit'.tr,
                     onMinus: _runs > 1 ? () => setState(() => _runs--) : null,
                     onPlus: _runs < 14 ? () => setState(() => _runs++) : null,
                   ),
                   const SizedBox(height: StrideSpace.s12),
                   _MiniStepper(
                     icon: Icons.place_outlined,
-                    label: 'Total distance',
+                    label: 'setup_goal_distance_label'.tr,
                     value: '$_distance',
-                    unit: '$unitLabel per week',
+                    unit: 'setup_goal_per_week'.trArgs([unitLabel]),
                     onMinus: _distance > 1 ? () => setState(() => _distance--) : null,
                     onPlus: _distance < 300 ? () => setState(() => _distance++) : null,
                   ),
@@ -231,7 +231,7 @@ class _SetupGoalScreenState extends ConsumerState<SetupGoalScreen> {
             ),
           ),
           const SizedBox(height: StrideSpace.s16),
-          Text('Skip for now uses ${_fmt.format(StepGoalLimits.defaultValue)} steps a day and no weekly running goal.', style: StrideText.caption),
+          Text('setup_goal_skip_note'.trArgs([_fmt.format(StepGoalLimits.defaultValue)]), style: StrideText.caption),
         ],
       ),
     );
@@ -263,7 +263,7 @@ class _MiniStepper extends StatelessWidget {
         Icon(icon, color: StrideColors.primary),
         const SizedBox(width: StrideSpace.s12),
         Expanded(child: Text(label, style: StrideText.body)),
-        btn(Icons.remove, onMinus, 'Decrease $label'),
+        btn(Icons.remove, onMinus, 'setup_goal_decrease'.trArgs([label])),
         SizedBox(
           width: 72,
           child: Semantics(
@@ -277,7 +277,7 @@ class _MiniStepper extends StatelessWidget {
             ),
           ),
         ),
-        btn(Icons.add, onPlus, 'Increase $label'),
+        btn(Icons.add, onPlus, 'setup_goal_increase'.trArgs([label])),
       ],
     );
   }

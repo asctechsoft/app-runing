@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../utils/l10n.dart';
 import '../../values/routes.dart';
 import '../../utils/formatters.dart';
 import '../../utils/logger.dart';
@@ -18,15 +19,15 @@ import '../../controller/run/engine/run_session_controller.dart';
 import 'components/run_widgets.dart';
 
 String privacyLabel(Privacy p) => switch (p) {
-  Privacy.onlyMe => 'Only me',
-  Privacy.followers => 'Followers',
-  Privacy.public => 'Public',
+  Privacy.onlyMe => 'run_privacy_only_me'.tr,
+  Privacy.followers => 'run_privacy_followers'.tr,
+  Privacy.public => 'run_privacy_public'.tr,
 };
 
 String privacyHint(Privacy p) => switch (p) {
-  Privacy.onlyMe => 'Only you can see this activity.',
-  Privacy.followers => 'People who follow you can see it.',
-  Privacy.public => 'Anyone on STRIDE can see it.',
+  Privacy.onlyMe => 'run_privacy_hint_only_me'.tr,
+  Privacy.followers => 'run_privacy_hint_followers'.tr,
+  Privacy.public => 'run_privacy_hint_public'.tr,
 };
 
 /// Lưu hoạt động (G10): title/feeling/notes/photos/privacy → lưu local trước (offline OK).
@@ -92,14 +93,14 @@ class _SaveActivityScreenState extends ConsumerState<SaveActivityScreen> {
       });
     } catch (e, st) {
       StrideLog.e('run.photos', e, st);
-      if (mounted) showStrideSnack(context, 'Couldn\'t open your photos. Check photo access in Settings.', isError: true);
+      if (mounted) showStrideSnack(context, 'run_save_photos_error'.tr, isError: true);
     }
   }
 
   Future<void> _pickPrivacy() async {
     final r = await showStrideSheet<Privacy>(
       context,
-      title: 'Who can see this?',
+      title: 'run_save_privacy_sheet'.tr,
       builder: (ctx) => Column(
         children: [
           for (final p in Privacy.values)
@@ -138,7 +139,7 @@ class _SaveActivityScreenState extends ConsumerState<SaveActivityScreen> {
       StrideLog.e('run.save', e, st);
       if (!mounted) return;
       setState(() => _saving = false);
-      showStrideSnack(context, 'Couldn\'t save activity. Your draft is still available.', actionLabel: 'Retry', onAction: _save, isError: true);
+      showStrideSnack(context, 'run_save_failed'.tr, actionLabel: 'action_retry'.tr, onAction: _save, isError: true);
     }
   });
 
@@ -148,11 +149,11 @@ class _SaveActivityScreenState extends ConsumerState<SaveActivityScreen> {
     final fmt = ref.watch(formatProvider);
     final a = st.activity;
     if (a == null) {
-      return const StrideScreen(title: 'Save activity', body: LoadingCard());
+      return StrideScreen(title: 'run_save_activity'.tr, body: const LoadingCard());
     }
     final indoor = a.type == ActivityType.indoorRun;
     return StrideScreen(
-      title: 'Save activity',
+      title: 'run_save_activity'.tr,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -161,14 +162,20 @@ class _SaveActivityScreenState extends ConsumerState<SaveActivityScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 Expanded(
-                  child: MetricTile(label: 'Distance', value: fmt.distanceValue(a.distanceM), unit: fmt.distanceUnitLabel, center: true, estimated: indoor),
+                  child: MetricTile(
+                    label: 'run_label_distance'.tr,
+                    value: fmt.distanceValue(a.distanceM),
+                    unit: fmt.distanceUnitLabel,
+                    center: true,
+                    estimated: indoor,
+                  ),
                 ),
                 Expanded(
-                  child: MetricTile(label: 'Moving time', value: formatDuration(a.movingMs), center: true),
+                  child: MetricTile(label: 'run_label_moving_time'.tr, value: formatDuration(a.movingMs), center: true),
                 ),
                 Expanded(
                   child: MetricTile(
-                    label: 'Avg. pace',
+                    label: 'run_label_avg_pace'.tr,
                     value: fmt.paceValue(a.avgPaceSecPerKm),
                     unit: a.avgPaceSecPerKm == null ? null : fmt.paceUnitLabel,
                     center: true,
@@ -178,23 +185,23 @@ class _SaveActivityScreenState extends ConsumerState<SaveActivityScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          Text('Activity title', style: StrideText.label),
+          Text('run_save_title_label'.tr, style: StrideText.label),
           const SizedBox(height: 6),
           TextField(
             controller: _title,
             maxLength: 80,
             textCapitalization: TextCapitalization.sentences,
             decoration: InputDecoration(
-              hintText: 'Name your activity',
+              hintText: 'run_save_title_hint'.tr,
               counterText: '',
-              suffixIcon: IconButton(tooltip: 'Clear title', icon: const Icon(Icons.close), onPressed: () => _title.clear()),
+              suffixIcon: IconButton(tooltip: 'run_save_clear_title'.tr, icon: const Icon(Icons.close), onPressed: () => _title.clear()),
             ),
           ),
           const SizedBox(height: 16),
-          Text('Date', style: StrideText.label),
+          Text('run_save_date'.tr, style: StrideText.label),
           const SizedBox(height: 6),
           Semantics(
-            label: 'Date, ${longDate(a.startedAt)}',
+            label: 'run_save_date_semantic'.trArgs([longDate(a.startedAt)]),
             excludeSemantics: true,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -213,7 +220,7 @@ class _SaveActivityScreenState extends ConsumerState<SaveActivityScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          Text('How did it feel?', style: StrideText.label),
+          Text('run_save_feeling'.tr, style: StrideText.label),
           const SizedBox(height: 6),
           Wrap(
             spacing: 8,
@@ -221,9 +228,9 @@ class _SaveActivityScreenState extends ConsumerState<SaveActivityScreen> {
               for (final f in Feeling.values)
                 StrideChip(
                   label: switch (f) {
-                    Feeling.easy => 'Easy',
-                    Feeling.steady => 'Steady',
-                    Feeling.hard => 'Hard',
+                    Feeling.easy => 'run_feeling_easy'.tr,
+                    Feeling.steady => 'run_feeling_steady'.tr,
+                    Feeling.hard => 'run_feeling_hard'.tr,
                   },
                   icon: switch (f) {
                     Feeling.easy => Icons.sentiment_satisfied,
@@ -236,7 +243,7 @@ class _SaveActivityScreenState extends ConsumerState<SaveActivityScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          Text('Notes', style: StrideText.label),
+          Text('run_save_notes'.tr, style: StrideText.label),
           const SizedBox(height: 6),
           TextField(
             controller: _notes,
@@ -244,10 +251,10 @@ class _SaveActivityScreenState extends ConsumerState<SaveActivityScreen> {
             maxLines: 6,
             maxLength: 500,
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(hintText: 'How was your activity?'),
+            decoration: InputDecoration(hintText: 'run_save_notes_hint'.tr),
           ),
           const SizedBox(height: 8),
-          Text('Add photos', style: StrideText.label),
+          Text('run_save_add_photos'.tr, style: StrideText.label),
           const SizedBox(height: 6),
           Wrap(
             spacing: 8,
@@ -263,7 +270,7 @@ class _SaveActivityScreenState extends ConsumerState<SaveActivityScreen> {
                         width: 88,
                         height: 88,
                         fit: BoxFit.cover,
-                        semanticLabel: 'Selected photo',
+                        semanticLabel: 'run_save_selected_photo'.tr,
                         errorBuilder: (_, _, _) => Container(width: 88, height: 88, color: StrideColors.subtle, child: const Icon(Icons.broken_image_outlined)),
                       ),
                     ),
@@ -271,7 +278,7 @@ class _SaveActivityScreenState extends ConsumerState<SaveActivityScreen> {
                       right: 0,
                       top: 0,
                       child: IconButton(
-                        tooltip: 'Remove photo',
+                        tooltip: 'run_save_remove_photo'.tr,
                         style: IconButton.styleFrom(backgroundColor: StrideColors.surface),
                         icon: const Icon(Icons.close, size: 18),
                         onPressed: () => setState(() => _photos.remove(p)),
@@ -282,7 +289,7 @@ class _SaveActivityScreenState extends ConsumerState<SaveActivityScreen> {
               if (_photos.length < _maxPhotos)
                 Semantics(
                   button: true,
-                  label: 'Add photos',
+                  label: 'run_save_add_photos'.tr,
                   excludeSemantics: true,
                   child: InkWell(
                     onTap: _addPhotos,
@@ -295,11 +302,11 @@ class _SaveActivityScreenState extends ConsumerState<SaveActivityScreen> {
                         borderRadius: BorderRadius.circular(StrideRadius.small),
                         border: Border.all(color: StrideColors.borderSubtle),
                       ),
-                      child: const Column(
+                      child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.add_photo_alternate_outlined, color: StrideColors.primary),
-                          Text('Add photo', style: StrideText.caption),
+                          const Icon(Icons.add_photo_alternate_outlined, color: StrideColors.primary),
+                          Text('run_save_add_photo'.tr, style: StrideText.caption),
                         ],
                       ),
                     ),
@@ -308,7 +315,7 @@ class _SaveActivityScreenState extends ConsumerState<SaveActivityScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          Text('Privacy', style: StrideText.label),
+          Text('run_save_privacy'.tr, style: StrideText.label),
           const SizedBox(height: 6),
           SettingsGroup(
             children: [
@@ -325,14 +332,14 @@ class _SaveActivityScreenState extends ConsumerState<SaveActivityScreen> {
       bottom: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          PrimaryButton(label: 'Save activity', loading: _saving, onPressed: _save),
+          PrimaryButton(label: 'run_save_activity'.tr, loading: _saving, onPressed: _save),
           const SizedBox(height: 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(Icons.phone_android, size: 14, color: StrideColors.textMuted),
               const SizedBox(width: 4),
-              Text('Saved on this device first', style: StrideText.caption),
+              Text('run_save_local_first'.tr, style: StrideText.caption),
             ],
           ),
         ],

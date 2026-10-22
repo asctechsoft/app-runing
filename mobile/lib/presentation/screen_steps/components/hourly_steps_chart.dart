@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../utils/formatters.dart';
+import '../../../utils/l10n.dart';
 import '../../../values/tokens.dart';
 import '../../../models/data_models/steps.dart';
 import '../../../controller/steps/steps_logic.dart';
@@ -104,7 +105,7 @@ class HourlyStepsChart extends StatelessWidget {
                             show: true,
                             alignment: Alignment.topRight,
                             style: StrideText.caption.copyWith(color: StrideColors.textSecondary),
-                            labelResolver: (_) => 'Goal pace ${format.steps(targetPerHour!.round())}/h',
+                            labelResolver: (_) => 'steps_goal_pace'.trArgs([format.steps(targetPerHour!.round())]),
                           ),
                         ),
                       ],
@@ -120,7 +121,7 @@ class HourlyStepsChart extends StatelessWidget {
                   getTooltipItem: (group, gi, rod, ri) {
                     final e = entries[group.x];
                     if (e.future) return null;
-                    final value = e.steps == null ? 'No data' : '${format.steps(e.steps)} steps';
+                    final value = e.steps == null ? 'steps_no_data_short'.tr : 'steps_count'.trArgs([format.steps(e.steps)]);
                     final src = e.steps == null ? '' : '\n${sourceLabel(source)}';
                     return BarTooltipItem(
                       '${hourLabel(e.hour)}\n$value$src',
@@ -156,7 +157,7 @@ class HourlyStepsChart extends StatelessWidget {
     final past = entries.where((e) => !e.future).toList();
     final withData = past.where((e) => e.steps != null).length;
     final total = past.fold<int>(0, (a, e) => a + (e.steps ?? 0));
-    return 'Hourly steps chart. $withData of ${past.length} hours have data, total ${format.steps(total)} steps.';
+    return 'steps_chart_summary'.trArgs([withData, past.length, format.steps(total)]);
   }
 
   static double _niceMax(double v) {
@@ -178,12 +179,12 @@ class HourlyStepsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = entries.where((e) => !e.future).toList();
-    if (rows.isEmpty) return Text('No hours to show yet.', style: StrideText.bodySecondary);
+    if (rows.isEmpty) return Text('steps_no_hours'.tr, style: StrideText.bodySecondary);
     return Column(
       children: [
         for (final e in rows)
           Semantics(
-            label: '${hourLabel(e.hour)}, ${e.steps == null ? 'no data' : '${format.steps(e.steps)} steps'}',
+            label: e.steps == null ? 'steps_hour_no_data'.trArgs([hourLabel(e.hour)]) : 'steps_hour_steps'.trArgs([hourLabel(e.hour), format.steps(e.steps)]),
             excludeSemantics: true,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),

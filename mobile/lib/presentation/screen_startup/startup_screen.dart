@@ -11,6 +11,7 @@ import '../common_components/widgets.dart';
 import '../../repository/owner_repository.dart';
 import '../../models/data_models/activity.dart';
 import '../../controller/sync/sync_providers.dart';
+import '../../utils/l10n.dart';
 
 /// Quyết định màn đầu tiên (E01). Thuần, không I/O — để test.
 /// Thứ tự: phiên chưa đóng → intro → thiết lập hồ sơ → Home.
@@ -66,7 +67,7 @@ class _StartupScreenState extends ConsumerState<StartupScreen> {
       backgroundColor: StrideColors.canvas,
       body: SafeArea(
         child: _failed
-            ? ErrorState(title: "STRIDE couldn't start", message: 'Something went wrong while opening your data on this device.', onRetry: _route)
+            ? ErrorState(title: 'startup_error_title'.tr, message: 'startup_error_msg'.tr, onRetry: _route)
             : Column(
                 children: [
                   const Spacer(flex: 3),
@@ -74,9 +75,9 @@ class _StartupScreenState extends ConsumerState<StartupScreen> {
                     child: Semantics(label: 'STRIDE', image: true, child: const StrideLogo(size: 120)),
                   ),
                   const Spacer(flex: 4),
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: StrideSpace.s32),
-                    child: Text('Every step, your way', style: StrideText.bodySecondary),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: StrideSpace.s32),
+                    child: Text('app_tagline'.tr, style: StrideText.bodySecondary),
                   ),
                 ],
               ),

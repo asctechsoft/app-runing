@@ -1,3 +1,5 @@
+import '../../utils/l10n.dart';
+
 /// Người được chọn theo dõi (tài khoản STRIDE đã xác minh, do backend xác nhận).
 class LiveShareViewer {
   const LiveShareViewer({required this.userId, required this.label, this.email});
@@ -22,10 +24,18 @@ enum LiveShareExpiry {
   fourHours;
 
   String get label => switch (this) {
-    whenRunEnds => 'When this run ends',
-    oneHour => 'After 1 hour',
-    twoHours => 'After 2 hours',
-    fourHours => 'After 4 hours',
+    whenRunEnds => 'model_live_share_when_run_ends'.tr,
+    oneHour => 'model_live_share_1h'.tr,
+    twoHours => 'model_live_share_2h'.tr,
+    fourHours => 'model_live_share_4h'.tr,
+  };
+
+  /// Cụm dùng trong câu xác nhận ("... for 1 hour"); mỗi ngôn ngữ có key riêng, không suy ra từ [label].
+  String get untilPhrase => switch (this) {
+    whenRunEnds => 'live_until_run_ends'.tr,
+    oneHour => 'model_live_share_for_1h'.tr,
+    twoHours => 'model_live_share_for_2h'.tr,
+    fourHours => 'model_live_share_for_4h'.tr,
   };
 
   /// TTL gửi server. "Khi run kết thúc": client dừng chủ động khi end run; TTL 6 giờ chỉ là chốt an toàn

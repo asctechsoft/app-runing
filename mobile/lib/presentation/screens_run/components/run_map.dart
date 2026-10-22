@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../utils/l10n.dart';
 import '../../../utils/logger.dart';
 import '../../../controller/providers.dart';
 import '../../../values/tokens.dart';
@@ -129,7 +130,7 @@ class _RunMapState extends ConsumerState<RunMap> {
           children: [
             const Icon(Icons.location_searching, color: StrideColors.primary, size: 32),
             const SizedBox(height: 8),
-            Text('Waiting for your location', style: StrideText.bodySecondary),
+            Text('run_map_waiting'.tr, style: StrideText.bodySecondary),
           ],
         ),
       );
@@ -142,7 +143,7 @@ class _RunMapState extends ConsumerState<RunMap> {
     return Stack(
       children: [
         Semantics(
-          label: 'Route map',
+          label: 'run_map_semantic'.tr,
           child: FlutterMap(
             mapController: _mc,
             options: MapOptions(
@@ -197,7 +198,7 @@ class _RunMapState extends ConsumerState<RunMap> {
                       width: 18,
                       height: 18,
                       child: Semantics(
-                        label: 'Start',
+                        label: 'run_map_start'.tr,
                         child: Container(
                           decoration: BoxDecoration(
                             color: StrideColors.primary,
@@ -231,7 +232,7 @@ class _RunMapState extends ConsumerState<RunMap> {
                       width: 30,
                       height: 30,
                       child: Semantics(
-                        label: 'Finish',
+                        label: 'run_map_finish'.tr,
                         child: Container(
                           decoration: BoxDecoration(
                             color: StrideColors.surface,
@@ -248,7 +249,7 @@ class _RunMapState extends ConsumerState<RunMap> {
                       width: 22,
                       height: 22,
                       child: Semantics(
-                        label: cur.stale ? 'Last known location' : 'Current location',
+                        label: cur.stale ? 'run_map_last_known'.tr : 'run_map_current'.tr,
                         child: Container(
                           decoration: BoxDecoration(
                             color: cur.stale ? StrideColors.textMuted : StrideColors.mapCurrent,
@@ -283,7 +284,7 @@ class _RunMapState extends ConsumerState<RunMap> {
               shape: const CircleBorder(),
               elevation: 2,
               child: IconButton(
-                tooltip: 'Recenter map',
+                tooltip: 'run_map_recenter'.tr,
                 constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
                 icon: Icon(_follow ? Icons.my_location : Icons.location_searching, color: StrideColors.primary),
                 onPressed: _recenter,

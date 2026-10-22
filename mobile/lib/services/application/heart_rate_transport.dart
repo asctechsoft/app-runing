@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'heart_rate_parser.dart';
+import '../../utils/l10n.dart';
 
 /// Trạng thái adapter Bluetooth đã chuẩn hóa.
 enum BleAdapter { unknown, on, off, unauthorized, unsupported }
@@ -16,7 +17,7 @@ class FoundSensor {
   final int? rssi;
 
   /// Tên hiển thị: tên quảng bá, nếu trống → "Heart rate sensor" + đuôi id (không bịa tên hãng).
-  String get displayName => advertisedName.trim().isNotEmpty ? advertisedName.trim() : 'Heart rate sensor ${idSuffix(remoteId)}';
+  String get displayName => advertisedName.trim().isNotEmpty ? advertisedName.trim() : 'svc_hr_sensor_default_name'.trArgs([idSuffix(remoteId)]);
 
   static String idSuffix(String id) {
     final clean = id.replaceAll(RegExp('[^A-Za-z0-9]'), '');

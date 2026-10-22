@@ -59,5 +59,7 @@ main()
 Firebase chỉ khởi tạo trên Android (có `google-services.json`); lỗi/không mạng thì app chạy offline và ẩn tính năng tài khoản/đám mây.
 
 ## Chuỗi đa ngôn ngữ
-XML kiểu Android ở `mobile/lib/xml_strings/values*/strings.xml` (khai trong `pubspec.yaml`). Thêm ngôn ngữ: thêm thư mục `values-xx`, khai asset,
-thêm `Locale` vào `AppLocaleConfig.supportedLocales`, chạy `python build.py translate`. Dùng trong code: `'app_tagline'.tr` (cần `import 'package:get/get.dart'`).
+XML kiểu Android ở `mobile/lib/xml_strings/values*/strings.xml` (khai trong `pubspec.yaml`): `values` là tiếng Anh, `values-vi` là tiếng Việt, khoảng 1.660 key.
+Quy tắc thêm/sửa chuỗi: xem mục "Chuỗi giao diện" trong `CLAUDE.md`. Dùng trong code: `'app_tagline'.tr`, `'run_pace_value'.trArgs([pace])`
+(`import` từ `utils/l10n.dart`). Thêm ngôn ngữ: thêm thư mục `values-xx`, khai asset, thêm `Locale` vào `AppLocaleConfig.supportedLocales`,
+chạy `python build.py translate`.

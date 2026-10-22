@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../utils/l10n.dart';
 import '../../values/routes.dart';
 import '../../utils/formatters.dart';
 import '../../controller/providers.dart';
@@ -17,10 +18,10 @@ enum RouteDistanceBucket { any, short, medium, long }
 const routeSurfaces = ['road', 'trail', 'track', 'mixed'];
 
 String routeSurfaceLabel(String? s) => switch (s) {
-  'road' => 'Road',
-  'trail' => 'Trail',
-  'track' => 'Track',
-  'mixed' => 'Mixed',
+  'road' => 'explore_surface_road'.tr,
+  'trail' => 'explore_surface_trail'.tr,
+  'track' => 'explore_surface_track'.tr,
+  'mixed' => 'explore_surface_mixed'.tr,
   _ => missingValue,
 };
 
@@ -33,10 +34,10 @@ String routeSurfaceLabel(String? s) => switch (s) {
 };
 
 String routeBucketLabel(RouteDistanceBucket b, StrideFormat fmt) => switch (b) {
-  RouteDistanceBucket.any => 'Any distance',
-  RouteDistanceBucket.short => 'Under 5 ${fmt.distanceUnitLabel}',
-  RouteDistanceBucket.medium => '5–10 ${fmt.distanceUnitLabel}',
-  RouteDistanceBucket.long => 'Over 10 ${fmt.distanceUnitLabel}',
+  RouteDistanceBucket.any => 'explore_bucket_any'.tr,
+  RouteDistanceBucket.short => 'explore_bucket_short'.trArgs([fmt.distanceUnitLabel]),
+  RouteDistanceBucket.medium => 'explore_bucket_medium'.trArgs([fmt.distanceUnitLabel]),
+  RouteDistanceBucket.long => 'explore_bucket_long'.trArgs([fmt.distanceUnitLabel]),
 };
 
 /// Discover routes (M06): tìm theo vùng, lọc quãng đường/mặt đường.
@@ -47,15 +48,15 @@ class RoutesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final flags = ref.watch(flagsProvider);
     return StrideScreen(
-      title: 'Discover routes',
+      title: 'explore_routes_title'.tr,
       scroll: false,
       body: !flags.exploreRoutes
-          ? const EmptyState(icon: Icons.place_outlined, title: 'Routes aren’t available', message: 'Discover routes isn’t turned on in this version.')
-          : const ExploreGuestGate(
+          ? EmptyState(icon: Icons.place_outlined, title: 'explore_routes_unavailable_title'.tr, message: 'explore_routes_unavailable_message'.tr)
+          : ExploreGuestGate(
               icon: Icons.place_outlined,
-              title: 'Sign in to discover routes',
-              message: 'Create an account or sign in to find and save routes.',
-              child: _RoutesBody(),
+              title: 'explore_routes_guest_title'.tr,
+              message: 'explore_routes_guest_message'.tr,
+              child: const _RoutesBody(),
             ),
     );
   }
@@ -136,14 +137,14 @@ class _RoutesBodyState extends ConsumerState<_RoutesBody> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const ExploreHeader(title: 'Discover routes', subtitle: 'Find your next running route.'),
+        ExploreHeader(title: 'explore_routes_title'.tr, subtitle: 'explore_routes_subtitle'.tr),
         TextField(
           key: const Key('routes-region'),
           controller: _region,
           onChanged: (_) => _debounce(() {
             if (mounted) _load();
           }),
-          decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'City or region'),
+          decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: 'explore_routes_region_hint'.tr),
         ),
         const Gap(4),
         SingleChildScrollView(
@@ -173,7 +174,7 @@ class _RoutesBodyState extends ConsumerState<_RoutesBody> {
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: StrideChip(
-                    label: s == null ? 'Any surface' : routeSurfaceLabel(s),
+                    label: s == null ? 'explore_surface_any'.tr : routeSurfaceLabel(s),
                     selected: _surface == s,
                     onTap: () {
                       setState(() => _surface = s);
@@ -199,8 +200,8 @@ class _RoutesBodyState extends ConsumerState<_RoutesBody> {
     }
     final items = _items ?? const <RouteSummary>[];
     if (items.isEmpty) {
-      return const SingleChildScrollView(
-        child: EmptyState(icon: Icons.search_off, title: 'No routes found', message: 'Try another area or fewer filters.'),
+      return SingleChildScrollView(
+        child: EmptyState(icon: Icons.search_off, title: 'explore_routes_empty_title'.tr, message: 'explore_routes_empty_message'.tr),
       );
     }
     return RefreshIndicator(
@@ -235,7 +236,7 @@ class _RoutesBodyState extends ConsumerState<_RoutesBody> {
                 ),
                 if (r.saved)
                   Semantics(
-                    label: 'Saved',
+                    label: 'explore_saved'.tr,
                     child: const Icon(Icons.bookmark, color: StrideColors.primary),
                   ),
                 const Icon(Icons.chevron_right, color: StrideColors.textMuted),
@@ -257,13 +258,13 @@ class RouteDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final flags = ref.watch(flagsProvider);
     return StrideScreen(
-      title: 'Route',
+      title: 'explore_route_title'.tr,
       body: !flags.exploreRoutes
-          ? const EmptyState(icon: Icons.place_outlined, title: 'Routes aren’t available', message: 'Discover routes isn’t turned on in this version.')
+          ? EmptyState(icon: Icons.place_outlined, title: 'explore_routes_unavailable_title'.tr, message: 'explore_routes_unavailable_message'.tr)
           : ExploreGuestGate(
               icon: Icons.place_outlined,
-              title: 'Sign in to discover routes',
-              message: 'Create an account or sign in to view and save routes.',
+              title: 'explore_routes_guest_title'.tr,
+              message: 'explore_routes_guest_detail_message'.tr,
               child: _RouteDetailBody(id: routeId),
             ),
     );
@@ -306,7 +307,7 @@ class _RouteDetailBodyState extends ConsumerState<_RouteDetailBody> {
       final s = await ref.read(exploreRepositoryProvider).saveRoute(r.summary.id, !r.summary.saved);
       if (!mounted) return;
       setState(() => _r = RouteDetail(summary: r.summary.withSaved(s.saved), points: r.points));
-      showStrideSnack(context, s.saved ? 'Route saved' : 'Route removed from saved');
+      showStrideSnack(context, s.saved ? 'explore_route_saved'.tr : 'explore_route_unsaved'.tr);
     } catch (e) {
       if (mounted) showExploreError(context, e);
     } finally {
@@ -337,10 +338,10 @@ class _RouteDetailBodyState extends ConsumerState<_RouteDetailBody> {
                 ? Container(
                     color: StrideColors.subtle,
                     alignment: Alignment.center,
-                    child: const Text('Map preview isn’t available for this route.', style: StrideText.bodySecondary),
+                    child: Text('explore_route_map_unavailable'.tr, style: StrideText.bodySecondary),
                   )
                 : Semantics(
-                    label: 'Map preview of ${s.name}',
+                    label: 'explore_route_map_label'.trArgs([s.name]),
                     child: FlutterMap(
                       options: MapOptions(
                         initialCameraFit: CameraFit.coordinates(coordinates: r.points, padding: const EdgeInsets.all(32)),
@@ -374,26 +375,29 @@ class _RouteDetailBodyState extends ConsumerState<_RouteDetailBody> {
           ),
         ),
         const Gap(8),
-        const StatusBanner(tone: BannerTone.info, message: 'Route preview only — no turn-by-turn navigation.', icon: Icons.map_outlined),
+        StatusBanner(tone: BannerTone.info, message: 'explore_route_preview_note'.tr, icon: Icons.map_outlined),
         const Gap(12),
         StrideCard(
           child: Row(
             children: [
               Expanded(
-                child: MetricTile(label: 'Distance', value: fmt.distanceValue(s.distanceM), unit: fmt.distanceUnitLabel),
+                child: MetricTile(label: 'explore_distance'.tr, value: fmt.distanceValue(s.distanceM), unit: fmt.distanceUnitLabel),
               ),
               Expanded(
-                child: MetricTile(label: 'Surface', value: routeSurfaceLabel(s.surface)),
+                child: MetricTile(label: 'explore_surface'.tr, value: routeSurfaceLabel(s.surface)),
               ),
             ],
           ),
         ),
-        if (s.attribution.isNotEmpty) ...[const Gap(8), Text('Route data: ${s.attribution}', style: StrideText.caption)],
+        if (s.attribution.isNotEmpty) ...[
+          const Gap(8),
+          Text('explore_route_data'.trArgs([s.attribution]), style: StrideText.caption),
+        ],
         const Gap(16),
         if (s.saved)
-          SecondaryButton(label: 'Unsave route', icon: Icons.bookmark_remove_outlined, onPressed: _busy ? null : _toggleSave)
+          SecondaryButton(label: 'explore_route_unsave'.tr, icon: Icons.bookmark_remove_outlined, onPressed: _busy ? null : _toggleSave)
         else
-          PrimaryButton(label: 'Save route', icon: Icons.bookmark_add_outlined, loading: _busy, onPressed: _busy ? null : _toggleSave),
+          PrimaryButton(label: 'explore_route_save'.tr, icon: Icons.bookmark_add_outlined, loading: _busy, onPressed: _busy ? null : _toggleSave),
       ],
     );
   }

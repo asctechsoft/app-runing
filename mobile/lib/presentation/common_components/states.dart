@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/l10n.dart';
 import '../../values/tokens.dart';
 import 'buttons.dart';
 
@@ -54,15 +55,20 @@ class EmptyState extends StatelessWidget {
 
 /// Lỗi có nguyên nhân và Retry (không "Something went wrong" chung chung khi biết nguyên nhân).
 class ErrorState extends StatelessWidget {
-  const ErrorState({super.key, required this.title, required this.message, this.onRetry, this.retryLabel = 'Try again'});
+  const ErrorState({super.key, required this.title, required this.message, this.onRetry, this.retryLabel});
   final String title;
   final String message;
   final VoidCallback? onRetry;
-  final String retryLabel;
+  final String? retryLabel;
 
   @override
-  Widget build(BuildContext context) =>
-      EmptyState(title: title, message: message, icon: Icons.error_outline, actionLabel: onRetry == null ? null : retryLabel, onAction: onRetry);
+  Widget build(BuildContext context) => EmptyState(
+    title: title,
+    message: message,
+    icon: Icons.error_outline,
+    actionLabel: onRetry == null ? null : (retryLabel ?? 'common_try_again'.tr),
+    onAction: onRetry,
+  );
 }
 
 /// Thiếu quyền: icon + lý do + tác động + Open phone settings / Not now.
@@ -90,7 +96,7 @@ class PermissionState extends StatelessWidget {
     icon: icon,
     actionLabel: actionLabel,
     onAction: onAction,
-    secondaryLabel: onNotNow == null ? null : 'Not now',
+    secondaryLabel: onNotNow == null ? null : 'common_not_now'.tr,
     onSecondary: onNotNow,
   );
 }
@@ -160,7 +166,7 @@ class Skeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
-    label: 'Loading',
+    label: 'common_loading'.tr,
     child: Container(
       height: height,
       width: width,
@@ -186,10 +192,10 @@ class SyncBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (icon, text, color) = switch (state) {
-      'synced' => (Icons.cloud_done_outlined, 'Synced', StrideColors.success),
-      'pending' => (Icons.cloud_upload_outlined, 'Waiting to sync', StrideColors.textSecondary),
-      'error' => (Icons.cloud_off_outlined, 'Sync error', StrideColors.error),
-      _ => (Icons.phone_android, 'Saved on this device', StrideColors.textSecondary),
+      'synced' => (Icons.cloud_done_outlined, 'common_sync_synced'.tr, StrideColors.success),
+      'pending' => (Icons.cloud_upload_outlined, 'common_sync_pending'.tr, StrideColors.textSecondary),
+      'error' => (Icons.cloud_off_outlined, 'common_sync_error'.tr, StrideColors.error),
+      _ => (Icons.phone_android, 'common_sync_local'.tr, StrideColors.textSecondary),
     };
     return Row(
       mainAxisSize: MainAxisSize.min,

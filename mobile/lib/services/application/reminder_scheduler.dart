@@ -9,6 +9,7 @@ import '../native/permission_coordinator.dart';
 import '../../controller/providers.dart';
 import '../../controller/reminders/reminder_logic.dart';
 import '../../repository/reminder_repository.dart';
+import '../../utils/l10n.dart';
 
 /// Đăng ký/hủy lịch nhắc với OS. Bản giả dùng trong test.
 abstract class ReminderScheduler {
@@ -84,12 +85,12 @@ class LocalReminderScheduler implements ReminderScheduler {
       await _plugin.cancel(id: reminderNotificationId(r.kind, d));
     }
     final (title, body) = switch (r.kind) {
-      ReminderKind.dailySteps => ('Time to move', 'A short walk helps you reach your daily step goal.'),
-      ReminderKind.run => ('Ready for a run?', 'Your planned run time is here.'),
+      ReminderKind.dailySteps => ('notif_steps_title'.tr, 'notif_steps_body'.tr),
+      ReminderKind.run => ('notif_run_title'.tr, 'notif_run_body'.tr),
     };
-    const details = NotificationDetails(
-      android: AndroidNotificationDetails('stride_reminders', 'Move reminders', channelDescription: 'Step and run reminders you set in STRIDE'),
-      iOS: DarwinNotificationDetails(),
+    final details = NotificationDetails(
+      android: AndroidNotificationDetails('stride_reminders', 'notif_channel_name'.tr, channelDescription: 'notif_channel_desc'.tr),
+      iOS: const DarwinNotificationDetails(),
     );
     final now = DateTime.now();
     for (final s in slots) {

@@ -1,4 +1,5 @@
 import '../../models/data_models/profile.dart';
+import '../../utils/l10n.dart';
 
 /// Giới hạn hợp lệ của mục tiêu (F06).
 abstract final class GoalLimits {
@@ -19,23 +20,23 @@ abstract final class GoalLimits {
 
 /// Lỗi kiểm tra; null = hợp lệ.
 String? validateDailySteps(int? v) {
-  if (v == null) return 'Enter a daily step goal.';
-  if (v < GoalLimits.minSteps || v > GoalLimits.maxSteps) return 'Choose between 1,000 and 100,000 steps.';
+  if (v == null) return 'goals_error_steps_required'.tr;
+  if (v < GoalLimits.minSteps || v > GoalLimits.maxSteps) return 'goals_error_steps_range'.tr;
   return null;
 }
 
 String? validateWeeklyRuns(int? v) {
-  if (v == null) return 'Enter a weekly run goal.';
-  if (v < GoalLimits.minRuns || v > GoalLimits.maxRuns) return 'Choose between 1 and 14 runs.';
+  if (v == null) return 'goals_error_runs_required'.tr;
+  if (v < GoalLimits.minRuns || v > GoalLimits.maxRuns) return 'goals_error_runs_range'.tr;
   return null;
 }
 
 /// [meters] là giá trị gốc; giới hạn tính theo km bất kể đơn vị hiển thị.
 String? validateWeeklyDistanceM(double? meters) {
-  if (meters == null) return 'Enter a weekly distance goal.';
+  if (meters == null) return 'goals_error_distance_required'.tr;
   final km = meters / 1000;
   // Dung sai nhỏ cho làm tròn khi đổi mi ↔ km.
-  if (km < GoalLimits.minDistanceKm - 1e-6 || km > GoalLimits.maxDistanceKm + 1e-6) return 'Choose between 1 and 500 km (about 0.6–310 mi).';
+  if (km < GoalLimits.minDistanceKm - 1e-6 || km > GoalLimits.maxDistanceKm + 1e-6) return 'goals_error_distance_range'.tr;
   return null;
 }
 

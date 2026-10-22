@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../values/tokens.dart';
+import '../../utils/l10n.dart';
 
 /// App shell 5 tab: Home → Progress → Run → History → Profile (D03).
 /// Nút Run nổi bật 64 nhưng chỉ selected khi thực sự ở tab Run.
@@ -11,11 +12,11 @@ class AppShell extends StatelessWidget {
   final StatefulNavigationShell shell;
 
   static const _tabs = [
-    (Icons.home_outlined, Icons.home, 'Home'),
-    (Icons.bar_chart_outlined, Icons.bar_chart, 'Progress'),
-    (Icons.directions_run, Icons.directions_run, 'Run'),
-    (Icons.receipt_long_outlined, Icons.receipt_long, 'History'),
-    (Icons.person_outline, Icons.person, 'Profile'),
+    (Icons.home_outlined, Icons.home, 'shell_tab_home'),
+    (Icons.bar_chart_outlined, Icons.bar_chart, 'shell_tab_progress'),
+    (Icons.directions_run, Icons.directions_run, 'shell_tab_run'),
+    (Icons.receipt_long_outlined, Icons.receipt_long, 'shell_tab_history'),
+    (Icons.person_outline, Icons.person, 'shell_tab_profile'),
   ];
 
   void _go(int i) => shell.goBranch(i, initialLocation: i == shell.currentIndex);
@@ -47,7 +48,7 @@ class AppShell extends StatelessWidget {
     return Semantics(
       selected: selected,
       button: true,
-      label: '$label tab',
+      label: 'shell_tab_semantic'.trArgs([label.tr]),
       excludeSemantics: true,
       child: InkWell(
         onTap: () => _go(i),
@@ -57,7 +58,7 @@ class AppShell extends StatelessWidget {
             Icon(selected ? selIcon : icon, color: color, size: 24),
             const SizedBox(height: 2),
             Text(
-              label,
+              label.tr,
               style: StrideText.caption.copyWith(color: color, fontWeight: selected ? FontWeight.w600 : FontWeight.w400),
             ),
           ],
@@ -71,7 +72,7 @@ class AppShell extends StatelessWidget {
     return Semantics(
       selected: selected,
       button: true,
-      label: 'Run tab',
+      label: 'shell_tab_semantic'.trArgs(['shell_tab_run'.tr]),
       excludeSemantics: true,
       child: Center(
         child: Material(
@@ -81,16 +82,16 @@ class AppShell extends StatelessWidget {
           child: InkWell(
             customBorder: const CircleBorder(),
             onTap: () => _go(i),
-            child: const SizedBox(
+            child: SizedBox(
               width: 58,
               height: 58,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.directions_run, color: Colors.white, size: 24),
+                  const Icon(Icons.directions_run, color: Colors.white, size: 24),
                   Text(
-                    'Run',
-                    style: TextStyle(fontFamily: StrideText.fontFamily, color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                    'shell_tab_run'.tr,
+                    style: const TextStyle(fontFamily: StrideText.fontFamily, color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),

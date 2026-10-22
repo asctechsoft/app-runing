@@ -10,6 +10,7 @@ import '../common_components/widgets.dart';
 import '../../controller/run/engine/run_session_controller.dart';
 import '../../models/ui_models/workout_models.dart';
 import '../../repository/workout_repository.dart';
+import '../../utils/l10n.dart';
 
 const _stepMs = 30000;
 const _maxStepMs = 120 * 60000;
@@ -86,7 +87,7 @@ class _IntervalEditorScreenState extends ConsumerState<IntervalEditorScreen> {
     final pos = childIndex ?? index;
     final result = await showStrideSheet<_StepEdit>(
       context,
-      title: step.isRepeat ? 'Repeat block' : intervalKindLabel(step.kind),
+      title: step.isRepeat ? 'workout_repeat_block'.tr : intervalKindLabel(step.kind),
       builder: (ctx) => _StepEditor(step: step, canMoveUp: pos > 0, canMoveDown: pos < siblings - 1, allowKindChange: childIndex != null),
     );
     if (result == null) return;
@@ -117,14 +118,14 @@ class _IntervalEditorScreenState extends ConsumerState<IntervalEditorScreen> {
   Future<void> _addTopLevel() async {
     final kind = await showStrideSheet<IntervalKind>(
       context,
-      title: 'Add step',
+      title: 'workout_add_step'.tr,
       builder: (ctx) => Column(
         children: [
           for (final k in IntervalKind.values)
             SettingsRow(
               icon: _iconFor(k),
-              title: k == IntervalKind.repeat ? 'Repeat block' : intervalKindLabel(k),
-              subtitle: k == IntervalKind.repeat ? 'Repeat a set of intervals' : intervalKindHint(k),
+              title: k == IntervalKind.repeat ? 'workout_repeat_block'.tr : intervalKindLabel(k),
+              subtitle: k == IntervalKind.repeat ? 'workout_repeat_hint'.tr : intervalKindHint(k),
               onTap: () => Navigator.of(ctx).pop(k),
             ),
         ],
@@ -164,10 +165,10 @@ class _IntervalEditorScreenState extends ConsumerState<IntervalEditorScreen> {
 
   String? _validate() {
     final p = _plan!;
-    if (p.steps.isEmpty) return 'Add at least one step.';
-    if (p.totalMs <= 0) return 'Your workout needs at least one timed step.';
+    if (p.steps.isEmpty) return 'workout_err_no_steps'.tr;
+    if (p.totalMs <= 0) return 'workout_err_no_time'.tr;
     for (final s in p.steps) {
-      if (s.isRepeat && s.children.isEmpty) return 'Each repeat block needs at least one interval.';
+      if (s.isRepeat && s.children.isEmpty) return 'workout_err_empty_repeat'.tr;
     }
     return null;
   }
@@ -182,16 +183,16 @@ class _IntervalEditorScreenState extends ConsumerState<IntervalEditorScreen> {
     final name = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Save as preset'),
+        title: Text('workout_save_preset'.tr),
         content: TextField(
           controller: ctrl,
           autofocus: true,
           maxLength: 40,
-          decoration: const InputDecoration(labelText: 'Preset name'),
+          decoration: InputDecoration(labelText: 'workout_preset_name'.tr),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()), child: const Text('Save')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text('action_cancel'.tr)),
+          FilledButton(onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()), child: Text('workout_save'.tr)),
         ],
       ),
     );
@@ -201,10 +202,10 @@ class _IntervalEditorScreenState extends ConsumerState<IntervalEditorScreen> {
       if (!mounted) return;
       setState(() => _plan = saved);
       ref.invalidate(workoutPlansProvider);
-      showStrideSnack(context, 'Preset saved.');
+      showStrideSnack(context, 'workout_preset_saved'.tr);
     } catch (e, st) {
       StrideLog.e('workout.save', e, st);
-      if (mounted) showStrideSnack(context, 'Couldn\'t save the preset. Try again.', actionLabel: 'Retry', onAction: _savePreset, isError: true);
+      if (mounted) showStrideSnack(context, 'workout_preset_save_failed'.tr, actionLabel: 'action_retry'.tr, onAction: _savePreset, isError: true);
     }
   });
 
@@ -224,19 +225,19 @@ class _IntervalEditorScreenState extends ConsumerState<IntervalEditorScreen> {
     final flags = ref.watch(flagsProvider);
     if (!flags.workoutIntervals) {
       return StrideScreen(
-        title: 'Intervals',
-        body: EmptyState(title: 'Intervals aren\'t available', message: 'Interval workouts are turned off in this version.', icon: Icons.timer_off_outlined),
+        title: 'workout_intervals'.tr,
+        body: EmptyState(title: 'workout_unavailable_title'.tr, message: 'workout_unavailable_message'.tr, icon: Icons.timer_off_outlined),
       );
     }
-    if (_loading) return const StrideScreen(title: 'Interval workout', body: LoadingCard(height: 300));
+    if (_loading) return StrideScreen(title: 'workout_interval_title'.tr, body: const LoadingCard(height: 300));
     if (_notFound || _plan == null) {
       return StrideScreen(
-        title: 'Interval workout',
+        title: 'workout_interval_title'.tr,
         body: EmptyState(
-          title: 'Preset not found',
-          message: 'This preset may have been deleted.',
+          title: 'workout_not_found_title'.tr,
+          message: 'workout_not_found_message'.tr,
           icon: Icons.search_off,
-          actionLabel: 'Build a new workout',
+          actionLabel: 'workout_build_new'.tr,
           onAction: () => context.go(Routes.runIntervals),
         ),
       );
@@ -244,7 +245,7 @@ class _IntervalEditorScreenState extends ConsumerState<IntervalEditorScreen> {
     final plan = _plan!;
     final steps = plan.steps;
     return StrideScreen(
-      title: 'Build a workout',
+      title: 'workout_build_title'.tr,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -255,7 +256,7 @@ class _IntervalEditorScreenState extends ConsumerState<IntervalEditorScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(plan.name, style: StrideText.title),
-                    Text('A mix of running and walking to build endurance.', style: StrideText.bodySecondary),
+                    Text('workout_build_subtitle'.tr, style: StrideText.bodySecondary),
                   ],
                 ),
               ),
@@ -268,13 +269,13 @@ class _IntervalEditorScreenState extends ConsumerState<IntervalEditorScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 Expanded(
-                  child: MetricTile(label: 'Total time', value: formatStepDuration(plan.totalMs), icon: Icons.schedule, center: true),
+                  child: MetricTile(label: 'workout_total_time'.tr, value: formatStepDuration(plan.totalMs), icon: Icons.schedule, center: true),
                 ),
                 Expanded(
-                  child: MetricTile(label: 'Intervals', value: '${plan.intervalCount}', icon: Icons.repeat, center: true),
+                  child: MetricTile(label: 'workout_intervals'.tr, value: '${plan.intervalCount}', icon: Icons.repeat, center: true),
                 ),
                 Expanded(
-                  child: MetricTile(label: 'Phases', value: '${plan.phases.length}', icon: Icons.format_list_numbered, center: true),
+                  child: MetricTile(label: 'workout_phases'.tr, value: '${plan.phases.length}', icon: Icons.format_list_numbered, center: true),
                 ),
               ],
             ),
@@ -282,10 +283,10 @@ class _IntervalEditorScreenState extends ConsumerState<IntervalEditorScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: Text('Workout plan', style: StrideText.subheading)),
+              Expanded(child: Text('workout_plan'.tr, style: StrideText.subheading)),
               const Icon(Icons.graphic_eq, size: 18, color: StrideColors.primary),
               const SizedBox(width: 4),
-              Text('Audio cues', style: StrideText.label.copyWith(color: StrideColors.primary)),
+              Text('workout_audio_cues'.tr, style: StrideText.label.copyWith(color: StrideColors.primary)),
               Switch(
                 value: plan.audioCues,
                 onChanged: (v) => setState(() => _plan = plan.copyWith(audioCues: v)),
@@ -294,7 +295,7 @@ class _IntervalEditorScreenState extends ConsumerState<IntervalEditorScreen> {
           ),
           const SizedBox(height: 8),
           if (steps.isEmpty)
-            const EmptyState(title: 'No steps yet', message: 'Add a warm-up, intervals and a cool-down.', icon: Icons.add_task)
+            EmptyState(title: 'workout_no_steps_title'.tr, message: 'workout_no_steps_message'.tr, icon: Icons.add_task)
           else
             ReorderableListView.builder(
               shrinkWrap: true,
@@ -320,10 +321,10 @@ class _IntervalEditorScreenState extends ConsumerState<IntervalEditorScreen> {
                           step: s,
                           dragHandle: ReorderableDragStartListener(
                             index: i,
-                            child: const SizedBox(
+                            child: SizedBox(
                               width: 40,
                               height: 48,
-                              child: Icon(Icons.drag_indicator, color: StrideColors.textMuted, semanticLabel: 'Drag to reorder'),
+                              child: Icon(Icons.drag_indicator, color: StrideColors.textMuted, semanticLabel: 'workout_drag_reorder'.tr),
                             ),
                           ),
                           onTap: () => _editStep(index: i),
@@ -343,7 +344,7 @@ class _IntervalEditorScreenState extends ConsumerState<IntervalEditorScreen> {
                               style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
                               onPressed: () => _addChild(i),
                               icon: const Icon(Icons.add_circle_outline),
-                              label: const Text('Add interval'),
+                              label: Text('workout_add_interval'.tr),
                             ),
                           ),
                         ],
@@ -353,27 +354,31 @@ class _IntervalEditorScreenState extends ConsumerState<IntervalEditorScreen> {
                 );
               },
             ),
-          OutlineButton(label: 'Add step', icon: Icons.add, onPressed: _addTopLevel),
+          OutlineButton(label: 'workout_add_step'.tr, icon: Icons.add, onPressed: _addTopLevel),
           const SizedBox(height: 16),
           SageCard(
             child: Semantics(
-              label: 'Total time ${formatStepDuration(plan.totalMs)}',
+              label: 'workout_total_time_semantic'.trArgs([formatStepDuration(plan.totalMs)]),
               excludeSemantics: true,
               child: Row(
                 children: [
                   const Icon(Icons.schedule, color: StrideColors.primary),
                   const SizedBox(width: 12),
-                  Expanded(child: Text('Total time', style: StrideText.body)),
+                  Expanded(child: Text('workout_total_time'.tr, style: StrideText.body)),
                   Text(formatStepDuration(plan.totalMs), style: StrideText.metricSmall),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 12),
-          OutlineButton(label: plan.id == null ? 'Save as preset' : 'Update preset', icon: Icons.bookmark_add_outlined, onPressed: _savePreset),
+          OutlineButton(
+            label: plan.id == null ? 'workout_save_preset'.tr : 'workout_update_preset'.tr,
+            icon: Icons.bookmark_add_outlined,
+            onPressed: _savePreset,
+          ),
         ],
       ),
-      bottom: PrimaryButton(label: 'Start workout', trailingIcon: Icons.arrow_forward, onPressed: _startWorkout),
+      bottom: PrimaryButton(label: 'workout_start'.tr, trailingIcon: Icons.arrow_forward, onPressed: _startWorkout),
     );
   }
 }
@@ -386,11 +391,11 @@ class _StepRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = step.isRepeat ? 'Repeat ${step.repeat} times' : intervalKindLabel(step.kind);
+    final title = step.isRepeat ? 'workout_repeat_times'.trArgs([step.repeat]) : intervalKindLabel(step.kind);
     final trailing = step.isRepeat ? formatStepDuration(planTotalMs([step])) : formatStepDuration(step.durationMs ?? 0);
     return Semantics(
       button: true,
-      label: '$title, $trailing. Tap to edit',
+      label: 'workout_step_semantic'.trArgs([title, trailing]),
       excludeSemantics: true,
       child: InkWell(
         onTap: onTap,
@@ -464,16 +469,16 @@ class _StepEditorState extends State<_StepEditor> {
         if (repeat)
           ValueStepper(
             valueText: '$_repeat',
-            unitLabel: 'times',
-            semanticLabel: 'Repeats',
+            unitLabel: 'workout_times'.tr,
+            semanticLabel: 'workout_repeats'.tr,
             onDecrement: _repeat > 1 ? () => setState(() => _repeat--) : null,
             onIncrement: _repeat < 50 ? () => setState(() => _repeat++) : null,
           )
         else
           ValueStepper(
             valueText: formatStepDuration(_ms),
-            unitLabel: 'duration',
-            semanticLabel: 'Duration',
+            unitLabel: 'workout_duration_unit'.tr,
+            semanticLabel: 'workout_duration'.tr,
             onDecrement: _ms > _stepMs ? () => setState(() => _ms -= _stepMs) : null,
             onIncrement: _ms < _maxStepMs ? () => setState(() => _ms += _stepMs) : null,
           ),
@@ -483,7 +488,7 @@ class _StepEditorState extends State<_StepEditor> {
             if (widget.canMoveUp)
               Expanded(
                 child: OutlineButton(
-                  label: 'Move up',
+                  label: 'workout_move_up'.tr,
                   icon: Icons.arrow_upward,
                   onPressed: () => Navigator.of(context).pop(const _StepEdit(_EditAction.moveUp)),
                 ),
@@ -492,7 +497,7 @@ class _StepEditorState extends State<_StepEditor> {
             if (widget.canMoveDown)
               Expanded(
                 child: OutlineButton(
-                  label: 'Move down',
+                  label: 'workout_move_down'.tr,
                   icon: Icons.arrow_downward,
                   onPressed: () => Navigator.of(context).pop(const _StepEdit(_EditAction.moveDown)),
                 ),
@@ -501,7 +506,7 @@ class _StepEditorState extends State<_StepEditor> {
         ),
         const SizedBox(height: 8),
         PrimaryButton(
-          label: 'Done',
+          label: 'workout_done'.tr,
           onPressed: () =>
               Navigator.of(context)
                   .pop(_StepEdit(_EditAction.update, repeat ? widget.step.copyWith(repeat: _repeat) : widget.step.copyWith(kind: _kind, durationMs: _ms))),
@@ -510,7 +515,7 @@ class _StepEditorState extends State<_StepEditor> {
         TextButton(
           style: TextButton.styleFrom(foregroundColor: StrideColors.error, minimumSize: const Size(48, 48)),
           onPressed: () => Navigator.of(context).pop(const _StepEdit(_EditAction.remove)),
-          child: Text(repeat ? 'Remove repeat block' : 'Remove step'),
+          child: Text(repeat ? 'workout_remove_repeat'.tr : 'workout_remove_step'.tr),
         ),
       ],
     );

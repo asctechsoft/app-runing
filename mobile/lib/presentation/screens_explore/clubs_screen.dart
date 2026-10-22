@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../utils/l10n.dart';
 import '../../values/routes.dart';
 import '../../utils/formatters.dart';
 import '../../controller/providers.dart';
@@ -22,15 +23,11 @@ class ClubsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final flags = ref.watch(flagsProvider);
     return StrideScreen(
-      title: 'Running clubs',
+      title: 'explore_clubs_title'.tr,
       scroll: false,
       body: !flags.exploreClubs
-          ? const EmptyState(icon: Icons.groups_outlined, title: 'Clubs aren’t available', message: 'Running clubs aren’t turned on in this version.')
-          : const ExploreGuestGate(
-              title: 'Sign in to join clubs',
-              message: 'Create an account or sign in to find clubs and run together.',
-              child: _ClubsBody(),
-            ),
+          ? EmptyState(icon: Icons.groups_outlined, title: 'explore_clubs_unavailable_title'.tr, message: 'explore_clubs_unavailable_message'.tr)
+          : ExploreGuestGate(title: 'explore_clubs_guest_title'.tr, message: 'explore_clubs_guest_message'.tr, child: const _ClubsBody()),
     );
   }
 }
@@ -123,19 +120,19 @@ class _ClubsBodyState extends ConsumerState<_ClubsBody> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const ExploreHeader(title: 'Running clubs', subtitle: 'Find your people. Run further together.'),
+        ExploreHeader(title: 'explore_clubs_title'.tr, subtitle: 'explore_clubs_subtitle'.tr),
         TextField(
           key: const Key('clubs-search'),
           controller: _search,
           onChanged: _onQueryChanged,
           textInputAction: TextInputAction.search,
-          decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search clubs or interests'),
+          decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: 'explore_clubs_search_hint'.tr),
         ),
         const Gap(8),
         StrideSegmented<_ClubsTab>(
           values: _ClubsTab.values,
           selected: _tab,
-          labelOf: (t) => t == _ClubsTab.nearby ? 'Nearby' : 'My clubs',
+          labelOf: (t) => t == _ClubsTab.nearby ? 'explore_clubs_tab_nearby'.tr : 'explore_clubs_tab_mine'.tr,
           onChanged: (t) {
             if (t == _tab) return;
             setState(() {
@@ -151,10 +148,10 @@ class _ClubsBodyState extends ConsumerState<_ClubsBody> {
             key: const Key('clubs-region'),
             controller: _region,
             onChanged: _onQueryChanged,
-            decoration: const InputDecoration(prefixIcon: Icon(Icons.location_city_outlined), hintText: 'City or region, e.g. Hanoi'),
+            decoration: InputDecoration(prefixIcon: const Icon(Icons.location_city_outlined), hintText: 'explore_clubs_region_hint'.tr),
           ),
           const Gap(4),
-          Text('We use the area you type. STRIDE doesn’t use your location to find clubs.', style: StrideText.caption),
+          Text('explore_clubs_region_note'.tr, style: StrideText.caption),
         ],
         const Gap(8),
         Expanded(child: _content()),
@@ -177,15 +174,15 @@ class _ClubsBodyState extends ConsumerState<_ClubsBody> {
         child: _tab == _ClubsTab.mine
             ? EmptyState(
                 icon: Icons.groups_outlined,
-                title: 'No clubs yet',
-                message: 'Clubs you join will show here.',
-                actionLabel: 'Find clubs',
+                title: 'explore_clubs_mine_empty_title'.tr,
+                message: 'explore_clubs_mine_empty_message'.tr,
+                actionLabel: 'explore_clubs_find'.tr,
                 onAction: () {
                   setState(() => _tab = _ClubsTab.nearby);
                   _load();
                 },
               )
-            : const EmptyState(icon: Icons.search_off, title: 'No clubs found', message: 'Try another name or area.'),
+            : EmptyState(icon: Icons.search_off, title: 'explore_clubs_empty_title'.tr, message: 'explore_clubs_empty_message'.tr),
       );
     }
     return RefreshIndicator(
@@ -210,7 +207,7 @@ class _ClubsBodyState extends ConsumerState<_ClubsBody> {
   }
 }
 
-String _membersLabel(int n) => n == 1 ? '1 member' : '${NumberFormat.decimalPattern().format(n)} members';
+String _membersLabel(int n) => n == 1 ? 'explore_member_one'.tr : 'explore_member_other'.trArgs([NumberFormat.decimalPattern().format(n)]);
 
 class _MembershipChip extends StatelessWidget {
   const _MembershipChip(this.m);
@@ -229,7 +226,7 @@ class _MembershipChip extends StatelessWidget {
           Icon(member ? Icons.check : Icons.schedule, size: 14, color: member ? StrideColors.primary : StrideColors.warning),
           const SizedBox(width: 4),
           Text(
-            member ? (m!.role == 'owner' ? 'Owner' : 'Member') : 'Request pending',
+            member ? (m!.role == 'owner' ? 'explore_club_owner'.tr : 'explore_club_member'.tr) : 'explore_club_request_pending'.tr,
             style: StrideText.caption.copyWith(color: member ? StrideColors.primary : StrideColors.warning, fontWeight: FontWeight.w600),
           ),
         ],
@@ -294,12 +291,12 @@ class ClubDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final flags = ref.watch(flagsProvider);
     return StrideScreen(
-      title: 'Club',
+      title: 'explore_club_title'.tr,
       body: !flags.exploreClubs
-          ? const EmptyState(icon: Icons.groups_outlined, title: 'Clubs aren’t available', message: 'Running clubs aren’t turned on in this version.')
+          ? EmptyState(icon: Icons.groups_outlined, title: 'explore_clubs_unavailable_title'.tr, message: 'explore_clubs_unavailable_message'.tr)
           : ExploreGuestGate(
-              title: 'Sign in to join clubs',
-              message: 'Create an account or sign in to see this club.',
+              title: 'explore_clubs_guest_title'.tr,
+              message: 'explore_clubs_guest_detail_message'.tr,
               child: _ClubDetailBody(clubId: clubId),
             ),
     );
@@ -342,7 +339,7 @@ class _ClubDetailBodyState extends ConsumerState<_ClubDetailBody> {
       final m = await ref.read(exploreRepositoryProvider).requestJoin(widget.clubId);
       if (!mounted) return;
       setState(() => _club = _club!.withMembership(m));
-      showStrideSnack(context, m?.isMember == true ? 'You joined the club' : 'Request sent. A club admin will review it.');
+      showStrideSnack(context, m?.isMember == true ? 'explore_club_joined'.tr : 'explore_club_request_sent'.tr);
     } catch (e) {
       if (mounted) showExploreError(context, e);
     } finally {
@@ -353,10 +350,10 @@ class _ClubDetailBodyState extends ConsumerState<_ClubDetailBody> {
   Future<void> _leave({required bool pending}) async {
     final ok = await confirmDialog(
       context,
-      title: pending ? 'Cancel join request?' : 'Leave ${_club!.name}?',
-      message: pending ? 'You can request to join again later.' : 'You’ll stop seeing posts and events from this club.',
-      confirmLabel: pending ? 'Cancel request' : 'Leave club',
-      cancelLabel: 'Keep',
+      title: pending ? 'explore_club_cancel_request_title'.tr : 'explore_club_leave_title'.trArgs([_club!.name]),
+      message: pending ? 'explore_club_cancel_request_message'.tr : 'explore_club_leave_message'.tr,
+      confirmLabel: pending ? 'explore_club_cancel_request'.tr : 'explore_club_leave'.tr,
+      cancelLabel: 'explore_keep'.tr,
       destructive: !pending,
     );
     if (!ok || !mounted) return;
@@ -365,7 +362,7 @@ class _ClubDetailBodyState extends ConsumerState<_ClubDetailBody> {
       final m = await ref.read(exploreRepositoryProvider).leaveClub(widget.clubId);
       if (!mounted) return;
       setState(() => _club = _club!.withMembership(m));
-      showStrideSnack(context, pending ? 'Request cancelled' : 'You left the club');
+      showStrideSnack(context, pending ? 'explore_club_request_cancelled'.tr : 'explore_club_left'.tr);
     } catch (e) {
       if (mounted) showExploreError(context, e);
     } finally {
@@ -410,30 +407,26 @@ class _ClubDetailBodyState extends ConsumerState<_ClubDetailBody> {
             children: [
               _MembershipChip(m),
               const Spacer(),
-              if (!m!.isOwner) TextButton(onPressed: _busy ? null : () => _leave(pending: false), child: const Text('Leave club')),
+              if (!m!.isOwner) TextButton(onPressed: _busy ? null : () => _leave(pending: false), child: Text('explore_club_leave'.tr)),
             ],
           ),
           const Gap(8),
           StrideSegmented<_DetailTab>(
             values: _DetailTab.values,
             selected: _tab,
-            labelOf: (t) => t == _DetailTab.feed ? 'Feed' : 'Events',
+            labelOf: (t) => t == _DetailTab.feed ? 'explore_club_tab_feed'.tr : 'explore_club_tab_events'.tr,
             onChanged: (t) => setState(() => _tab = t),
           ),
           const Gap(12),
           if (_tab == _DetailTab.feed) _ClubFeed(key: ValueKey('feed-${c.id}'), clubId: c.id) else _ClubEvents(key: ValueKey('events-${c.id}'), clubId: c.id),
         ] else if (pending) ...[
-          const StatusBanner(
-            tone: BannerTone.warning,
-            title: 'Request pending',
-            message: 'A club admin will review your request. You’ll be notified when it’s approved.',
-          ),
+          StatusBanner(tone: BannerTone.warning, title: 'explore_club_request_pending'.tr, message: 'explore_club_request_pending_message'.tr),
           const Gap(12),
-          SecondaryButton(label: 'Cancel request', onPressed: _busy ? null : () => _leave(pending: true)),
+          SecondaryButton(label: 'explore_club_cancel_request'.tr, onPressed: _busy ? null : () => _leave(pending: true)),
         ] else ...[
-          PrimaryButton(label: 'Request to join', loading: _busy, onPressed: _busy ? null : _join),
+          PrimaryButton(label: 'explore_club_request_join'.tr, loading: _busy, onPressed: _busy ? null : _join),
           const Gap(8),
-          Text('Posts and events are visible to approved members.', style: StrideText.caption, textAlign: TextAlign.center),
+          Text('explore_club_members_only_note'.tr, style: StrideText.caption, textAlign: TextAlign.center),
         ],
       ],
     );
@@ -540,11 +533,11 @@ class _ClubFeedState extends ConsumerState<_ClubFeed> {
                   maxLength: 2000,
                   minLines: 1,
                   maxLines: 4,
-                  decoration: const InputDecoration(hintText: 'Share something with the club', counterText: ''),
+                  decoration: InputDecoration(hintText: 'explore_feed_composer_hint'.tr, counterText: ''),
                 ),
               ),
               IconButton(
-                tooltip: 'Post',
+                tooltip: 'explore_feed_post'.tr,
                 onPressed: _posting ? null : _post,
                 icon: _posting ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send),
               ),
@@ -554,7 +547,7 @@ class _ClubFeedState extends ConsumerState<_ClubFeed> {
         const Gap(12),
         if (posts == null) ...[const LoadingCard(height: 160), const Gap(12), const LoadingCard(height: 160)],
         if (posts != null && posts.isEmpty)
-          const EmptyState(icon: Icons.forum_outlined, title: 'No posts yet', message: 'Be the first to share a run or say hello.'),
+          EmptyState(icon: Icons.forum_outlined, title: 'explore_feed_empty_title'.tr, message: 'explore_feed_empty_message'.tr),
         if (posts != null)
           for (final p in posts) ...[
             _PostCard(post: p, onChanged: _replace, onDeleted: () => _remove(p.id), onBlocked: () => _removeAuthor(p.authorId)),
@@ -598,42 +591,42 @@ class _PostCardState extends ConsumerState<_PostCard> {
   Future<void> _action(_PostAction a) async {
     final repo = ref.read(exploreRepositoryProvider);
     final p = widget.post;
-    final name = p.authorName ?? 'this runner';
+    final name = p.authorName ?? 'explore_this_runner'.tr;
     try {
       switch (a) {
         case _PostAction.delete:
           final ok = await confirmDialog(
             context,
-            title: 'Delete post?',
-            message: 'This removes the post and its comments for everyone.',
-            confirmLabel: 'Delete',
-            cancelLabel: 'Cancel',
+            title: 'explore_post_delete_title'.tr,
+            message: 'explore_post_delete_message'.tr,
+            confirmLabel: 'explore_delete'.tr,
+            cancelLabel: 'action_cancel'.tr,
             destructive: true,
           );
           if (!ok) return;
           await repo.deletePost(p.id);
           widget.onDeleted();
-          if (mounted) showStrideSnack(context, 'Post deleted');
+          if (mounted) showStrideSnack(context, 'explore_post_deleted'.tr);
         case _PostAction.reportPost:
         case _PostAction.reportUser:
           final isUser = a == _PostAction.reportUser;
-          final reason = await _askReason(context, isUser ? 'Report $name' : 'Report post');
+          final reason = await _askReason(context, isUser ? 'explore_report_user_title'.trArgs([name]) : 'explore_report_post'.tr);
           if (reason == null) return;
           await repo.report(targetType: isUser ? 'user' : 'post', targetId: isUser ? p.authorId : p.id, reason: reason);
-          if (mounted) showStrideSnack(context, 'Report sent. Thanks for helping keep clubs safe.');
+          if (mounted) showStrideSnack(context, 'explore_report_sent'.tr);
         case _PostAction.block:
           final ok = await confirmDialog(
             context,
-            title: 'Block $name?',
-            message: 'You won’t see each other’s posts, comments or activities in clubs.',
-            confirmLabel: 'Block',
-            cancelLabel: 'Cancel',
+            title: 'explore_block_title'.trArgs([name]),
+            message: 'explore_block_message'.tr,
+            confirmLabel: 'explore_block'.tr,
+            cancelLabel: 'action_cancel'.tr,
             destructive: true,
           );
           if (!ok) return;
           await repo.blockUser(p.authorId);
           widget.onBlocked();
-          if (mounted) showStrideSnack(context, '$name is blocked');
+          if (mounted) showStrideSnack(context, 'explore_blocked'.trArgs([name]));
       }
     } catch (e) {
       if (mounted) showExploreError(context, e);
@@ -665,20 +658,20 @@ class _PostCardState extends ConsumerState<_PostCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(p.authorName ?? 'Runner', style: StrideText.label),
+                    Text(p.authorName ?? 'explore_runner'.tr, style: StrideText.label),
                     if (p.createdAt > 0) Text(DateFormat('MMM d, h:mm a').format(DateTime.fromMillisecondsSinceEpoch(p.createdAt)), style: StrideText.caption),
                   ],
                 ),
               ),
               PopupMenuButton<_PostAction>(
-                tooltip: 'Post options',
+                tooltip: 'explore_post_options'.tr,
                 onSelected: _action,
                 itemBuilder: (_) => [
-                  if (mine) const PopupMenuItem(value: _PostAction.delete, child: Text('Delete post')),
+                  if (mine) PopupMenuItem(value: _PostAction.delete, child: Text('explore_post_delete'.tr)),
                   if (!mine) ...[
-                    const PopupMenuItem(value: _PostAction.reportPost, child: Text('Report post')),
-                    const PopupMenuItem(value: _PostAction.reportUser, child: Text('Report user')),
-                    const PopupMenuItem(value: _PostAction.block, child: Text('Block user')),
+                    PopupMenuItem(value: _PostAction.reportPost, child: Text('explore_report_post'.tr)),
+                    PopupMenuItem(value: _PostAction.reportUser, child: Text('explore_report_user'.tr)),
+                    PopupMenuItem(value: _PostAction.block, child: Text('explore_block_user'.tr)),
                   ],
                 ],
               ),
@@ -686,13 +679,13 @@ class _PostCardState extends ConsumerState<_PostCard> {
           ),
           if (p.text.isNotEmpty) ...[const Gap(8), Text(p.text, style: StrideText.body)],
           if (p.activity != null) ...[const Gap(10), _ActivitySummary(a: p.activity!, fmt: fmt)],
-          if (p.activityHidden) ...[const Gap(8), Text('This activity is no longer shared.', style: StrideText.caption)],
+          if (p.activityHidden) ...[const Gap(8), Text('explore_post_activity_hidden'.tr, style: StrideText.caption)],
           const Gap(8),
           Row(
             children: [
               Semantics(
                 button: true,
-                label: p.cheeredByMe ? 'Remove cheer, ${p.cheerCount} cheers' : 'Cheer, ${p.cheerCount} cheers',
+                label: p.cheeredByMe ? 'explore_cheer_remove_label'.trArgs([p.cheerCount]) : 'explore_cheer_label'.trArgs([p.cheerCount]),
                 excludeSemantics: true,
                 child: TextButton.icon(
                   onPressed: _cheering ? null : _cheer,
@@ -702,7 +695,7 @@ class _PostCardState extends ConsumerState<_PostCard> {
               ),
               Semantics(
                 button: true,
-                label: 'Comments, ${p.commentCount}',
+                label: 'explore_comments_label'.trArgs([p.commentCount]),
                 excludeSemantics: true,
                 child: TextButton.icon(
                   onPressed: () async {
@@ -736,7 +729,7 @@ class _PostCardState extends ConsumerState<_PostCard> {
                 ),
               ),
               const Spacer(),
-              if (!p.cheeredByMe) StrideChip(label: 'Cheer', icon: Icons.waving_hand_outlined, selected: false, onTap: _cheering ? null : _cheer),
+              if (!p.cheeredByMe) StrideChip(label: 'explore_cheer'.tr, icon: Icons.waving_hand_outlined, selected: false, onTap: _cheering ? null : _cheer),
             ],
           ),
         ],
@@ -754,7 +747,7 @@ Future<String?> _askReason(BuildContext context, String title) {
       builder: (ctx, setState) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Tell us what’s wrong. Reports are reviewed by the STRIDE team.', style: StrideText.bodySecondary),
+          Text('explore_report_prompt'.tr, style: StrideText.bodySecondary),
           const Gap(12),
           TextField(
             controller: c,
@@ -762,11 +755,11 @@ Future<String?> _askReason(BuildContext context, String title) {
             maxLength: 500,
             minLines: 2,
             maxLines: 4,
-            decoration: const InputDecoration(labelText: 'Reason'),
+            decoration: InputDecoration(labelText: 'explore_report_reason'.tr),
             onChanged: (_) => setState(() {}),
           ),
           const Gap(8),
-          PrimaryButton(label: 'Send report', onPressed: c.text.trim().isEmpty ? null : () => Navigator.of(ctx).pop(c.text.trim())),
+          PrimaryButton(label: 'explore_report_send'.tr, onPressed: c.text.trim().isEmpty ? null : () => Navigator.of(ctx).pop(c.text.trim())),
         ],
       ),
     ),
@@ -788,14 +781,19 @@ class _ActivitySummary extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: MetricTile(label: 'Distance', value: fmt.distanceValue(a.distanceM), unit: fmt.distanceUnitLabel, estimated: a.distanceEstimated),
+              child: MetricTile(
+                label: 'explore_distance'.tr,
+                value: fmt.distanceValue(a.distanceM),
+                unit: fmt.distanceUnitLabel,
+                estimated: a.distanceEstimated,
+              ),
             ),
             Expanded(
-              child: MetricTile(label: 'Moving time', value: formatDuration(a.movingMs)),
+              child: MetricTile(label: 'explore_moving_time'.tr, value: formatDuration(a.movingMs)),
             ),
             Expanded(
               child: MetricTile(
-                label: 'Avg. pace',
+                label: 'explore_avg_pace'.tr,
                 // Pace từ quãng đường ước tính theo bước không đáng tin → —.
                 value: a.distanceEstimated ? missingValue : fmt.paceValue(a.avgPaceSecPerKm),
                 unit: a.distanceEstimated ? null : fmt.paceUnitLabel,
@@ -872,10 +870,10 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
   Future<void> _delete(PostComment c) async {
     final ok = await confirmDialog(
       context,
-      title: 'Delete comment?',
-      message: 'This can’t be undone.',
-      confirmLabel: 'Delete',
-      cancelLabel: 'Cancel',
+      title: 'explore_comment_delete_title'.tr,
+      message: 'explore_comment_delete_message'.tr,
+      confirmLabel: 'explore_delete'.tr,
+      cancelLabel: 'action_cancel'.tr,
       destructive: true,
     );
     if (!ok || !mounted) return;
@@ -907,8 +905,8 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
           children: [
             Row(
               children: [
-                const Expanded(child: Text('Comments', style: StrideText.heading)),
-                IconButton(tooltip: 'Close', onPressed: () => Navigator.of(context).maybePop(), icon: const Icon(Icons.close)),
+                Expanded(child: Text('explore_comments'.tr, style: StrideText.heading)),
+                IconButton(tooltip: 'explore_close'.tr, onPressed: () => Navigator.of(context).maybePop(), icon: const Icon(Icons.close)),
               ],
             ),
             Expanded(
@@ -919,16 +917,16 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                   : items == null
                   ? const Center(child: CircularProgressIndicator())
                   : items.isEmpty
-                  ? const Center(child: Text('No comments yet.', style: StrideText.bodySecondary))
+                  ? Center(child: Text('explore_comments_empty'.tr, style: StrideText.bodySecondary))
                   : ListView(
                       children: [
                         for (final c in items)
                           ListTile(
                             contentPadding: EdgeInsets.zero,
-                            title: Text(c.authorName ?? 'Runner', style: StrideText.label),
+                            title: Text(c.authorName ?? 'explore_runner'.tr, style: StrideText.label),
                             subtitle: Text(c.text, style: StrideText.body),
                             trailing: c.authorId == me
-                                ? IconButton(tooltip: 'Delete comment', icon: const Icon(Icons.delete_outline), onPressed: () => _delete(c))
+                                ? IconButton(tooltip: 'explore_comment_delete'.tr, icon: const Icon(Icons.delete_outline), onPressed: () => _delete(c))
                                 : null,
                           ),
                         if (_cursor != null) ExploreLoadMore(loading: false, onPressed: () => _load(more: true)),
@@ -941,10 +939,10 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                   child: TextField(
                     controller: _input,
                     maxLength: 1000,
-                    decoration: const InputDecoration(hintText: 'Add a comment', counterText: ''),
+                    decoration: InputDecoration(hintText: 'explore_comment_hint'.tr, counterText: ''),
                   ),
                 ),
-                IconButton(tooltip: 'Send comment', onPressed: _sending ? null : _send, icon: const Icon(Icons.send)),
+                IconButton(tooltip: 'explore_comment_send'.tr, onPressed: _sending ? null : _send, icon: const Icon(Icons.send)),
               ],
             ),
           ],
@@ -998,7 +996,7 @@ class _ClubEventsState extends ConsumerState<_ClubEvents> {
       final updated = await ref.read(exploreRepositoryProvider).rsvp(e.id, going);
       if (!mounted) return;
       setState(() => _items = [for (final x in _items ?? const <ClubEvent>[]) x.id == e.id ? updated : x]);
-      showStrideSnack(context, going ? 'You’re going' : 'RSVP cancelled');
+      showStrideSnack(context, going ? 'explore_event_going_snack'.tr : 'explore_event_rsvp_cancelled'.tr);
     } catch (err) {
       if (mounted) showExploreError(context, err);
     } finally {
@@ -1011,7 +1009,7 @@ class _ClubEventsState extends ConsumerState<_ClubEvents> {
     if (_error != null) return ExploreFailureView(failure: _error!, onRetry: _load);
     final items = _items;
     if (items == null) return const Column(children: [LoadingCard(), Gap(12), LoadingCard()]);
-    if (items.isEmpty) return const EmptyState(icon: Icons.event_outlined, title: 'No events yet', message: 'Club admins can schedule group runs here.');
+    if (items.isEmpty) return EmptyState(icon: Icons.event_outlined, title: 'explore_events_empty_title'.tr, message: 'explore_events_empty_message'.tr);
     final now = ref.watch(clockProvider).nowMs();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1042,16 +1040,21 @@ class _ClubEventsState extends ConsumerState<_ClubEvents> {
                 const Gap(8),
                 Row(
                   children: [
-                    Text(e.goingCount == 1 ? '1 going' : '${e.goingCount} going', style: StrideText.caption),
+                    Text(e.goingCount == 1 ? 'explore_going_one'.tr : 'explore_going_other'.trArgs([e.goingCount]), style: StrideText.caption),
                     const Spacer(),
                     if (e.isCancelled)
-                      Text('Cancelled', style: StrideText.label.copyWith(color: StrideColors.error))
+                      Text('explore_event_cancelled'.tr, style: StrideText.label.copyWith(color: StrideColors.error))
                     else if (e.isPast(now))
-                      Text('Ended', style: StrideText.label.copyWith(color: StrideColors.textMuted))
+                      Text('explore_event_ended'.tr, style: StrideText.label.copyWith(color: StrideColors.textMuted))
                     else if (e.going)
-                      TextButton(onPressed: _busy.contains(e.id) ? null : () => _rsvp(e, false), child: const Text('Cancel RSVP'))
+                      TextButton(onPressed: _busy.contains(e.id) ? null : () => _rsvp(e, false), child: Text('explore_event_cancel_rsvp'.tr))
                     else
-                      PrimaryButton(label: 'RSVP', expand: false, loading: _busy.contains(e.id), onPressed: _busy.contains(e.id) ? null : () => _rsvp(e, true)),
+                      PrimaryButton(
+                        label: 'explore_event_rsvp'.tr,
+                        expand: false,
+                        loading: _busy.contains(e.id),
+                        onPressed: _busy.contains(e.id) ? null : () => _rsvp(e, true),
+                      ),
                   ],
                 ),
               ],

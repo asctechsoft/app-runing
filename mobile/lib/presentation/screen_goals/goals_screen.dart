@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../utils/formatters.dart';
+import '../../utils/l10n.dart';
 import '../../controller/providers.dart';
 import '../../values/tokens.dart';
 import '../../utils/clock.dart';
@@ -32,17 +33,13 @@ class GoalsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(goalsCurrentProvider);
     return async.when(
-      loading: () => const StrideScreen(
-        title: 'Your goals',
-        body: Column(children: [Gap(16), LoadingCard(height: 200), Gap(16), LoadingCard(height: 200)]),
+      loading: () => StrideScreen(
+        title: 'goals_title'.tr,
+        body: const Column(children: [Gap(16), LoadingCard(height: 200), Gap(16), LoadingCard(height: 200)]),
       ),
       error: (e, _) => StrideScreen(
-        title: 'Your goals',
-        body: ErrorState(
-          title: "Couldn't load your goals",
-          message: 'Goals saved on this device could not be read.',
-          onRetry: () => ref.invalidate(goalsCurrentProvider),
-        ),
+        title: 'goals_title'.tr,
+        body: ErrorState(title: 'goals_error_title'.tr, message: 'goals_error_message'.tr, onRetry: () => ref.invalidate(goalsCurrentProvider)),
       ),
       data: (g) => _GoalsForm(original: g),
     );
@@ -85,10 +82,10 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           await repo.setGoal(owner, e.key, e.value);
         }
         if (!mounted) return;
-        showStrideSnack(context, changed.isEmpty ? 'No changes to save' : 'Goals updated');
+        showStrideSnack(context, changed.isEmpty ? 'goals_no_changes'.tr : 'goals_updated'.tr);
         if (context.canPop()) context.pop();
       } catch (e) {
-        if (mounted) showStrideSnack(context, "Couldn't save goals. Try again.", isError: true);
+        if (mounted) showStrideSnack(context, 'goals_save_error'.tr, isError: true);
       } finally {
         if (mounted) setState(() => _saving = false);
       }
@@ -104,7 +101,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
     final distUnit = fmt.metersToUnit(_draft.weeklyDistanceM!);
     final distMinU = fmt.metersToUnit(GoalLimits.minDistanceKm * 1000);
     final distMaxU = fmt.metersToUnit(GoalLimits.maxDistanceKm * 1000);
-    final unitLong = fmt.distanceUnitLabel == 'km' ? 'kilometres per week' : 'miles per week';
+    final unitLong = fmt.distanceUnitLabel == 'km' ? 'goals_unit_km_week'.tr : 'goals_unit_mi_week'.tr;
     final nf = NumberFormat.decimalPattern(fmt.locale);
 
     void setDistUnit(double u) {
@@ -113,21 +110,21 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
     }
 
     return StrideScreen(
-      title: 'Your goals',
-      bottom: PrimaryButton(label: 'Save changes', loading: _saving, onPressed: _draft.isValid && !_saving ? _save : null),
+      title: 'goals_title'.tr,
+      bottom: PrimaryButton(label: 'goals_save'.tr, loading: _saving, onPressed: _draft.isValid && !_saving ? _save : null),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Gap(StrideSpace.s8),
           _GoalCard(
             icon: Icons.directions_walk,
-            title: 'Daily steps',
-            subtitle: 'Stay active and build healthy habits.',
+            title: 'goals_daily_steps_title'.tr,
+            subtitle: 'goals_daily_steps_subtitle'.tr,
             error: errors[GoalType.dailySteps],
             stepper: ValueStepper(
               valueText: nf.format(steps),
-              unitLabel: 'steps per day',
-              semanticLabel: 'Daily steps',
+              unitLabel: 'goals_unit_steps_day'.tr,
+              semanticLabel: 'goals_daily_steps_title'.tr,
               onDecrement: steps > GoalLimits.minSteps
                   ? () => setState(() => _draft = _draft.copyWith(dailySteps: clampSteps(steps - GoalLimits.stepIncrement)))
                   : null,
@@ -145,13 +142,13 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           const Gap(StrideSpace.s16),
           _GoalCard(
             icon: Icons.directions_run,
-            title: 'Weekly runs',
-            subtitle: 'Set how many runs you want to complete each week.',
+            title: 'goals_weekly_runs_title'.tr,
+            subtitle: 'goals_weekly_runs_subtitle'.tr,
             error: errors[GoalType.weeklyRuns],
             stepper: ValueStepper(
               valueText: '$runs',
-              unitLabel: 'runs per week',
-              semanticLabel: 'Weekly runs',
+              unitLabel: 'goals_unit_runs_week'.tr,
+              semanticLabel: 'goals_weekly_runs_title'.tr,
               onDecrement: runs > GoalLimits.minRuns ? () => setState(() => _draft = _draft.copyWith(weeklyRuns: clampRuns(runs - 1))) : null,
               onIncrement: runs < GoalLimits.maxRuns ? () => setState(() => _draft = _draft.copyWith(weeklyRuns: clampRuns(runs + 1))) : null,
             ),
@@ -165,13 +162,13 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           const Gap(StrideSpace.s16),
           _GoalCard(
             icon: Icons.place_outlined,
-            title: 'Weekly distance',
-            subtitle: 'Set a running distance goal for the week.',
+            title: 'goals_weekly_distance_title'.tr,
+            subtitle: 'goals_weekly_distance_subtitle'.tr,
             error: errors[GoalType.weeklyDistanceM],
             stepper: ValueStepper(
               valueText: _distText(distUnit, fmt.locale),
               unitLabel: unitLong,
-              semanticLabel: 'Weekly distance',
+              semanticLabel: 'goals_weekly_distance_title'.tr,
               onDecrement: distUnit > distMinU + 1e-6 ? () => setDistUnit((distUnit - 1).roundToDouble().clamp(distMinU, distMaxU)) : null,
               onIncrement: distUnit < distMaxU - 1e-6 ? () => setDistUnit((distUnit + 1).roundToDouble()) : null,
             ),
@@ -188,7 +185,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
             children: [
               const Icon(Icons.info_outline, color: StrideColors.textSecondary, size: 20),
               const SizedBox(width: StrideSpace.s8),
-              Expanded(child: Text('Changes apply from today. Past days keep their original goals.', style: StrideText.bodySecondary)),
+              Expanded(child: Text('goals_changes_note'.tr, style: StrideText.bodySecondary)),
             ],
           ),
           const Gap(StrideSpace.s16),
@@ -235,7 +232,7 @@ class _GoalCard extends StatelessWidget {
         const Gap(StrideSpace.s16),
         stepper,
         const Gap(StrideSpace.s12),
-        Text('Quick presets', style: StrideText.caption),
+        Text('goals_quick_presets'.tr, style: StrideText.caption),
         const Gap(StrideSpace.s8),
         presets,
         if (error != null) ...[const Gap(StrideSpace.s8), Text(error!, style: StrideText.label.copyWith(color: StrideColors.error))],

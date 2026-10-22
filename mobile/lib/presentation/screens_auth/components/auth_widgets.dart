@@ -6,6 +6,7 @@ import '../../../values/routes.dart';
 import '../../../values/tokens.dart';
 import '../../common_components/widgets.dart';
 import '../../../repository/auth_repository.dart';
+import '../../../utils/l10n.dart';
 
 /// Quay lại màn trước; nếu mở trực tiếp (không có stack) thì về [fallback] (E02: hủy auth quay lại đúng chỗ).
 void popOr(BuildContext context, String fallback) {
@@ -110,7 +111,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
           prefixIcon: Icon(widget.icon, color: StrideColors.textSecondary),
           suffixIcon: widget.password
               ? IconButton(
-                  tooltip: _obscure ? 'Show password' : 'Hide password',
+                  tooltip: _obscure ? 'auth_show_password'.tr : 'auth_hide_password'.tr,
                   icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
                   onPressed: () => setState(() => _obscure = !_obscure),
                 )
@@ -136,7 +137,7 @@ class PasswordRulesList extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (final r in passwordRules) _RuleRow(label: r.label, met: r.test(password)),
-          if (tooLong) const _RuleRow(label: 'Password is too long', met: false, error: true),
+          if (tooLong) _RuleRow(label: 'auth_rule_too_long'.tr, met: false, error: true),
         ],
       ),
     );
@@ -153,7 +154,7 @@ class _RuleRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = error ? StrideColors.error : (met ? StrideColors.primary : StrideColors.textSecondary);
     return Semantics(
-      label: '$label, ${met ? 'met' : 'not met'}',
+      label: (met ? 'auth_rule_semantic_met' : 'auth_rule_semantic_unmet').trArgs([label]),
       excludeSemantics: true,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
@@ -179,11 +180,7 @@ class AccountsUnavailable extends StatelessWidget {
   const AccountsUnavailable({super.key});
 
   @override
-  Widget build(BuildContext context) => const StatusBanner(
-    tone: BannerTone.info,
-    title: "Accounts aren't available in this build",
-    message: 'You can keep using STRIDE without an account. Your activities stay on this device.',
-  );
+  Widget build(BuildContext context) => StatusBanner(tone: BannerTone.info, title: 'auth_unavailable_title'.tr, message: 'auth_unavailable_body'.tr);
 }
 
 /// Dòng "Already have an account? Log in" (link trong câu).
@@ -216,16 +213,16 @@ class InlineLink extends StatelessWidget {
 class OrDivider extends StatelessWidget {
   const OrDivider({super.key});
   @override
-  Widget build(BuildContext context) => const Padding(
-    padding: EdgeInsets.symmetric(vertical: StrideSpace.s12),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: StrideSpace.s12),
     child: Row(
       children: [
-        Expanded(child: Divider()),
+        const Expanded(child: Divider()),
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12),
-          child: Text('or', style: StrideText.caption),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text('auth_or'.tr, style: StrideText.caption),
         ),
-        Expanded(child: Divider()),
+        const Expanded(child: Divider()),
       ],
     ),
   );

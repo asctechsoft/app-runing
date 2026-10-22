@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../utils/l10n.dart';
 import '../../values/routes.dart';
 import '../../utils/formatters.dart';
 import '../../controller/providers.dart';
@@ -40,17 +41,17 @@ class SavedScreen extends ConsumerWidget {
         body: async.when(
           loading: () => const Padding(padding: EdgeInsets.only(top: 48), child: LoadingCard(height: 260)),
           error: (e, _) => ErrorState(
-            title: 'Couldn\'t load your activity',
-            message: 'It was saved, but we couldn\'t open it right now.',
+            title: 'run_saved_load_failed_title'.tr,
+            message: 'run_saved_load_failed_message'.tr,
             onRetry: () => ref.invalidate(_savedActivityProvider(activityId)),
           ),
           data: (a) {
             if (a == null) {
               return EmptyState(
-                title: 'Activity not found',
-                message: 'This activity isn\'t on this device.',
+                title: 'run_saved_not_found_title'.tr,
+                message: 'run_saved_not_found_message'.tr,
                 icon: Icons.search_off,
-                actionLabel: 'Back to home',
+                actionLabel: 'run_back_home'.tr,
                 onAction: () => _leave(context, ref, Routes.home),
               );
             }
@@ -60,15 +61,11 @@ class SavedScreen extends ConsumerWidget {
                 const SizedBox(height: 48),
                 const IconBadge(icon: Icons.check, size: 88),
                 const SizedBox(height: 20),
-                Semantics(liveRegion: true, child: Text('Activity saved', style: StrideText.title)),
+                Semantics(liveRegion: true, child: Text('run_saved_title'.tr, style: StrideText.title)),
                 const SizedBox(height: 8),
                 SyncBadge(state: a.syncState.name),
                 const SizedBox(height: 8),
-                Text(
-                  pending ? 'Your activity is safe on this device. We\'ll sync it when you\'re online.' : 'Your activity is safe on this device.',
-                  style: StrideText.bodySecondary,
-                  textAlign: TextAlign.center,
-                ),
+                Text(pending ? 'run_saved_pending'.tr : 'run_saved_safe'.tr, style: StrideText.bodySecondary, textAlign: TextAlign.center),
                 const SizedBox(height: 24),
                 StrideCard(
                   child: Column(
@@ -82,18 +79,18 @@ class SavedScreen extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: MetricTile(
-                              label: 'Distance',
+                              label: 'run_label_distance'.tr,
                               value: fmt.distanceValue(a.distanceM),
                               unit: fmt.distanceUnitLabel,
                               estimated: a.distanceSource == DistanceSource.steps,
                             ),
                           ),
                           Expanded(
-                            child: MetricTile(label: 'Moving time', value: formatDuration(a.movingMs)),
+                            child: MetricTile(label: 'run_label_moving_time'.tr, value: formatDuration(a.movingMs)),
                           ),
                           Expanded(
                             child: MetricTile(
-                              label: 'Avg. pace',
+                              label: 'run_label_avg_pace'.tr,
                               value: fmt.paceValue(a.avgPaceSecPerKm),
                               unit: a.avgPaceSecPerKm == null ? null : fmt.paceUnitLabel,
                             ),
@@ -113,12 +110,12 @@ class SavedScreen extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   PrimaryButton(
-                    label: 'View activity',
+                    label: 'run_saved_view'.tr,
                     trailingIcon: Icons.arrow_forward,
                     onPressed: () => _leave(context, ref, Routes.historyActivity(activityId)),
                   ),
                   const SizedBox(height: 8),
-                  OutlineButton(label: 'Back to home', onPressed: () => _leave(context, ref, Routes.home)),
+                  OutlineButton(label: 'run_back_home'.tr, onPressed: () => _leave(context, ref, Routes.home)),
                 ],
               ),
       ),

@@ -1,4 +1,5 @@
 import '../../models/data_models/steps.dart';
+import '../../utils/l10n.dart';
 
 /// Ngưỡng nhịp bước (bước/phút) để tính là "active" — xấp xỉ đi bộ có chủ đích.
 const activeCadenceThresholdSpm = 60.0;
@@ -47,15 +48,14 @@ List<HourEntry> hourEntries(StepDay day, {required String todayKey, required int
 }
 
 String hourLabel(int h) {
-  final suffix = h < 12 ? 'AM' : 'PM';
   final h12 = h % 12 == 0 ? 12 : h % 12;
-  return '$h12 $suffix';
+  return (h < 12 ? 'steps_hour_am' : 'steps_hour_pm').trArgs([h12]);
 }
 
 String sourceLabel(StepSource? s) => switch (s) {
-  StepSource.phoneSensor => 'This phone',
-  StepSource.healthConnect => 'Health Connect',
-  StepSource.healthKit => 'Apple Health',
-  StepSource.device => 'Connected device',
-  null => 'No source yet',
+  StepSource.phoneSensor => 'steps_source_phone'.tr,
+  StepSource.healthConnect => 'steps_source_health_connect'.tr,
+  StepSource.healthKit => 'steps_source_apple_health'.tr,
+  StepSource.device => 'steps_source_device'.tr,
+  null => 'steps_source_none'.tr,
 };

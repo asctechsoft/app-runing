@@ -1,6 +1,8 @@
 import 'package:intl/intl.dart';
 
 import '../../utils/clock.dart';
+import '../../utils/l10n.dart';
+import '../../utils/date_locale.dart';
 
 /// Kỳ thống kê (I04).
 enum ProgressPeriod { week, month, year }
@@ -134,14 +136,14 @@ String periodLabel(PeriodRange r) {
       final s = r.start;
       final e = DateTime(r.end.year, r.end.month, r.end.day - 1);
       if (s.year != e.year) {
-        return '${DateFormat('MMM d, y', 'en_US').format(s)} – ${DateFormat('MMM d, y', 'en_US').format(e)}';
+        return '${DateFormat('MMM d, y', appDateLocale).format(s)} – ${DateFormat('MMM d, y', appDateLocale).format(e)}';
       }
       if (s.month != e.month) {
-        return '${DateFormat('MMM d', 'en_US').format(s)} – ${DateFormat('MMM d, y', 'en_US').format(e)}';
+        return '${DateFormat('MMM d', appDateLocale).format(s)} – ${DateFormat('MMM d, y', appDateLocale).format(e)}';
       }
-      return '${DateFormat('MMM d', 'en_US').format(s)} – ${e.day}, ${e.year}';
+      return '${DateFormat('MMM d', appDateLocale).format(s)} – ${e.day}, ${e.year}';
     case ProgressPeriod.month:
-      return DateFormat('MMMM y', 'en_US').format(r.start);
+      return DateFormat('MMMM y', appDateLocale).format(r.start);
     case ProgressPeriod.year:
       return '${r.start.year}';
   }
@@ -149,19 +151,19 @@ String periodLabel(PeriodRange r) {
 
 /// Nhãn ngắn cho trục cột.
 String bucketLabel(ProgressPeriod p, PeriodBucket b) => switch (p) {
-  ProgressPeriod.week => DateFormat.E('en_US').format(b.start),
+  ProgressPeriod.week => DateFormat.E(appDateLocale).format(b.start),
   ProgressPeriod.month => '${b.start.day}',
-  ProgressPeriod.year => DateFormat.MMM('en_US').format(b.start).substring(0, 1),
+  ProgressPeriod.year => DateFormat.MMM(appDateLocale).format(b.start).substring(0, 1),
 };
 
 /// Nhãn đầy đủ cho tooltip / danh sách thay thế.
 String bucketLongLabel(ProgressPeriod p, PeriodBucket b) => switch (p) {
-  ProgressPeriod.year => DateFormat('MMMM y', 'en_US').format(b.start),
-  _ => DateFormat('EEE, MMM d', 'en_US').format(b.start),
+  ProgressPeriod.year => DateFormat('MMMM y', appDateLocale).format(b.start),
+  _ => DateFormat('EEE, MMM d', appDateLocale).format(b.start),
 };
 
 String periodNoun(ProgressPeriod p) => switch (p) {
-  ProgressPeriod.week => 'week',
-  ProgressPeriod.month => 'month',
-  ProgressPeriod.year => 'year',
+  ProgressPeriod.week => 'model_period_week'.tr,
+  ProgressPeriod.month => 'model_period_month'.tr,
+  ProgressPeriod.year => 'model_period_year'.tr,
 };

@@ -10,6 +10,7 @@ import '../../controller/providers.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
 import 'components/setup_widgets.dart';
+import '../../utils/l10n.dart';
 
 /// Bước 3: giải thích và xin từng quyền riêng (E05, F04). Từ chối vẫn vào app được.
 class SetupPermissionsScreen extends ConsumerStatefulWidget {
@@ -78,7 +79,7 @@ class _SetupPermissionsScreenState extends ConsumerState<SetupPermissionsScreen>
         final s = await p.request(PermKind.motion);
         if (mounted) setState(() => _status[PermKind.motion] = s);
         if (s != PermStatus.granted && mounted) {
-          showStrideSnack(context, 'Step tracking is off. You can turn it on later in Profile → Data sources.');
+          showStrideSnack(context, 'setup_perm_step_off'.tr);
         }
       }
       final owners = ref.read(ownerRepositoryProvider);
@@ -97,60 +98,57 @@ class _SetupPermissionsScreenState extends ConsumerState<SetupPermissionsScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           PrimaryButton(
-            label: _status[PermKind.motion] == PermStatus.granted ? 'Continue' : 'Enable step tracking',
+            label: _status[PermKind.motion] == PermStatus.granted ? 'setup_continue'.tr : 'setup_perm_enable_steps'.tr,
             trailingIcon: Icons.arrow_forward,
             loading: _finishing,
             onPressed: () => _finish(enableSteps: true),
           ),
           const SizedBox(height: StrideSpace.s8),
-          OutlineButton(label: 'Set up later', onPressed: _finishing ? null : () => _finish(enableSteps: false)),
+          OutlineButton(label: 'setup_perm_later'.tr, onPressed: _finishing ? null : () => _finish(enableSteps: false)),
         ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SetupHeader(step: 2, title: 'Ready to move', subtitle: 'Enable a few permissions to get the most out of STRIDE. You can change them anytime.'),
+          SetupHeader(step: 2, title: 'setup_perm_title'.tr, subtitle: 'setup_perm_subtitle'.tr),
           _PermRow(
             icon: Icons.directions_walk,
-            title: 'Motion & steps',
-            badge: 'Needed',
-            body: 'Allow access to your motion activity to count steps throughout the day.',
+            title: 'setup_perm_motion_title'.tr,
+            badge: 'setup_perm_needed'.tr,
+            body: 'setup_perm_motion_body'.tr,
             status: _status[PermKind.motion],
             onTap: () => _handle(PermKind.motion),
           ),
           _PermRow(
             icon: Icons.location_on_outlined,
-            title: 'Location',
-            badge: 'Needed',
-            body: 'Used only while you record an outdoor activity, for distance, pace and your route.',
+            title: 'setup_perm_location_title'.tr,
+            badge: 'setup_perm_needed'.tr,
+            body: 'setup_perm_location_body'.tr,
             status: _status[PermKind.location],
             onTap: () => _handle(PermKind.location),
           ),
           _PermRow(
             icon: Icons.notifications_none,
-            title: 'Notifications',
-            badge: 'Optional',
-            body: 'Get reminders and progress updates you choose to turn on.',
+            title: 'setup_perm_notif_title'.tr,
+            badge: 'setup_perm_optional'.tr,
+            body: 'setup_perm_notif_body'.tr,
             status: _status[PermKind.notification],
             onTap: () => _handle(PermKind.notification),
           ),
           const SizedBox(height: StrideSpace.s8),
-          const StrideCard(
+          StrideCard(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.lock_outline, color: StrideColors.primary),
-                SizedBox(width: StrideSpace.s12),
+                const Icon(Icons.lock_outline, color: StrideColors.primary),
+                const SizedBox(width: StrideSpace.s12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Your privacy matters', style: StrideText.label),
-                      SizedBox(height: 2),
-                      Text(
-                        'Location is recorded only during activities you start, never all day. Activities are private by default and you control your data in Profile.',
-                        style: StrideText.bodySecondary,
-                      ),
+                      Text('setup_perm_privacy_title'.tr, style: StrideText.label),
+                      const SizedBox(height: 2),
+                      Text('setup_perm_privacy_body'.tr, style: StrideText.bodySecondary),
                     ],
                   ),
                 ),
@@ -173,13 +171,13 @@ class _PermRow extends StatelessWidget {
   final VoidCallback onTap;
 
   (String, Color, String?) get _statusInfo => switch (status) {
-    null => ('Checking…', StrideColors.textMuted, null),
-    PermStatus.granted => ('Allowed', StrideColors.primary, null),
-    PermStatus.limited => ('Allowed with limits', StrideColors.warning, 'Review'),
-    PermStatus.denied => ('Not allowed', StrideColors.warning, 'Allow'),
-    PermStatus.blocked => ('Blocked in system settings', StrideColors.error, 'Open settings'),
-    PermStatus.restricted => ('Restricted on this device', StrideColors.error, 'Open settings'),
-    PermStatus.unknown => ('Not set up yet', StrideColors.textSecondary, 'Allow'),
+    null => ('setup_perm_status_checking'.tr, StrideColors.textMuted, null),
+    PermStatus.granted => ('setup_perm_status_granted'.tr, StrideColors.primary, null),
+    PermStatus.limited => ('setup_perm_status_limited'.tr, StrideColors.warning, 'setup_perm_action_review'.tr),
+    PermStatus.denied => ('setup_perm_status_denied'.tr, StrideColors.warning, 'setup_perm_action_allow'.tr),
+    PermStatus.blocked => ('setup_perm_status_blocked'.tr, StrideColors.error, 'setup_perm_action_open_settings'.tr),
+    PermStatus.restricted => ('setup_perm_status_restricted'.tr, StrideColors.error, 'setup_perm_action_open_settings'.tr),
+    PermStatus.unknown => ('setup_perm_status_unknown'.tr, StrideColors.textSecondary, 'setup_perm_action_allow'.tr),
   };
 
   @override
@@ -205,7 +203,7 @@ class _PermRow extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: badge == 'Needed' ? StrideColors.lime : StrideColors.surface,
+                          color: badge == 'setup_perm_needed'.tr ? StrideColors.lime : StrideColors.surface,
                           borderRadius: BorderRadius.circular(StrideRadius.pill),
                         ),
                         child: Text(

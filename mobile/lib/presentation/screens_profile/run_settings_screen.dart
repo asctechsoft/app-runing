@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../utils/formatters.dart';
+import '../../utils/l10n.dart';
 import '../../controller/providers.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
@@ -26,7 +27,7 @@ class _RunSettingsScreenState extends ConsumerState<RunSettingsScreen> {
       final latest = await ref.read(settingsRepositoryProvider).load(s.ownerId);
       await ref.read(settingsRepositoryProvider).save(change(latest));
     } catch (_) {
-      if (mounted) showStrideSnack(context, 'Couldn’t save this setting. Try again.', isError: true);
+      if (mounted) showStrideSnack(context, 'profile_save_setting_error'.tr, isError: true);
     }
   }
 
@@ -35,9 +36,9 @@ class _RunSettingsScreenState extends ConsumerState<RunSettingsScreen> {
     setState(() => _testing = true);
     try {
       final ok = await ref.read(profileVoiceProvider).speak(voiceTestPhrase(s.audioCues, fmt));
-      if (!ok && mounted) showStrideSnack(context, 'Text-to-speech isn’t available. Check your phone’s voice settings.', isError: true);
+      if (!ok && mounted) showStrideSnack(context, 'profile_run_tts_unavailable'.tr, isError: true);
     } catch (_) {
-      if (mounted) showStrideSnack(context, 'Text-to-speech isn’t available. Check your phone’s voice settings.', isError: true);
+      if (mounted) showStrideSnack(context, 'profile_run_tts_unavailable'.tr, isError: true);
     } finally {
       if (mounted) setState(() => _testing = false);
     }
@@ -49,10 +50,11 @@ class _RunSettingsScreenState extends ConsumerState<RunSettingsScreen> {
     final fmt = ref.watch(formatProvider);
     final openSession = ref.watch(profileOpenSessionProvider).value ?? false;
     return StrideScreen(
-      title: 'Run settings',
+      title: 'profile_run_settings_title'.tr,
       body: settings.when(
         loading: () => const Column(children: [Gap(16), LoadingCard(), Gap(12), LoadingCard()]),
-        error: (e, _) => ErrorState(title: 'Couldn’t load settings', message: 'Try again.', onRetry: () => ref.invalidate(settingsProvider)),
+        error: (e, _) =>
+            ErrorState(title: 'profile_settings_load_error_title'.tr, message: 'profile_try_again'.tr, onRetry: () => ref.invalidate(settingsProvider)),
         data: (s) {
           final cues = s.audioCues;
           final unit = fmt.distanceUnitLabel;
@@ -61,17 +63,14 @@ class _RunSettingsScreenState extends ConsumerState<RunSettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Gap(8),
-              if (openSession) ...[
-                const StatusBanner(tone: BannerTone.info, message: 'An activity is in progress. Changes apply from your next activity.'),
-                const Gap(12),
-              ],
-              const SectionHeader(title: 'Audio updates'),
+              if (openSession) ...[StatusBanner(tone: BannerTone.info, message: 'profile_run_in_progress'.tr), const Gap(12)],
+              SectionHeader(title: 'profile_run_audio_updates'.tr),
               SettingsGroup(
                 children: [
                   ProfileSwitchRow(
                     icon: Icons.volume_up_outlined,
-                    title: 'Audio cues',
-                    subtitle: 'Hear progress updates while you run.',
+                    title: 'profile_run_audio_cues'.tr,
+                    subtitle: 'profile_run_audio_cues_subtitle'.tr,
                     value: cues.enabled,
                     onChanged: (v) => _update(s, (l) => l.copyWith(audioCues: l.audioCues.copyWith(enabled: v))),
                   ),
@@ -81,7 +80,7 @@ class _RunSettingsScreenState extends ConsumerState<RunSettingsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Announce every', style: StrideText.label),
+                          Text('profile_run_announce_every'.tr, style: StrideText.label),
                           const Gap(4),
                           PresetChips<double>(
                             values: cueIntervalChoices,
@@ -93,12 +92,12 @@ class _RunSettingsScreenState extends ConsumerState<RunSettingsScreen> {
                       ),
                     ),
                     ProfileSwitchRow(
-                      title: 'Announce time',
+                      title: 'profile_run_announce_time'.tr,
                       value: cues.announceTime,
                       onChanged: (v) => _update(s, (l) => l.copyWith(audioCues: l.audioCues.copyWith(announceTime: v))),
                     ),
                     ProfileSwitchRow(
-                      title: 'Announce pace',
+                      title: 'profile_run_announce_pace'.tr,
                       value: cues.announcePace,
                       onChanged: (v) => _update(s, (l) => l.copyWith(audioCues: l.audioCues.copyWith(announcePace: v))),
                     ),
@@ -108,26 +107,26 @@ class _RunSettingsScreenState extends ConsumerState<RunSettingsScreen> {
               if (cues.enabled) ...[
                 const Gap(12),
                 OutlineButton(
-                  label: _testing ? 'Playing…' : 'Test voice',
+                  label: _testing ? 'profile_run_playing'.tr : 'profile_run_test_voice'.tr,
                   icon: Icons.record_voice_over_outlined,
                   onPressed: _testing ? null : () => _testVoice(s, fmt),
                 ),
               ],
               const Gap(16),
-              const SectionHeader(title: 'Recording'),
+              SectionHeader(title: 'profile_run_recording'.tr),
               SettingsGroup(
                 children: [
                   ProfileSwitchRow(
                     icon: Icons.pause_circle_outline,
-                    title: 'Auto pause',
-                    subtitle: 'Pauses the timer when you stop moving and resumes when you move again. Moving time excludes paused time.',
+                    title: 'profile_run_auto_pause'.tr,
+                    subtitle: 'profile_run_auto_pause_subtitle'.tr,
                     value: s.autoPause,
                     onChanged: (v) => _update(s, (l) => l.copyWith(autoPause: v)),
                   ),
                 ],
               ),
               const Gap(12),
-              const ProfileNote('Settings are saved on this device and apply when you start an activity.'),
+              ProfileNote('profile_run_note'.tr),
             ],
           );
         },

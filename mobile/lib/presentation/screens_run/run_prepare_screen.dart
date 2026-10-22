@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../utils/l10n.dart';
 import '../../values/routes.dart';
 import '../../services/native/permission_coordinator.dart';
 import '../../controller/providers.dart';
@@ -154,10 +155,10 @@ class _RunPrepareScreenState extends ConsumerState<RunPrepareScreen> with Widget
       if (motion != PermStatus.granted && motion != PermStatus.limited) {
         final go = await confirmDialog(
           context,
-          title: 'Steps aren\'t available',
-          message: 'Without motion access, STRIDE can only record time for this indoor run. Distance and steps will show as —.',
-          confirmLabel: 'Start anyway',
-          cancelLabel: 'Not now',
+          title: 'run_prepare_motion_title'.tr,
+          message: 'run_prepare_motion_message'.tr,
+          confirmLabel: 'run_start_anyway'.tr,
+          cancelLabel: 'run_not_now'.tr,
           icon: Icons.directions_walk,
         );
         if (!go) return;
@@ -166,7 +167,7 @@ class _RunPrepareScreenState extends ConsumerState<RunPrepareScreen> with Widget
       if (!_locationOk) {
         await _requestLocation();
         if (!_locationOk) {
-          if (mounted) showStrideSnack(context, 'Allow location to record your route.', isError: true);
+          if (mounted) showStrideSnack(context, 'run_prepare_allow_location'.tr, isError: true);
           return;
         }
       }
@@ -174,8 +175,8 @@ class _RunPrepareScreenState extends ConsumerState<RunPrepareScreen> with Widget
         if (mounted) {
           showStrideSnack(
             context,
-            'Turn on location services to record your route.',
-            actionLabel: 'Settings',
+            'run_prepare_services_snack'.tr,
+            actionLabel: 'run_settings'.tr,
             onAction: () => ref.read(runLocationSourceProvider).openLocationSettings(),
             isError: true,
           );
@@ -185,10 +186,10 @@ class _RunPrepareScreenState extends ConsumerState<RunPrepareScreen> with Widget
       if (_fix == null && mounted) {
         final go = await confirmDialog(
           context,
-          title: 'Start without GPS?',
-          message: 'We haven\'t found your location yet. Your time starts now, and your route begins when GPS is found.',
-          confirmLabel: 'Start anyway',
-          cancelLabel: 'Wait for GPS',
+          title: 'run_prepare_no_gps_title'.tr,
+          message: 'run_prepare_no_gps_message'.tr,
+          confirmLabel: 'run_start_anyway'.tr,
+          cancelLabel: 'run_prepare_wait_gps'.tr,
           icon: Icons.location_searching,
         );
         if (!go) return;
@@ -210,15 +211,15 @@ class _RunPrepareScreenState extends ConsumerState<RunPrepareScreen> with Widget
     final audioLabel = cues == null
         ? '—'
         : !cues.enabled
-        ? 'Off'
-        : 'Every ${cues.everyKm == cues.everyKm.roundToDouble() ? cues.everyKm.round() : cues.everyKm} ${fmt.distanceUnitLabel}';
+        ? 'run_off'.tr
+        : 'run_prepare_audio_every'.trArgs([cues.everyKm == cues.everyKm.roundToDouble() ? cues.everyKm.round() : cues.everyKm, fmt.distanceUnitLabel]);
     final gps = _fix == null ? GpsQuality.searching : qualityForAccuracy(_fix!.accuracyM);
     final g = StrideScreen.gutterOf(context);
     final startLabel = setup.plan != null
-        ? 'Start workout'
+        ? 'run_prepare_start_workout'.tr
         : setup.type == ActivityType.walk
-        ? 'Start a walk'
-        : 'Start a run';
+        ? 'run_prepare_start_walk'.tr
+        : 'run_prepare_start_run'.tr;
 
     return Scaffold(
       body: SafeArea(
@@ -228,24 +229,24 @@ class _RunPrepareScreenState extends ConsumerState<RunPrepareScreen> with Widget
             child: ListView(
               padding: EdgeInsets.fromLTRB(g, 16, g, 24),
               children: [
-                Text('Ready for a run?', style: StrideText.title),
+                Text('run_prepare_title'.tr, style: StrideText.title),
                 Text(longDate(ref.read(clockProvider).nowMs()), style: StrideText.bodySecondary),
                 const SizedBox(height: 16),
                 if (st.isActive) ...[
                   StatusBanner(
                     tone: BannerTone.info,
-                    title: 'Activity in progress',
-                    message: 'Your activity is still recording.',
-                    actionLabel: 'Return',
+                    title: 'run_prepare_active_title'.tr,
+                    message: 'run_prepare_active_message'.tr,
+                    actionLabel: 'run_prepare_return'.tr,
                     onAction: () => context.go(Routes.live),
                   ),
                   const SizedBox(height: 12),
                 ] else if (st.phase == SessionPhase.awaitingSave) ...[
                   StatusBanner(
                     tone: BannerTone.warning,
-                    title: 'Your last activity isn\'t saved',
-                    message: 'Review it to save or discard.',
-                    actionLabel: 'Review',
+                    title: 'run_prepare_unsaved_title'.tr,
+                    message: 'run_prepare_unsaved_message'.tr,
+                    actionLabel: 'run_prepare_review'.tr,
                     onAction: () => context.go(Routes.results),
                   ),
                   const SizedBox(height: 12),
@@ -260,11 +261,9 @@ class _RunPrepareScreenState extends ConsumerState<RunPrepareScreen> with Widget
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Indoor run doesn\'t use GPS', style: StrideText.label),
+                              Text('run_prepare_indoor_title'.tr, style: StrideText.label),
                               Text(
-                                settings?.heightCm == null
-                                    ? 'No route map. Add your height in Edit profile to estimate distance from steps.'
-                                    : 'No route map. Distance is estimated from your steps.',
+                                settings?.heightCm == null ? 'run_prepare_indoor_no_height'.tr : 'run_prepare_indoor_estimated'.tr,
                                 style: StrideText.bodySecondary.copyWith(fontSize: 14),
                               ),
                             ],
@@ -277,9 +276,9 @@ class _RunPrepareScreenState extends ConsumerState<RunPrepareScreen> with Widget
                   if (_perm != null && !_locationOk)
                     StrideCard(
                       child: PermissionState(
-                        title: 'Location is off for STRIDE',
-                        message: 'Allow location to map your route. STRIDE uses location only while you record an activity.',
-                        actionLabel: (_perm == PermStatus.blocked || _perm == PermStatus.restricted) ? 'Open settings' : 'Allow location',
+                        title: 'run_prepare_perm_title'.tr,
+                        message: 'run_prepare_perm_message'.tr,
+                        actionLabel: (_perm == PermStatus.blocked || _perm == PermStatus.restricted) ? 'run_prepare_open_settings'.tr : 'run_prepare_allow'.tr,
                         onAction: _requestLocation,
                         icon: Icons.location_off_outlined,
                       ),
@@ -288,9 +287,9 @@ class _RunPrepareScreenState extends ConsumerState<RunPrepareScreen> with Widget
                     if (!_serviceOn) ...[
                       StatusBanner(
                         tone: BannerTone.warning,
-                        title: 'Location services are off',
-                        message: 'Turn them on to record your route.',
-                        actionLabel: 'Turn on',
+                        title: 'run_prepare_services_title'.tr,
+                        message: 'run_prepare_services_message'.tr,
+                        actionLabel: 'run_prepare_turn_on'.tr,
                         onAction: () async {
                           await ref.read(runLocationSourceProvider).openLocationSettings();
                           await _checkPermission();
@@ -318,8 +317,8 @@ class _RunPrepareScreenState extends ConsumerState<RunPrepareScreen> with Widget
                       const SizedBox(height: 8),
                       StatusBanner(
                         tone: BannerTone.info,
-                        message: 'Precise location is off. Your route and distance may be less accurate.',
-                        actionLabel: 'Settings',
+                        message: 'run_prepare_precise_off'.tr,
+                        actionLabel: 'run_settings'.tr,
                         onAction: () => ref.read(permissionsProvider).openSettings(),
                       ),
                     ],
@@ -331,29 +330,39 @@ class _RunPrepareScreenState extends ConsumerState<RunPrepareScreen> with Widget
                     SettingsRow(
                       icon: setup.type == ActivityType.walk ? Icons.directions_walk : Icons.directions_run,
                       title: activityTypeLabel(setup.type),
-                      subtitle: indoor ? 'Treadmill or indoor track, no GPS' : 'Outside with GPS tracking',
+                      subtitle: indoor ? 'run_prepare_type_indoor'.tr : 'run_prepare_type_outdoor'.tr,
                       onTap: () => context.push(Routes.runActivity),
                     ),
-                    SettingsRow(icon: Icons.flag_outlined, title: 'Goal', subtitle: runGoalLabel(setup.goal, fmt), onTap: () => context.push(Routes.runGoal)),
+                    SettingsRow(
+                      icon: Icons.flag_outlined,
+                      title: 'run_prepare_row_goal'.tr,
+                      subtitle: runGoalLabel(setup.goal, fmt),
+                      onTap: () => context.push(Routes.runGoal),
+                    ),
                     if (flags.workoutIntervals)
                       SettingsRow(
                         icon: Icons.timer_outlined,
-                        title: 'Workout',
+                        title: 'run_prepare_row_workout'.tr,
                         subtitle: workoutLabel(setup.plan),
                         onTap: () => context.push(Routes.runWorkout),
                       ),
-                    SettingsRow(icon: Icons.volume_up_outlined, title: 'Audio updates', subtitle: audioLabel, onTap: () => context.push(Routes.runAudio)),
+                    SettingsRow(
+                      icon: Icons.volume_up_outlined,
+                      title: 'run_prepare_row_audio'.tr,
+                      subtitle: audioLabel,
+                      onTap: () => context.push(Routes.runAudio),
+                    ),
                     if (flags.liveSharing)
                       SettingsRow(
                         icon: Icons.share_location_outlined,
-                        title: 'Live share',
+                        title: 'run_prepare_row_live'.tr,
                         subtitle: _liveShareLabel(ref),
                         onTap: () => context.push(Routes.runLiveShare),
                       ),
                   ],
                 ),
                 const SizedBox(height: 24),
-                PrimaryButton(label: st.isActive ? 'Return to activity' : startLabel, trailingIcon: Icons.arrow_forward, onPressed: _start),
+                PrimaryButton(label: st.isActive ? 'run_prepare_return_activity'.tr : startLabel, trailingIcon: Icons.arrow_forward, onPressed: _start),
               ],
             ),
           ),
@@ -366,7 +375,7 @@ class _RunPrepareScreenState extends ConsumerState<RunPrepareScreen> with Widget
 /// Trạng thái live share thật cho buổi sắp chạy (mặc định Off).
 String _liveShareLabel(WidgetRef ref) {
   final c = ref.watch(liveShareConfigProvider);
-  if (!c.enabled || c.consentedAt == null || c.viewers.isEmpty) return 'Off';
+  if (!c.enabled || c.consentedAt == null || c.viewers.isEmpty) return 'run_off'.tr;
   final n = c.viewers.length;
-  return 'On · $n ${n == 1 ? 'person' : 'people'} can follow';
+  return (n == 1 ? 'run_prepare_live_one' : 'run_prepare_live_many').trArgs([n]);
 }

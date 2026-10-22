@@ -1,3 +1,5 @@
+import '../../utils/l10n.dart';
+
 /// Quy tắc nhập hồ sơ (E04) — khoảng hợp lệ trùng backend validators/me.ts.
 abstract final class ProfileLimits {
   static const minHeightCm = 50.0;
@@ -12,8 +14,8 @@ const cmPerInch = 2.54;
 
 String? validateDisplayName(String? v) {
   final s = v?.trim() ?? '';
-  if (s.isEmpty) return 'Enter your name.';
-  if (s.length > ProfileLimits.maxNameLength) return 'Use ${ProfileLimits.maxNameLength} characters or fewer.';
+  if (s.isEmpty) return 'setup_err_name_empty'.tr;
+  if (s.length > ProfileLimits.maxNameLength) return 'setup_err_name_long'.trArgs([ProfileLimits.maxNameLength]);
   return null;
 }
 
@@ -34,8 +36,8 @@ ParsedMeasure parseHeightCm(String? text) {
   final t = text?.trim() ?? '';
   if (t.isEmpty) return const ParsedMeasure(null);
   final v = _parse(t);
-  if (v == null) return const ParsedMeasure(null, 'Enter a number.');
-  if (v < ProfileLimits.minHeightCm || v > ProfileLimits.maxHeightCm) return const ParsedMeasure(null, 'Enter a height between 50 and 272 cm.');
+  if (v == null) return ParsedMeasure(null, 'setup_err_number'.tr);
+  if (v < ProfileLimits.minHeightCm || v > ProfileLimits.maxHeightCm) return ParsedMeasure(null, 'setup_err_height_range'.tr);
   return ParsedMeasure(v);
 }
 
@@ -45,9 +47,9 @@ ParsedMeasure parseHeightFtIn(String? ft, String? inch) {
   if (f.isEmpty && i.isEmpty) return const ParsedMeasure(null);
   final fv = f.isEmpty ? 0.0 : _parse(f);
   final iv = i.isEmpty ? 0.0 : _parse(i);
-  if (fv == null || iv == null || fv < 0 || iv < 0 || iv >= 12) return const ParsedMeasure(null, 'Enter feet and inches (0–11).');
+  if (fv == null || iv == null || fv < 0 || iv < 0 || iv >= 12) return ParsedMeasure(null, 'setup_err_height_ftin'.tr);
   final cm = (fv * 12 + iv) * cmPerInch;
-  if (cm < ProfileLimits.minHeightCm || cm > ProfileLimits.maxHeightCm) return const ParsedMeasure(null, 'Enter a height between 1 ft 8 in and 8 ft 11 in.');
+  if (cm < ProfileLimits.minHeightCm || cm > ProfileLimits.maxHeightCm) return ParsedMeasure(null, 'setup_err_height_ftin_range'.tr);
   return ParsedMeasure(cm);
 }
 
@@ -55,10 +57,10 @@ ParsedMeasure parseWeightKg(String? text, {required bool pounds}) {
   final t = text?.trim() ?? '';
   if (t.isEmpty) return const ParsedMeasure(null);
   final v = _parse(t);
-  if (v == null) return const ParsedMeasure(null, 'Enter a number.');
+  if (v == null) return ParsedMeasure(null, 'setup_err_number'.tr);
   final kg = pounds ? v * kgPerLb : v;
   if (kg < ProfileLimits.minWeightKg || kg > ProfileLimits.maxWeightKg) {
-    return ParsedMeasure(null, pounds ? 'Enter a weight between 45 and 880 lb.' : 'Enter a weight between 20 and 400 kg.');
+    return ParsedMeasure(null, pounds ? 'setup_err_weight_lb'.tr : 'setup_err_weight_kg'.tr);
   }
   return ParsedMeasure(kg);
 }

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 import '../../../utils/formatters.dart';
+import '../../../utils/l10n.dart';
 import '../../../utils/logger.dart';
 import '../../../models/data_models/profile.dart';
 
@@ -109,9 +110,9 @@ String _spokenDuration(int ms) {
   final m = (s % 3600) ~/ 60;
   final sec = s % 60;
   final parts = <String>[
-    if (h > 0) plural(h, 'hour', 'hours'),
-    if (m > 0) plural(m, 'minute', 'minutes'),
-    if (h == 0 && (sec > 0 || m == 0)) plural(sec, 'second', 'seconds'),
+    if (h > 0) plural(h, 'run_audio_hour_one'.tr, 'run_audio_hour_other'.tr),
+    if (m > 0) plural(m, 'run_audio_minute_one'.tr, 'run_audio_minute_other'.tr),
+    if (h == 0 && (sec > 0 || m == 0)) plural(sec, 'run_audio_second_one'.tr, 'run_audio_second_other'.tr),
   ];
   return parts.join(' ');
 }
@@ -127,14 +128,16 @@ String milestoneSpeech({
 }) {
   final value = milestone * everyUnits;
   final valueText = value == value.roundToDouble() ? value.round().toString() : value.toStringAsFixed(1);
-  final unitWord = unit == DistanceUnit.km ? (value == 1 ? 'kilometer' : 'kilometers') : (value == 1 ? 'mile' : 'miles');
-  final b = StringBuffer('$valueText $unitWord.');
-  if (cues.announceTime) b.write(' Time ${_spokenDuration(movingMs)}.');
+  final unitWord = unit == DistanceUnit.km
+      ? (value == 1 ? 'run_audio_km_one' : 'run_audio_km_other').tr
+      : (value == 1 ? 'run_audio_mi_one' : 'run_audio_mi_other').tr;
+  final b = StringBuffer('run_audio_milestone'.trArgs([valueText, unitWord]));
+  if (cues.announceTime) b.write(' ${'run_audio_time'.trArgs([_spokenDuration(movingMs)])}');
   if (cues.announcePace && avgPaceSecPerKm != null) {
     final perUnit = unit == DistanceUnit.km ? avgPaceSecPerKm : avgPaceSecPerKm * metersPerMile / 1000;
     final total = perUnit.round();
     if (total < 3600) {
-      b.write(' Average pace ${_spokenDuration(total * 1000)} per ${unit == DistanceUnit.km ? 'kilometer' : 'mile'}.');
+      b.write(' ${'run_audio_pace'.trArgs([_spokenDuration(total * 1000), (unit == DistanceUnit.km ? 'run_audio_km_one' : 'run_audio_mi_one').tr])}');
     }
   }
   return b.toString();

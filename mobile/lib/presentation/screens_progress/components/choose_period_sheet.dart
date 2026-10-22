@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../utils/l10n.dart';
+import '../../../utils/progress_data.dart';
 import '../../../values/tokens.dart';
 import '../../common_components/widgets.dart';
 import '../../screen_history/components/month_calendar.dart';
 import '../../../models/ui_models/period.dart';
+import '../../../utils/date_locale.dart';
 
 /// Mở sheet "Choose period"; trả kỳ đã chọn khi bấm Apply, null khi đóng.
 Future<PeriodRange?> showChoosePeriodSheet(BuildContext context, {required PeriodRange initial, required int weekStart, required DateTime now}) {
   return showStrideSheet<PeriodRange>(
     context,
-    title: 'Choose period',
+    title: 'progress_choose_period'.tr,
     builder: (ctx) => ChoosePeriodPanel(initial: initial, weekStart: weekStart, now: now),
   );
 }
@@ -54,21 +57,12 @@ class _ChoosePeriodPanelState extends State<ChoosePeriodPanel> {
     final mode = _sel.period;
     final current = periodFor(mode, _today, widget.weekStart);
     final previous = shiftPeriod(current, -1, widget.weekStart);
-    final noun = periodNoun(mode);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        StrideSegmented<ProgressPeriod>(
-          values: ProgressPeriod.values,
-          selected: mode,
-          labelOf: (p) => switch (p) {
-            ProgressPeriod.week => 'Week',
-            ProgressPeriod.month => 'Month',
-            ProgressPeriod.year => 'Year',
-          },
-          onChanged: _setMode,
-        ),
+        StrideSegmented<ProgressPeriod>(values: ProgressPeriod.values, selected: mode, labelOf: periodSegmentLabel, onChanged: _setMode),
         const SizedBox(height: 12),
         switch (mode) {
           ProgressPeriod.week => _weekPicker(),
@@ -76,12 +70,20 @@ class _ChoosePeriodPanelState extends State<ChoosePeriodPanel> {
           ProgressPeriod.year => _yearPicker(),
         },
         const SizedBox(height: 12),
-        Text('Shortcuts', style: StrideText.label),
+        Text('progress_shortcuts'.tr, style: StrideText.label),
         Wrap(
           spacing: 8,
           children: [
-            StrideChip(label: 'This $noun', selected: _sel == current, onTap: () => _pick(current)),
-            StrideChip(label: 'Last $noun', selected: _sel == previous, onTap: () => _pick(previous)),
+            StrideChip(
+              label: periodTr(mode, 'progress_this_week', 'progress_this_month', 'progress_this_year'),
+              selected: _sel == current,
+              onTap: () => _pick(current),
+            ),
+            StrideChip(
+              label: periodTr(mode, 'progress_last_week', 'progress_last_month', 'progress_last_year'),
+              selected: _sel == previous,
+              onTap: () => _pick(previous),
+            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -90,14 +92,14 @@ class _ChoosePeriodPanelState extends State<ChoosePeriodPanel> {
           child: Text.rich(
             TextSpan(
               children: [
-                const TextSpan(text: 'Selected range\n', style: StrideText.caption),
+                TextSpan(text: 'progress_selected_range'.tr, style: StrideText.caption),
                 TextSpan(text: periodLabel(_sel), style: StrideText.subheading),
               ],
             ),
           ),
         ),
         const SizedBox(height: 16),
-        PrimaryButton(label: 'Apply', onPressed: () => Navigator.of(context).pop(_sel)),
+        PrimaryButton(label: 'progress_apply'.tr, onPressed: () => Navigator.of(context).pop(_sel)),
       ],
     );
   }
@@ -109,15 +111,15 @@ class _ChoosePeriodPanelState extends State<ChoosePeriodPanel> {
         Row(
           children: [
             IconButton(
-              tooltip: 'Previous month',
+              tooltip: 'progress_previous_month'.tr,
               onPressed: () => setState(() => _visibleMonth = DateTime(_visibleMonth.year, _visibleMonth.month - 1)),
               icon: const Icon(Icons.chevron_left),
             ),
             Expanded(
-              child: Text(DateFormat('MMMM y', 'en_US').format(_visibleMonth), style: StrideText.subheading, textAlign: TextAlign.center),
+              child: Text(DateFormat('MMMM y', appDateLocale).format(_visibleMonth), style: StrideText.subheading, textAlign: TextAlign.center),
             ),
             IconButton(
-              tooltip: 'Next month',
+              tooltip: 'progress_next_month'.tr,
               onPressed: nextMonth.isAfter(_today) ? null : () => setState(() => _visibleMonth = nextMonth),
               icon: const Icon(Icons.chevron_right),
             ),
@@ -141,12 +143,12 @@ class _ChoosePeriodPanelState extends State<ChoosePeriodPanel> {
       children: [
         Row(
           children: [
-            IconButton(tooltip: 'Previous year', onPressed: () => setState(() => _visibleYear--), icon: const Icon(Icons.chevron_left)),
+            IconButton(tooltip: 'progress_previous_year'.tr, onPressed: () => setState(() => _visibleYear--), icon: const Icon(Icons.chevron_left)),
             Expanded(
               child: Text('$_visibleYear', style: StrideText.subheading, textAlign: TextAlign.center),
             ),
             IconButton(
-              tooltip: 'Next year',
+              tooltip: 'progress_next_year'.tr,
               onPressed: _visibleYear >= _today.year ? null : () => setState(() => _visibleYear++),
               icon: const Icon(Icons.chevron_right),
             ),
@@ -163,7 +165,7 @@ class _ChoosePeriodPanelState extends State<ChoosePeriodPanel> {
                 builder: (_) {
                   final r = periodFor(ProgressPeriod.month, DateTime(_visibleYear, m), widget.weekStart);
                   return Center(
-                    child: StrideChip(label: DateFormat.MMM('en_US').format(r.start), selected: _sel == r, onTap: _isFuture(r) ? null : () => _pick(r)),
+                    child: StrideChip(label: DateFormat.MMM(appDateLocale).format(r.start), selected: _sel == r, onTap: _isFuture(r) ? null : () => _pick(r)),
                   );
                 },
               ),

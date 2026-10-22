@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../utils/l10n.dart';
 import '../../values/routes.dart';
 import '../../utils/formatters.dart';
 import '../../utils/logger.dart';
@@ -73,7 +74,7 @@ class _RecoveryScreenState extends ConsumerState<RecoveryScreen> {
       await f();
     } catch (e, st) {
       StrideLog.e('run.recovery', e, st);
-      if (mounted) showStrideSnack(context, 'Something went wrong while recovering. Your data is still on this device.', isError: true);
+      if (mounted) showStrideSnack(context, 'run_recovery_error_snack'.tr, isError: true);
     } finally {
       if (mounted) setState(() => _busy = null);
     }
@@ -92,10 +93,10 @@ class _RecoveryScreenState extends ConsumerState<RecoveryScreen> {
   Future<void> _discard() async {
     final ok = await confirmDialog(
       context,
-      title: 'Discard this activity?',
-      message: 'The recovered route, time and distance will be deleted from this device. This can\'t be undone.',
-      confirmLabel: 'Discard activity',
-      cancelLabel: 'Keep activity',
+      title: 'run_discard_title'.tr,
+      message: 'run_recovery_discard_message'.tr,
+      confirmLabel: 'run_discard_confirm'.tr,
+      cancelLabel: 'run_discard_keep'.tr,
       destructive: true,
       icon: Icons.delete_outline,
     );
@@ -118,7 +119,7 @@ class _RecoveryScreenState extends ConsumerState<RecoveryScreen> {
     if (_error != null) {
       return StrideScreen(
         showBack: false,
-        body: ErrorState(title: 'Couldn\'t check your last activity', message: 'Your data is still on this device. Try again.', onRetry: _load),
+        body: ErrorState(title: 'run_recovery_check_failed_title'.tr, message: 'run_recovery_check_failed_message'.tr, onRetry: _load),
       );
     }
     final info = _info;
@@ -126,10 +127,10 @@ class _RecoveryScreenState extends ConsumerState<RecoveryScreen> {
       return StrideScreen(
         showBack: false,
         body: EmptyState(
-          title: 'Nothing to recover',
-          message: 'All your activities are finished.',
+          title: 'run_recovery_empty_title'.tr,
+          message: 'run_recovery_empty_message'.tr,
           icon: Icons.check_circle_outline,
-          actionLabel: 'Back to home',
+          actionLabel: 'run_back_home'.tr,
           onAction: () => context.go(Routes.home),
         ),
       );
@@ -147,12 +148,10 @@ class _RecoveryScreenState extends ConsumerState<RecoveryScreen> {
             const SizedBox(height: 24),
             const Center(child: IconBadge(icon: Icons.restore, size: 72)),
             const SizedBox(height: 16),
-            Text('Your last activity was interrupted', style: StrideText.title, textAlign: TextAlign.center),
+            Text('run_recovery_title'.tr, style: StrideText.title, textAlign: TextAlign.center),
             const SizedBox(height: 8),
             Text(
-              cpAt == null
-                  ? 'STRIDE stopped before your activity finished.'
-                  : 'STRIDE stopped before your activity finished. We saved it up to ${clockTime(cpAt)}.',
+              cpAt == null ? 'run_recovery_stopped'.tr : 'run_recovery_stopped_at'.trArgs([clockTime(cpAt)]),
               style: StrideText.bodySecondary,
               textAlign: TextAlign.center,
             ),
@@ -161,20 +160,25 @@ class _RecoveryScreenState extends ConsumerState<RecoveryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${activityTypeLabel(a.type)} · started ${clockTime(a.startedAt)}', style: StrideText.label),
+                  Text('run_recovery_started'.trArgs([activityTypeLabel(a.type), clockTime(a.startedAt)]), style: StrideText.label),
                   Text(longDate(a.startedAt), style: StrideText.caption),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
-                        child: MetricTile(label: 'Distance saved', value: fmt.distanceValue(info.distanceM), unit: fmt.distanceUnitLabel, estimated: indoor),
+                        child: MetricTile(
+                          label: 'run_recovery_distance_saved'.tr,
+                          value: fmt.distanceValue(info.distanceM),
+                          unit: fmt.distanceUnitLabel,
+                          estimated: indoor,
+                        ),
                       ),
                       Expanded(
-                        child: MetricTile(label: 'Moving time saved', value: formatDuration(info.movingMs)),
+                        child: MetricTile(label: 'run_recovery_moving_saved'.tr, value: formatDuration(info.movingMs)),
                       ),
                       Expanded(
-                        child: MetricTile(label: 'Last checkpoint', value: cpAt == null ? missingValue : clockTime(cpAt)),
+                        child: MetricTile(label: 'run_recovery_last_checkpoint'.tr, value: cpAt == null ? missingValue : clockTime(cpAt)),
                       ),
                     ],
                   ),
@@ -184,24 +188,22 @@ class _RecoveryScreenState extends ConsumerState<RecoveryScreen> {
             const SizedBox(height: 12),
             StatusBanner(
               tone: BannerTone.warning,
-              title: 'Missing time',
-              message: cpAt == null
-                  ? 'Anything after the last saved point wasn\'t recorded and won\'t be counted.'
-                  : 'Time and route after ${clockTime(cpAt)} weren\'t recorded and won\'t be counted as moving time.',
+              title: 'run_recovery_missing_title'.tr,
+              message: cpAt == null ? 'run_recovery_missing_no_cp'.tr : 'run_recovery_missing_after'.trArgs([clockTime(cpAt)]),
             ),
           ],
         ),
         bottom: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            PrimaryButton(label: 'Resume as new segment', icon: Icons.play_arrow, loading: _busy == 'resume', onPressed: _busy == null ? _resume : null),
+            PrimaryButton(label: 'run_recovery_resume'.tr, icon: Icons.play_arrow, loading: _busy == 'resume', onPressed: _busy == null ? _resume : null),
             const SizedBox(height: 8),
-            SecondaryButton(label: 'Finish & save', onPressed: _busy == null ? _finish : null),
+            SecondaryButton(label: 'run_recovery_finish'.tr, onPressed: _busy == null ? _finish : null),
             const SizedBox(height: 4),
             TextButton(
               onPressed: _busy == null ? _discard : null,
               style: TextButton.styleFrom(foregroundColor: StrideColors.error, minimumSize: const Size(48, 48)),
-              child: const Text('Discard'),
+              child: Text('run_discard'.tr),
             ),
           ],
         ),

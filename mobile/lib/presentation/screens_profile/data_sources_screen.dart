@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../utils/l10n.dart';
 import '../../values/routes.dart';
 import '../../services/native/permission_coordinator.dart';
 import '../../controller/providers.dart';
@@ -57,22 +58,22 @@ class DataSourcesScreen extends ConsumerWidget {
     final sensor = ref.watch(profilePhoneSensorProvider);
     final clock = ref.watch(clockProvider);
     return StrideScreen(
-      title: 'Data sources',
+      title: 'profile_data_sources_title'.tr,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Gap(8),
-          Text('Connect your health data', style: StrideText.title),
+          Text('profile_ds_heading'.tr, style: StrideText.title),
           const Gap(4),
-          Text('Choose where STRIDE gets your steps and activity data.', style: StrideText.bodySecondary),
+          Text('profile_ds_intro'.tr, style: StrideText.bodySecondary),
           const Gap(16),
           if (flags.devicesBle) ...[
             SettingsGroup(
               children: [
                 SettingsRow(
                   icon: Icons.watch_outlined,
-                  title: 'Connect a device',
-                  subtitle: 'Bluetooth heart rate sensors',
+                  title: 'profile_ds_device_title'.tr,
+                  subtitle: 'profile_ds_device_subtitle'.tr,
                   onTap: () => context.push(Routes.devices),
                 ),
               ],
@@ -85,8 +86,8 @@ class DataSourcesScreen extends ConsumerWidget {
                 loading: () => const Padding(padding: EdgeInsets.all(16), child: Skeleton(height: 40)),
                 error: (e, _) => SettingsRow(
                   icon: Icons.smartphone,
-                  title: 'Phone',
-                  subtitle: 'Couldn’t check the step sensor. Tap to retry.',
+                  title: 'profile_source_phone'.tr,
+                  subtitle: 'profile_ds_sensor_error'.tr,
                   showChevron: false,
                   onTap: () => ref.invalidate(profilePhoneSensorProvider),
                 ),
@@ -95,8 +96,8 @@ class DataSourcesScreen extends ConsumerWidget {
               if (flags.stepsHealth)
                 SettingsRow(
                   icon: Icons.favorite_border,
-                  title: _isIOS ? 'Apple Health' : 'Health Connect',
-                  subtitle: 'Not connected. Health data import isn’t available in this version yet.',
+                  title: _isIOS ? 'profile_source_apple_health'.tr : 'profile_source_health_connect'.tr,
+                  subtitle: 'profile_ds_health_unavailable'.tr,
                   showChevron: false,
                 ),
             ],
@@ -104,19 +105,14 @@ class DataSourcesScreen extends ConsumerWidget {
           const Gap(20),
           _PriorityCard(isIOS: _isIOS),
           const Gap(12),
-          const StrideCard(
-            child: ProfileNote(
-              'When the same activity is recorded by more than one source, STRIDE uses the source with the highest priority for that time, so steps aren’t counted twice.',
-              title: 'Overlapping steps count once',
-            ),
-          ),
+          StrideCard(child: ProfileNote('profile_ds_overlap_text'.tr, title: 'profile_ds_overlap_title'.tr)),
           const Gap(12),
           SettingsGroup(
             children: [
               SettingsRow(
                 icon: Icons.lock_open_outlined,
-                title: 'Manage permissions',
-                subtitle: 'Open phone settings for STRIDE',
+                title: 'profile_ds_permissions_title'.tr,
+                subtitle: 'profile_ds_permissions_subtitle'.tr,
                 onTap: () => ref.read(permissionsProvider).openSettings(),
               ),
             ],
@@ -139,10 +135,8 @@ class _PhoneRow extends ConsumerWidget {
     VoidCallback? onTap;
     String? action;
     if (!granted) {
-      subtitle = status.permission == PermStatus.blocked
-          ? 'Motion access is off. Turn it on in phone settings to count steps.'
-          : 'Motion access is needed to count steps.';
-      action = status.permission == PermStatus.blocked ? 'Settings' : 'Allow';
+      subtitle = status.permission == PermStatus.blocked ? 'profile_ds_motion_blocked'.tr : 'profile_ds_motion_needed'.tr;
+      action = status.permission == PermStatus.blocked ? 'profile_ds_action_settings'.tr : 'profile_ds_action_allow'.tr;
       onTap = () async {
         final perms = ref.read(permissionsProvider);
         if (status.permission == PermStatus.blocked) {
@@ -153,21 +147,21 @@ class _PhoneRow extends ConsumerWidget {
         ref.invalidate(profilePhoneSensorProvider);
       };
     } else if (status.lastReceivedAt == null) {
-      subtitle = 'Connected · no steps received yet';
+      subtitle = 'profile_ds_connected_none'.tr;
     } else {
       final age = nowMs - status.lastReceivedAt!;
       final when = DateFormat('MMM d, h:mm a').format(DateTime.fromMillisecondsSinceEpoch(status.lastReceivedAt!));
-      subtitle = age < const Duration(hours: 6).inMilliseconds ? 'Connected · steps received $when' : 'Connected · last steps received $when';
+      subtitle = age < const Duration(hours: 6).inMilliseconds ? 'profile_ds_connected_recent'.trArgs([when]) : 'profile_ds_connected_last'.trArgs([when]);
     }
     return SettingsRow(
       icon: Icons.smartphone,
-      title: 'Phone',
+      title: 'profile_source_phone'.tr,
       subtitle: subtitle,
       showChevron: false,
       onTap: onTap,
       trailing: action == null
           ? Semantics(
-              label: 'Connected',
+              label: 'profile_ds_connected'.tr,
               child: const Icon(Icons.check_circle, color: StrideColors.success, size: 22),
             )
           : TextButton(onPressed: onTap, child: Text(action)),
@@ -195,7 +189,7 @@ class _PriorityCardState extends ConsumerState<_PriorityCard> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _full = full);
-      showStrideSnack(context, 'Couldn’t save source priority. Try again.', isError: true);
+      showStrideSnack(context, 'profile_ds_priority_save_error'.tr, isError: true);
     }
   }
 
@@ -204,17 +198,17 @@ class _PriorityCardState extends ConsumerState<_PriorityCard> {
     final flags = ref.watch(flagsProvider);
     final loaded = ref.watch(profileSourcePriorityProvider);
     return ProfileSection(
-      title: 'Source priority',
-      subtitle: 'Choose which source to use when data overlaps.',
+      title: 'profile_ds_priority_title'.tr,
+      subtitle: 'profile_ds_priority_subtitle'.tr,
       child: loaded.when(
         loading: () => const Skeleton(height: 56),
-        error: (e, _) => TextButton(onPressed: () => ref.invalidate(profileSourcePriorityProvider), child: const Text('Couldn’t load. Try again')),
+        error: (e, _) => TextButton(onPressed: () => ref.invalidate(profileSourcePriorityProvider), child: Text('profile_load_retry'.tr)),
         data: (saved) {
           final full = _full ??= saved;
           final allowed = visibleStepSources(flags, isIOS: widget.isIOS).toSet();
           final visible = full.where(allowed.contains).toList();
           if (visible.length < 2) {
-            return Text('Only your phone is available as a step source right now.', style: StrideText.bodySecondary);
+            return Text('profile_ds_only_phone'.tr, style: StrideText.bodySecondary);
           }
           return ReorderableListView(
             shrinkWrap: true,
@@ -241,7 +235,7 @@ class _PriorityCardState extends ConsumerState<_PriorityCard> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        tooltip: 'Move ${stepSourceLabel(visible[i])} up',
+                        tooltip: 'profile_ds_move_up'.trArgs([stepSourceLabel(visible[i])]),
                         icon: const Icon(Icons.arrow_upward),
                         onPressed: i == 0
                             ? null
@@ -253,9 +247,9 @@ class _PriorityCardState extends ConsumerState<_PriorityCard> {
                       ),
                       ReorderableDragStartListener(
                         index: i,
-                        child: const Padding(
-                          padding: EdgeInsets.all(12),
-                          child: Icon(Icons.drag_handle, color: StrideColors.textMuted, semanticLabel: 'Drag to reorder'),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Icon(Icons.drag_handle, color: StrideColors.textMuted, semanticLabel: 'profile_ds_drag_reorder'.tr),
                         ),
                       ),
                     ],

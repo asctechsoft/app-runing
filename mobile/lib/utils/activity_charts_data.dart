@@ -9,7 +9,7 @@ class ChartSample {
   final double y;
 }
 
-/// Kết quả chuỗi: có dữ liệu hoặc lý do không vẽ được (F15: ẩn biểu đồ không tính được và nêu nguyên nhân).
+/// Kết quả chuỗi: có dữ liệu hoặc lý do không vẽ được (reason là KEY chuỗi, UI gọi `.tr`) (F15: ẩn biểu đồ không tính được và nêu nguyên nhân).
 class ChartSeries {
   const ChartSeries.ok(this.samples) : reason = null;
   const ChartSeries.unavailable(this.reason) : samples = const [];
@@ -54,7 +54,7 @@ ChartSeries paceSeries(List<TrackPoint> points, {double windowM = 200, double st
     offset += cum.last;
   }
   if (out.length < minPaceSamples) {
-    return const ChartSeries.unavailable('Not enough GPS data to chart pace. Pace charts need at least about 700 m of continuous GPS.');
+    return const ChartSeries.unavailable('activity_chart_pace_insufficient');
   }
   return ChartSeries.ok(out);
 }
@@ -64,7 +64,7 @@ ChartSeries elevationSeries(List<TrackPoint> points) {
   final accepted = points.where((p) => p.accepted).toList();
   final withAlt = accepted.where((p) => p.altitudeM != null).length;
   if (withAlt < minElevationSamples || withAlt < accepted.length / 2) {
-    return const ChartSeries.unavailable('Elevation isn\'t available because this device didn\'t record altitude for this activity.');
+    return const ChartSeries.unavailable('activity_chart_elevation_unavailable');
   }
   final out = <ChartSample>[];
   var dist = 0.0;
@@ -80,7 +80,7 @@ ChartSeries elevationSeries(List<TrackPoint> points) {
 /// Nhịp tim (bpm) theo phút kể từ lúc bắt đầu; chỉ khi có heart_rate_samples thật.
 ChartSeries heartRateSeries(List<(int t, int bpm)> samples, int startedAt) {
   if (samples.length < minHeartRateSamples) {
-    return const ChartSeries.unavailable('No heart rate data. Connect a heart rate sensor before your run to see this chart.');
+    return const ChartSeries.unavailable('activity_chart_hr_none');
   }
   return ChartSeries.ok([for (final (t, bpm) in samples) ChartSample((t - startedAt) / 60000, bpm.toDouble())]);
 }

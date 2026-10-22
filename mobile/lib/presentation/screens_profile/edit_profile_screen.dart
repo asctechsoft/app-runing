@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../controller/providers.dart';
+import '../../utils/l10n.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
 import '../../models/data_models/profile.dart';
@@ -46,15 +47,15 @@ class EditProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     return settings.when(
-      loading: () => const StrideScreen(
-        title: 'Edit profile',
-        body: Column(children: [Gap(16), LoadingCard(), Gap(12), LoadingCard()]),
+      loading: () => StrideScreen(
+        title: 'profile_edit_title'.tr,
+        body: const Column(children: [Gap(16), LoadingCard(), Gap(12), LoadingCard()]),
       ),
       error: (e, _) => StrideScreen(
-        title: 'Edit profile',
+        title: 'profile_edit_title'.tr,
         body: ErrorState(
-          title: 'Couldn’t load your profile',
-          message: 'Your profile is stored on this device. Try again.',
+          title: 'profile_edit_load_error_title'.tr,
+          message: 'profile_edit_load_error_message'.tr,
           onRetry: () => ref.invalidate(settingsProvider),
         ),
       ),
@@ -162,7 +163,7 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
       final path = await ref.read(profileAvatarPickerProvider).pickAndStore(widget.initial.ownerId);
       if (path != null && mounted) setState(() => _avatarPath = path);
     } catch (e) {
-      if (mounted) showStrideSnack(context, 'Couldn’t use that photo. Check photo access and try again.', isError: true);
+      if (mounted) showStrideSnack(context, 'profile_edit_photo_error'.tr, isError: true);
     }
   }
 
@@ -194,10 +195,10 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
       );
       await ref.read(settingsRepositoryProvider).save(next);
       if (!mounted) return;
-      showStrideSnack(context, 'Profile saved');
+      showStrideSnack(context, 'profile_edit_saved'.tr);
       if (context.canPop()) context.pop();
     } catch (e) {
-      if (mounted) showStrideSnack(context, 'Couldn’t save your profile. Try again.', isError: true);
+      if (mounted) showStrideSnack(context, 'profile_edit_save_error'.tr, isError: true);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -208,8 +209,8 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
   @override
   Widget build(BuildContext context) {
     return StrideScreen(
-      title: 'Edit profile',
-      bottom: PrimaryButton(label: 'Save changes', loading: _saving, onPressed: _saving ? null : _save),
+      title: 'profile_edit_title'.tr,
+      bottom: PrimaryButton(label: 'profile_edit_save_button'.tr, loading: _saving, onPressed: _saving ? null : _save),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -217,7 +218,7 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
           Center(
             child: Semantics(
               button: true,
-              label: 'Change profile photo',
+              label: 'profile_edit_change_photo'.tr,
               child: InkWell(
                 customBorder: const CircleBorder(),
                 onTap: _pickPhoto,
@@ -245,19 +246,19 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
           ),
           const Gap(16),
           ProfileSection(
-            title: 'Name',
+            title: 'profile_edit_name'.tr,
             child: TextField(
               key: const Key('profile-name'),
               controller: _name,
               textCapitalization: TextCapitalization.words,
               maxLength: 60,
-              decoration: _dec('Name', error: _nameError),
+              decoration: _dec('profile_edit_name'.tr, error: _nameError),
               onChanged: (_) => setState(() => _nameError = null),
             ),
           ),
           ProfileSection(
-            title: 'Body measurements',
-            subtitle: 'New body measurements apply to future calorie estimates. Past activities keep their calories.',
+            title: 'profile_edit_body_title'.tr,
+            subtitle: 'profile_edit_body_subtitle'.tr,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -269,7 +270,10 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
                         key: const Key('profile-height'),
                         controller: _height,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: _dec(_heightUnit == HeightUnit.cm ? 'Height (optional)' : 'Feet (optional)', error: _heightError),
+                        decoration: _dec(
+                          _heightUnit == HeightUnit.cm ? 'profile_edit_height_optional'.tr : 'profile_edit_feet_optional'.tr,
+                          error: _heightError,
+                        ),
                         onChanged: (_) => setState(() => _heightError = null),
                       ),
                     ),
@@ -280,14 +284,14 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
                           key: const Key('profile-height-in'),
                           controller: _heightIn,
                           keyboardType: TextInputType.number,
-                          decoration: _dec('Inches'),
+                          decoration: _dec('profile_edit_inches'.tr),
                           onChanged: (_) => setState(() => _heightError = null),
                         ),
                       ),
                     ],
                     const SizedBox(width: 8),
                     _UnitDropdown<HeightUnit>(
-                      label: 'Height unit',
+                      label: 'profile_edit_height_unit'.tr,
                       value: _heightUnit,
                       items: const {HeightUnit.cm: 'cm', HeightUnit.ftin: 'ft-in'},
                       onChanged: _switchHeightUnit,
@@ -303,13 +307,13 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
                         key: const Key('profile-weight'),
                         controller: _weight,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: _dec('Weight (optional)', error: _weightError),
+                        decoration: _dec('profile_edit_weight_optional'.tr, error: _weightError),
                         onChanged: (_) => setState(() => _weightError = null),
                       ),
                     ),
                     const SizedBox(width: 8),
                     _UnitDropdown<WeightUnit>(
-                      label: 'Weight unit',
+                      label: 'profile_edit_weight_unit'.tr,
                       value: _weightUnit,
                       items: const {WeightUnit.kg: 'kg', WeightUnit.lb: 'lb'},
                       onChanged: _switchWeightUnit,
@@ -317,22 +321,22 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
                   ],
                 ),
                 const Gap(8),
-                Text('Leave blank if you prefer not to share. STRIDE won’t fill in sample values.', style: StrideText.caption),
+                Text('profile_edit_blank_hint'.tr, style: StrideText.caption),
               ],
             ),
           ),
           ProfileSection(
-            title: 'Running experience',
-            subtitle: 'Helps us personalize your goals and recommendations.',
+            title: 'profile_edit_experience'.tr,
+            subtitle: 'profile_edit_experience_subtitle'.tr,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 DropdownButtonFormField<ActivityLevel?>(
                   key: const Key('profile-level'),
                   initialValue: _level,
-                  decoration: _dec('Running experience'),
+                  decoration: _dec('profile_edit_experience'.tr),
                   items: [
-                    const DropdownMenuItem<ActivityLevel?>(value: null, child: Text('Not set')),
+                    DropdownMenuItem<ActivityLevel?>(value: null, child: Text('profile_edit_not_set'.tr)),
                     for (final l in ActivityLevel.values) DropdownMenuItem<ActivityLevel?>(value: l, child: Text(activityLevelLabel(l))),
                   ],
                   onChanged: (v) => setState(() => _level = v),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/l10n.dart';
 import '../../values/tokens.dart';
 
 /// Thẻ trắng radius 20, padding 16.
@@ -65,7 +66,8 @@ class MetricTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final valueStyle = large ? StrideText.metricMedium : StrideText.metricSmall;
-    final semantics = '$label, $value${unit == null ? '' : ' $unit'}${estimated ? ', estimated' : ''}';
+    final base = '$label, $value${unit == null ? '' : ' $unit'}';
+    final semantics = estimated ? 'common_metric_semantics_estimated'.trArgs([base]) : base;
     return Semantics(
       label: semantics,
       excludeSemantics: true,
@@ -89,7 +91,12 @@ class MetricTile extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             textAlign: center ? TextAlign.center : TextAlign.start,
           ),
-          Text(estimated ? '$label · estimated' : label, style: StrideText.caption, textAlign: center ? TextAlign.center : TextAlign.start, maxLines: 2),
+          Text(
+            estimated ? 'common_metric_label_estimated'.trArgs([label]) : label,
+            style: StrideText.caption,
+            textAlign: center ? TextAlign.center : TextAlign.start,
+            maxLines: 2,
+          ),
         ],
       ),
     );
@@ -243,7 +250,7 @@ class ValueStepper extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        circle(Icons.remove, onDecrement, 'Decrease ${semanticLabel ?? ''}'),
+        circle(Icons.remove, onDecrement, 'common_stepper_decrease'.trArgs([semanticLabel ?? ''])),
         Expanded(
           child: Semantics(
             label: '${semanticLabel ?? ''} $valueText $unitLabel',
@@ -256,7 +263,7 @@ class ValueStepper extends StatelessWidget {
             ),
           ),
         ),
-        circle(Icons.add, onIncrement, 'Increase ${semanticLabel ?? ''}'),
+        circle(Icons.add, onIncrement, 'common_stepper_increase'.trArgs([semanticLabel ?? ''])),
       ],
     );
   }

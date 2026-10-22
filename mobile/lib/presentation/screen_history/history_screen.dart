@@ -8,12 +8,14 @@ import '../../utils/formatters.dart';
 import '../../controller/providers.dart';
 import '../../values/tokens.dart';
 import '../../utils/clock.dart';
+import '../../utils/l10n.dart';
 import '../common_components/widgets.dart';
 import '../../repository/activity_repository.dart';
 import '../../models/data_models/activity.dart';
 import '../screens_activity/components/activity_card.dart';
 import '../../controller/history/activity_feed_controller.dart';
 import 'components/month_calendar.dart';
+import '../../utils/date_locale.dart';
 
 enum HistoryView { list, calendar }
 
@@ -21,10 +23,10 @@ enum HistoryTypeFilter { all, run, walk, indoor }
 
 extension on HistoryTypeFilter {
   String get label => switch (this) {
-    HistoryTypeFilter.all => 'All',
-    HistoryTypeFilter.run => 'Run',
-    HistoryTypeFilter.walk => 'Walk',
-    HistoryTypeFilter.indoor => 'Indoor',
+    HistoryTypeFilter.all => 'history_filter_all'.tr,
+    HistoryTypeFilter.run => 'history_filter_run'.tr,
+    HistoryTypeFilter.walk => 'history_filter_walk'.tr,
+    HistoryTypeFilter.indoor => 'history_filter_indoor'.tr,
   };
 
   Set<ActivityType>? get types => switch (this) {
@@ -152,7 +154,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     final now = ref.read(clockProvider).nowLocal();
     final picked = await showStrideSheet<DateTime>(
       context,
-      title: 'Choose month',
+      title: 'history_choose_month'.tr,
       builder: (ctx) => _MonthPicker(initial: _month, latest: DateTime(now.year, now.month)),
     );
     if (picked != null) _setMonth(picked);
@@ -175,7 +177,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       SliverToBoxAdapter(
         child: Padding(
           padding: const EdgeInsets.only(top: 16, bottom: 8),
-          child: Text('Your activities', style: StrideText.title),
+          child: Text('history_title'.tr, style: StrideText.title),
         ),
       ),
     ];
@@ -187,11 +189,11 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           child: Center(
             child: EmptyState(
               icon: Icons.directions_run,
-              title: 'Your first run starts here',
-              message: 'Record a walk or run to see it on your timeline.',
-              actionLabel: 'Start a run',
+              title: 'history_empty_title'.tr,
+              message: 'history_empty_message'.tr,
+              actionLabel: 'progress_start_run'.tr,
               onAction: () => context.go(Routes.run),
-              secondaryLabel: 'Daily steps are available on Home',
+              secondaryLabel: 'history_empty_secondary'.tr,
               onSecondary: () => context.go(Routes.home),
             ),
           ),
@@ -203,21 +205,25 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         SliverToBoxAdapter(
           child: Row(
             children: [
-              IconButton(tooltip: 'Previous month', onPressed: () => _setMonth(DateTime(_month.year, _month.month - 1)), icon: const Icon(Icons.chevron_left)),
+              IconButton(
+                tooltip: 'progress_previous_month'.tr,
+                onPressed: () => _setMonth(DateTime(_month.year, _month.month - 1)),
+                icon: const Icon(Icons.chevron_left),
+              ),
               Expanded(
                 child: TextButton(
                   onPressed: _pickMonth,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(DateFormat('MMMM y', 'en_US').format(_month), style: StrideText.subheading),
+                      Text(DateFormat('MMMM y', appDateLocale).format(_month), style: StrideText.subheading),
                       const Icon(Icons.expand_more, size: 20),
                     ],
                   ),
                 ),
               ),
               IconButton(
-                tooltip: 'Next month',
+                tooltip: 'progress_next_month'.tr,
                 onPressed: isCurrentMonth ? null : () => _setMonth(DateTime(_month.year, _month.month + 1)),
                 icon: const Icon(Icons.chevron_right),
               ),
@@ -232,7 +238,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           child: StrideSegmented<HistoryView>(
             values: HistoryView.values,
             selected: _view,
-            labelOf: (v) => v == HistoryView.list ? 'List' : 'Calendar',
+            labelOf: (v) => v == HistoryView.list ? 'history_view_list'.tr : 'history_view_calendar'.tr,
             onChanged: (v) => setState(() => _view = v),
           ),
         ),
@@ -264,9 +270,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: InputChip(
-                  label: Text('Showing ${DateFormat('EEE, MMM d', 'en_US').format(_day!)}'),
+                  label: Text('history_showing'.trArgs([DateFormat('EEE, MMM d', appDateLocale).format(_day!)])),
                   onDeleted: () => _setDay(null),
-                  deleteButtonTooltipMessage: 'Show the whole month',
+                  deleteButtonTooltipMessage: 'history_show_whole_month'.tr,
                 ),
               ),
             ),
@@ -295,11 +301,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     if (_feed.error != null && _feed.items.isEmpty) {
       return [
         SliverToBoxAdapter(
-          child: ErrorState(
-            title: 'Couldn\'t load your activities',
-            message: 'Reading activities saved on this device failed. Your data has not been changed.',
-            onRetry: () => _reload(),
-          ),
+          child: ErrorState(title: 'history_error_title'.tr, message: 'history_error_message'.tr, onRetry: () => _reload()),
         ),
       ];
     }
@@ -313,9 +315,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         SliverToBoxAdapter(
           child: EmptyState(
             icon: Icons.filter_alt_off_outlined,
-            title: 'No activities found',
-            message: _day != null ? 'Nothing was recorded on this day with the current filter.' : 'Nothing matches this month and activity type.',
-            actionLabel: 'Clear filters',
+            title: 'history_no_results_title'.tr,
+            message: _day != null ? 'history_no_results_day'.tr : 'history_no_results_month'.tr,
+            actionLabel: 'history_clear_filters'.tr,
             onAction: _clearFilters,
           ),
         ),
@@ -335,8 +337,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             child: _feed.loadingMore
                 ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5))
                 : _feed.hasMore
-                ? TextButton(onPressed: _feed.loadMore, child: const Text('Load more'))
-                : Text(items.length == 1 ? '1 activity' : '${items.length} activities', style: StrideText.caption),
+                ? TextButton(onPressed: _feed.loadMore, child: Text('history_load_more'.tr))
+                : Text(items.length == 1 ? 'history_count_one'.tr : 'history_count_other'.trArgs([items.length]), style: StrideText.caption),
           ),
         ),
       ),
@@ -354,10 +356,10 @@ class _TotalsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = totals;
     final countLabel = switch (type) {
-      HistoryTypeFilter.run => t?.count == 1 ? 'run' : 'runs',
-      HistoryTypeFilter.walk => t?.count == 1 ? 'walk' : 'walks',
-      HistoryTypeFilter.indoor => t?.count == 1 ? 'indoor run' : 'indoor runs',
-      HistoryTypeFilter.all => t?.count == 1 ? 'activity' : 'activities',
+      HistoryTypeFilter.run => t?.count == 1 ? 'history_total_run_one'.tr : 'history_total_run_other'.tr,
+      HistoryTypeFilter.walk => t?.count == 1 ? 'history_total_walk_one'.tr : 'history_total_walk_other'.tr,
+      HistoryTypeFilter.indoor => t?.count == 1 ? 'history_total_indoor_one'.tr : 'history_total_indoor_other'.tr,
+      HistoryTypeFilter.all => t?.count == 1 ? 'history_total_activity_one'.tr : 'history_total_activity_other'.tr,
     };
     return SageCard(
       child: t == null
@@ -372,12 +374,12 @@ class _TotalsCard extends StatelessWidget {
                     icon: Icons.route_outlined,
                     value: format.distanceValue(t.distanceM),
                     unit: format.distanceUnitLabel,
-                    label: 'total distance',
+                    label: 'history_total_distance'.tr,
                     center: true,
                   ),
                 ),
                 Expanded(
-                  child: MetricTile(icon: Icons.timer_outlined, value: formatDurationShort(t.movingMs), label: 'total time', center: true),
+                  child: MetricTile(icon: Icons.timer_outlined, value: formatDurationShort(t.movingMs), label: 'history_total_time'.tr, center: true),
                 ),
               ],
             ),
@@ -404,12 +406,12 @@ class _MonthPickerState extends State<_MonthPicker> {
       children: [
         Row(
           children: [
-            IconButton(tooltip: 'Previous year', onPressed: () => setState(() => _year--), icon: const Icon(Icons.chevron_left)),
+            IconButton(tooltip: 'progress_previous_year'.tr, onPressed: () => setState(() => _year--), icon: const Icon(Icons.chevron_left)),
             Expanded(
               child: Text('$_year', style: StrideText.subheading, textAlign: TextAlign.center),
             ),
             IconButton(
-              tooltip: 'Next year',
+              tooltip: 'progress_next_year'.tr,
               onPressed: _year >= widget.latest.year ? null : () => setState(() => _year++),
               icon: const Icon(Icons.chevron_right),
             ),
@@ -429,7 +431,11 @@ class _MonthPickerState extends State<_MonthPicker> {
                   final selected = d.year == widget.initial.year && d.month == widget.initial.month;
                   return Padding(
                     padding: const EdgeInsets.all(4),
-                    child: StrideChip(label: DateFormat.MMM('en_US').format(d), selected: selected, onTap: enabled ? () => Navigator.of(context).pop(d) : null),
+                    child: StrideChip(
+                      label: DateFormat.MMM(appDateLocale).format(d),
+                      selected: selected,
+                      onTap: enabled ? () => Navigator.of(context).pop(d) : null,
+                    ),
                   );
                 },
               ),

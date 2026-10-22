@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../values/tokens.dart';
 import '../../common_components/widgets.dart';
 import '../../../utils/activity_charts_data.dart';
+import '../../../utils/l10n.dart';
 
 /// Thẻ biểu đồ đường; khi chuỗi không có dữ liệu thì hiện lý do thay vì biểu đồ rỗng.
 class SeriesChartCard extends StatelessWidget {
@@ -49,7 +50,7 @@ class SeriesChartCard extends StatelessWidget {
                 children: [
                   Text(title, style: StrideText.subheading),
                   const SizedBox(height: 4),
-                  Text(series.reason!, style: StrideText.bodySecondary),
+                  Text(series.reason!.tr, style: StrideText.bodySecondary),
                 ],
               ),
             ),
@@ -76,7 +77,7 @@ class SeriesChartCard extends StatelessWidget {
                 Row(
                   children: [
                     const Icon(Icons.arrow_upward, size: 14, color: StrideColors.textSecondary),
-                    Text('Faster', style: StrideText.caption.copyWith(color: StrideColors.textSecondary)),
+                    Text('activity_chart_faster'.tr, style: StrideText.caption.copyWith(color: StrideColors.textSecondary)),
                   ],
                 ),
             ],

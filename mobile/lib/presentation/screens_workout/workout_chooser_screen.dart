@@ -9,6 +9,7 @@ import '../common_components/widgets.dart';
 import '../../controller/run/engine/run_session_controller.dart';
 import '../../models/ui_models/workout_models.dart';
 import '../../repository/workout_repository.dart';
+import '../../utils/l10n.dart';
 
 /// Run → Workout: Free run / Intervals (flag workout.intervals) / preset đã lưu (K01).
 class WorkoutChooserScreen extends ConsumerWidget {
@@ -24,7 +25,7 @@ class WorkoutChooserScreen extends ConsumerWidget {
       return Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: StrideCard(
-          semanticLabel: '$title${selected ? ', selected' : ''}',
+          semanticLabel: '$title${selected ? 'workout_selected_suffix'.tr : ''}',
           onTap: onTap,
           child: Row(
             children: [
@@ -47,16 +48,16 @@ class WorkoutChooserScreen extends ConsumerWidget {
     }
 
     return StrideScreen(
-      title: 'Workout',
+      title: 'workout_title'.tr,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Choose how you want to train.', style: StrideText.bodySecondary),
+          Text('workout_choose_subtitle'.tr, style: StrideText.bodySecondary),
           const SizedBox(height: 16),
           option(
             icon: Icons.directions_run,
-            title: 'Free run',
-            subtitle: 'No structure. Run at your own pace.',
+            title: 'workout_free_run'.tr,
+            subtitle: 'workout_free_run_desc'.tr,
             selected: current == null,
             onTap: () {
               ref.read(runSessionProvider.notifier).setPlan(null);
@@ -66,23 +67,23 @@ class WorkoutChooserScreen extends ConsumerWidget {
           if (flags.workoutIntervals) ...[
             option(
               icon: Icons.timer_outlined,
-              title: 'Intervals',
-              subtitle: 'Alternate running and walking with timed phases.',
+              title: 'workout_intervals'.tr,
+              subtitle: 'workout_intervals_desc'.tr,
               selected: current != null && current.id == null,
               onTap: () => context.push(Routes.runIntervals),
             ),
-            const SectionHeader(title: 'Your presets'),
+            SectionHeader(title: 'workout_presets'.tr),
             plans!.when(
               loading: () => const Column(children: [LoadingCard(height: 72), SizedBox(height: 8), LoadingCard(height: 72)]),
               error: (e, _) => ErrorState(
-                title: 'Couldn\'t load your presets',
-                message: 'Your saved workouts are still on this device.',
+                title: 'workout_presets_error_title'.tr,
+                message: 'workout_presets_error_message'.tr,
                 onRetry: () => ref.invalidate(workoutPlansProvider),
               ),
               data: (list) => list.isEmpty
                   ? Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text('Interval workouts you save as presets appear here.', style: StrideText.bodySecondary),
+                      child: Text('workout_presets_empty'.tr, style: StrideText.bodySecondary),
                     )
                   : Column(
                       children: [
@@ -90,7 +91,7 @@ class WorkoutChooserScreen extends ConsumerWidget {
                           option(
                             icon: Icons.bookmark_outline,
                             title: p.name,
-                            subtitle: '${formatStepDuration(p.totalMs)} · ${p.phases.length} phases',
+                            subtitle: 'workout_preset_subtitle'.trArgs([formatStepDuration(p.totalMs), p.phases.length]),
                             selected: current?.id == p.id,
                             onTap: () => context.push('${Routes.runIntervals}?planId=${p.id}'),
                           ),

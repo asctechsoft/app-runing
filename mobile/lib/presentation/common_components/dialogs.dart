@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/l10n.dart';
 import '../../values/tokens.dart';
 import 'buttons.dart';
 
@@ -83,7 +84,7 @@ Future<T?> showStrideSheet<T>(BuildContext context, {required String title, requ
             Row(
               children: [
                 Expanded(child: Text(title, style: StrideText.heading)),
-                IconButton(tooltip: 'Close', onPressed: () => Navigator.of(ctx).pop(), icon: const Icon(Icons.close)),
+                IconButton(tooltip: 'common_close'.tr, onPressed: () => Navigator.of(ctx).pop(), icon: const Icon(Icons.close)),
               ],
             ),
             const SizedBox(height: 12),

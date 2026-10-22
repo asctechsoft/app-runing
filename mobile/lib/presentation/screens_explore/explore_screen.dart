@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../utils/l10n.dart';
 import '../../values/routes.dart';
 import '../../controller/providers.dart';
 import '../../values/tokens.dart';
@@ -15,19 +16,15 @@ class ExploreScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final flags = ref.watch(flagsProvider);
     final cards = [
-      if (flags.exploreClubs) (Icons.groups_outlined, 'Running clubs', 'Find a group and run together.', Routes.clubs),
-      if (flags.exploreChallenges) (Icons.emoji_events_outlined, 'Challenges', 'Set yourself a new challenge.', Routes.challenges),
-      if (flags.exploreRoutes) (Icons.place_outlined, 'Discover routes', 'Find your next running route.', Routes.routesDiscover),
+      if (flags.exploreClubs) (Icons.groups_outlined, 'explore_clubs_title'.tr, 'explore_clubs_hub_subtitle'.tr, Routes.clubs),
+      if (flags.exploreChallenges) (Icons.emoji_events_outlined, 'explore_challenges_title'.tr, 'explore_challenges_subtitle'.tr, Routes.challenges),
+      if (flags.exploreRoutes) (Icons.place_outlined, 'explore_routes_title'.tr, 'explore_routes_subtitle'.tr, Routes.routesDiscover),
     ];
     return StrideScreen(
-      title: 'Explore',
+      title: 'explore_title'.tr,
       largeTitle: true,
       body: cards.isEmpty
-          ? const EmptyState(
-              icon: Icons.explore_off_outlined,
-              title: 'Explore isn’t available',
-              message: 'Clubs, challenges and routes aren’t turned on in this version.',
-            )
+          ? EmptyState(icon: Icons.explore_off_outlined, title: 'explore_unavailable_title'.tr, message: 'explore_unavailable_message'.tr)
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

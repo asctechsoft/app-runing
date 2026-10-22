@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../../../utils/l10n.dart';
 import '../../../values/tokens.dart';
 
 /// Chữ cái đầu từ tên (tối đa 2), rỗng → null để hiện icon người.
@@ -27,7 +28,7 @@ class ProfileAvatar extends StatelessWidget {
     final initials = profileInitials(name);
     return Semantics(
       image: true,
-      label: name.trim().isEmpty ? 'Profile photo' : 'Profile photo of $name',
+      label: name.trim().isEmpty ? 'profile_avatar_label'.tr : 'profile_avatar_label_named'.trArgs([name]),
       excludeSemantics: true,
       child: Container(
         width: size,

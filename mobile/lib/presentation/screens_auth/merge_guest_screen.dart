@@ -10,6 +10,7 @@ import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
 import '../../controller/sync/sync_providers.dart';
 import '../../controller/auth/auth_flow.dart';
+import '../../utils/l10n.dart';
 
 /// Hỏi chuyển dữ liệu khách vào tài khoản vừa đăng nhập (E03). Không bao giờ tự gộp.
 class MergeGuestScreen extends ConsumerStatefulWidget {
@@ -45,10 +46,10 @@ class _MergeGuestScreenState extends ConsumerState<MergeGuestScreen> {
       ref.read(ownerProvider.notifier).reload();
       unawaited(ref.read(syncServiceProvider).syncNow());
       if (!mounted) return;
-      showStrideSnack(context, 'Activities moved to your account. They will sync when you are online.');
+      showStrideSnack(context, 'auth_merge_moved_snack'.tr);
       context.go(routeAfterMerge(ref.read(ownerProvider)));
     } catch (e) {
-      if (mounted) setState(() => _error = "Couldn't move your activities. Nothing was changed — try again.");
+      if (mounted) setState(() => _error = 'auth_merge_move_error'.tr);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -70,9 +71,9 @@ class _MergeGuestScreenState extends ConsumerState<MergeGuestScreen> {
           if (owner.isGuest) {
             return EmptyState(
               icon: Icons.person_outline,
-              title: 'Log in first',
-              message: 'Log in to an account to move activities saved on this device.',
-              actionLabel: 'Log in',
+              title: 'auth_merge_login_first_title'.tr,
+              message: 'auth_merge_login_first_msg'.tr,
+              actionLabel: 'auth_log_in'.tr,
               onAction: () => context.go(Routes.login),
             );
           }
@@ -80,15 +81,15 @@ class _MergeGuestScreenState extends ConsumerState<MergeGuestScreen> {
             return const Padding(padding: EdgeInsets.only(top: 48), child: LoadingCard());
           }
           if (snap.hasError) {
-            return ErrorState(title: "Couldn't read this device's activities", message: 'Try again.', onRetry: () => setState(() => _count = _load()));
+            return ErrorState(title: 'auth_merge_read_error_title'.tr, message: 'auth_try_again'.tr, onRetry: () => setState(() => _count = _load()));
           }
           final n = snap.data ?? 0;
           if (n == 0) {
             return EmptyState(
               icon: Icons.check_circle_outline,
-              title: 'Nothing to move',
-              message: 'There are no activities saved without an account on this device.',
-              actionLabel: 'Continue',
+              title: 'auth_merge_nothing_title'.tr,
+              message: 'auth_merge_nothing_msg'.tr,
+              actionLabel: 'auth_continue'.tr,
               onAction: _keepSeparate,
             );
           }
@@ -100,25 +101,21 @@ class _MergeGuestScreenState extends ConsumerState<MergeGuestScreen> {
               const SizedBox(height: StrideSpace.s24),
               Semantics(
                 header: true,
-                child: Text('Move your activities?', style: StrideText.title, textAlign: TextAlign.center),
+                child: Text('auth_merge_title'.tr, style: StrideText.title, textAlign: TextAlign.center),
               ),
               const SizedBox(height: StrideSpace.s8),
               Text(
-                'You have $n ${n == 1 ? 'activity' : 'activities'} saved on this device without an account. '
-                'Move ${n == 1 ? 'it' : 'them'} to ${owner.email ?? 'this account'} to back ${n == 1 ? 'it' : 'them'} up and see ${n == 1 ? 'it' : 'them'} on other devices.',
+                (n == 1 ? 'auth_merge_body_one' : 'auth_merge_body_other').trArgs([n, owner.email ?? 'auth_merge_this_account'.tr]),
                 style: StrideText.bodySecondary,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: StrideSpace.s16),
-              const StatusBanner(
-                tone: BannerTone.info,
-                message: 'If you keep them separate, they stay on this device and are only visible when you use STRIDE without an account.',
-              ),
+              StatusBanner(tone: BannerTone.info, message: 'auth_merge_keep_note'.tr),
               if (_error != null) ...[const SizedBox(height: StrideSpace.s12), StatusBanner(tone: BannerTone.error, message: _error!)],
               const SizedBox(height: StrideSpace.s32),
-              PrimaryButton(label: 'Move to this account', loading: _busy, onPressed: _move),
+              PrimaryButton(label: 'auth_merge_move'.tr, loading: _busy, onPressed: _move),
               const SizedBox(height: StrideSpace.s8),
-              SecondaryButton(label: 'Keep separate', onPressed: _busy ? null : _keepSeparate),
+              SecondaryButton(label: 'auth_merge_keep_separate'.tr, onPressed: _busy ? null : _keepSeparate),
             ],
           );
         },

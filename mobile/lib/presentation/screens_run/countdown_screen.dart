@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../utils/l10n.dart';
 import '../../values/routes.dart';
 import '../../controller/providers.dart';
 import '../../values/tokens.dart';
@@ -71,7 +72,7 @@ class _CountdownScreenState extends ConsumerState<CountdownScreen> with SingleTi
     } catch (e) {
       if (!mounted) return;
       ref.read(runSessionProvider.notifier).cancelCountdown();
-      showStrideSnack(context, 'Couldn\'t start recording. Please try again.', isError: true);
+      showStrideSnack(context, 'run_countdown_failed'.tr, isError: true);
       context.go(Routes.run);
     }
   }
@@ -107,7 +108,7 @@ class _CountdownScreenState extends ConsumerState<CountdownScreen> with SingleTi
             child: Column(
               children: [
                 const Spacer(),
-                Text('Get ready', style: StrideText.title),
+                Text('run_countdown_title'.tr, style: StrideText.title),
                 const SizedBox(height: 4),
                 Text(subtitle, style: StrideText.bodySecondary, textAlign: TextAlign.center),
                 const SizedBox(height: 32),
@@ -130,9 +131,9 @@ class _CountdownScreenState extends ConsumerState<CountdownScreen> with SingleTi
                       ),
                       Semantics(
                         liveRegion: true,
-                        label: _starting ? 'Starting' : 'Starting in $_n',
+                        label: _starting ? 'run_countdown_starting'.tr : 'run_countdown_starting_in'.trArgs([_n]),
                         excludeSemantics: true,
-                        child: Text(_starting ? 'Go' : '$_n', style: StrideText.countdown),
+                        child: Text(_starting ? 'run_countdown_go'.tr : '$_n', style: StrideText.countdown),
                       ),
                     ],
                   ),
@@ -140,7 +141,7 @@ class _CountdownScreenState extends ConsumerState<CountdownScreen> with SingleTi
                 const Spacer(),
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: StrideSpace.maxContentWidth),
-                  child: SecondaryButton(label: 'Cancel', onPressed: _starting ? null : _cancel),
+                  child: SecondaryButton(label: 'action_cancel'.tr, onPressed: _starting ? null : _cancel),
                 ),
               ],
             ),

@@ -11,6 +11,7 @@ import '../../models/data_models/profile.dart';
 import '../../controller/sync/sync_providers.dart';
 import '../../controller/setup/setup_logic.dart';
 import 'components/setup_widgets.dart';
+import '../../utils/l10n.dart';
 
 /// Bước 1: hồ sơ tối thiểu (E04). Tên bắt buộc; chiều cao/cân nặng tùy chọn — không tự điền giá trị mẫu.
 class SetupProfileScreen extends ConsumerStatefulWidget {
@@ -133,7 +134,7 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
       if (!ref.read(ownerProvider).isGuest) await ref.read(syncServiceProvider).enqueueProfile(saved);
       if (mounted) context.push(Routes.setupGoal);
     } catch (e) {
-      if (mounted) setState(() => _saveError = "Couldn't save your profile on this device. Try again.");
+      if (mounted) setState(() => _saveError = 'setup_profile_save_error'.tr);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -150,12 +151,12 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
           : Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                PrimaryButton(label: 'Continue', trailingIcon: Icons.arrow_forward, loading: _saving, onPressed: () => _save(skip: false)),
-                TextButton(onPressed: _saving ? null : () => _save(skip: true), child: const Text('Skip for now')),
+                PrimaryButton(label: 'setup_continue'.tr, trailingIcon: Icons.arrow_forward, loading: _saving, onPressed: () => _save(skip: false)),
+                TextButton(onPressed: _saving ? null : () => _save(skip: true), child: Text('setup_skip_for_now'.tr)),
               ],
             ),
       body: _loadError != null
-          ? ErrorState(title: "Couldn't load your profile", message: 'Something went wrong reading data on this device.', onRetry: _load)
+          ? ErrorState(title: 'setup_profile_load_error_title'.tr, message: 'setup_profile_load_error_msg'.tr, onRetry: _load)
           : _base == null
           ? const Padding(padding: EdgeInsets.only(top: 48), child: LoadingCard(height: 240))
           : Form(
@@ -163,11 +164,11 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SetupHeader(step: 0, title: 'Tell us about you', subtitle: 'Only your name is required. Height and weight help estimate calories.'),
+                  SetupHeader(step: 0, title: 'setup_profile_title'.tr, subtitle: 'setup_profile_subtitle'.tr),
                   if (_saveError != null) ...[StatusBanner(tone: BannerTone.error, message: _saveError!), const SizedBox(height: StrideSpace.s12)],
                   TextFormField(
                     controller: _name,
-                    decoration: const InputDecoration(labelText: 'Name', prefixIcon: Icon(Icons.person_outline)),
+                    decoration: InputDecoration(labelText: 'setup_profile_name'.tr, prefixIcon: Icon(Icons.person_outline)),
                     textCapitalization: TextCapitalization.words,
                     autofillHints: const [AutofillHints.name],
                     validator: validateDisplayName,
@@ -175,7 +176,7 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                   ),
                   const SizedBox(height: StrideSpace.s24),
                   _LabelRow(
-                    label: 'Height (optional)',
+                    label: 'setup_profile_height_optional'.tr,
                     trailing: StrideSegmented<HeightUnit>(
                       dense: true,
                       values: HeightUnit.values,
@@ -190,7 +191,7 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                       controller: _heightCm,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: digits,
-                      decoration: const InputDecoration(labelText: 'Height', suffixText: 'cm'),
+                      decoration: InputDecoration(labelText: 'setup_profile_height'.tr, suffixText: 'cm'),
                       validator: (_) => _height.error,
                       style: StrideText.body,
                     )
@@ -203,7 +204,7 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                             controller: _heightFt,
                             keyboardType: TextInputType.number,
                             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            decoration: const InputDecoration(labelText: 'Feet', suffixText: 'ft'),
+                            decoration: InputDecoration(labelText: 'setup_profile_feet'.tr, suffixText: 'ft'),
                             validator: (_) => _height.error,
                             style: StrideText.body,
                           ),
@@ -214,7 +215,7 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                             controller: _heightIn,
                             keyboardType: TextInputType.number,
                             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            decoration: const InputDecoration(labelText: 'Inches', suffixText: 'in'),
+                            decoration: InputDecoration(labelText: 'setup_profile_inches'.tr, suffixText: 'in'),
                             style: StrideText.body,
                           ),
                         ),
@@ -222,7 +223,7 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                     ),
                   const SizedBox(height: StrideSpace.s24),
                   _LabelRow(
-                    label: 'Weight (optional)',
+                    label: 'setup_profile_weight_optional'.tr,
                     trailing: StrideSegmented<WeightUnit>(
                       dense: true,
                       values: WeightUnit.values,
@@ -237,25 +238,25 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: digits,
                     decoration: InputDecoration(
-                      labelText: 'Weight',
+                      labelText: 'setup_profile_weight'.tr,
                       suffixText: _weightUnit.name,
-                      helperText: 'Without weight, calories are not shown.',
+                      helperText: 'setup_profile_weight_helper'.tr,
                       helperMaxLines: 2,
                     ),
                     validator: (_) => _weightParsed.error,
                     style: StrideText.body,
                   ),
                   const SizedBox(height: StrideSpace.s24),
-                  const Text('Distance units', style: StrideText.label),
+                  Text('setup_profile_distance_units'.tr, style: StrideText.label),
                   const SizedBox(height: StrideSpace.s8),
                   StrideSegmented<DistanceUnit>(
                     values: DistanceUnit.values,
                     selected: _distance,
-                    labelOf: (u) => u == DistanceUnit.km ? 'Kilometers' : 'Miles',
+                    labelOf: (u) => u == DistanceUnit.km ? 'setup_profile_kilometers'.tr : 'setup_profile_miles'.tr,
                     onChanged: (u) => setState(() => _distance = u),
                   ),
                   const SizedBox(height: StrideSpace.s24),
-                  const Text('How active are you?', style: StrideText.label),
+                  Text('setup_profile_activity_question'.tr, style: StrideText.label),
                   const SizedBox(height: StrideSpace.s8),
                   Wrap(
                     spacing: StrideSpace.s8,
@@ -266,10 +267,7 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                     ],
                   ),
                   const SizedBox(height: StrideSpace.s16),
-                  const Text(
-                    'Skip for now keeps kilometers, kilograms and centimeters. You can change everything later in Profile.',
-                    style: StrideText.caption,
-                  ),
+                  Text('setup_profile_skip_note'.tr, style: StrideText.caption),
                 ],
               ),
             ),
@@ -278,10 +276,10 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
 }
 
 String _levelLabel(ActivityLevel l) => switch (l) {
-  ActivityLevel.newbie => 'Just starting',
-  ActivityLevel.occasional => 'Occasionally',
-  ActivityLevel.regular => 'Regularly',
-  ActivityLevel.active => 'Very active',
+  ActivityLevel.newbie => 'setup_profile_level_newbie'.tr,
+  ActivityLevel.occasional => 'setup_profile_level_occasional'.tr,
+  ActivityLevel.regular => 'setup_profile_level_regular'.tr,
+  ActivityLevel.active => 'setup_profile_level_active'.tr,
 };
 
 class _LabelRow extends StatelessWidget {

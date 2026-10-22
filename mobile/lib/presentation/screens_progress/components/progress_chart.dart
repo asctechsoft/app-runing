@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../utils/formatters.dart';
+import '../../../utils/l10n.dart';
 import '../../../values/tokens.dart';
 import '../../../utils/clock.dart';
 import '../../../models/ui_models/period.dart';
@@ -153,11 +154,11 @@ class ProgressBarChart extends StatelessWidget {
           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
           child: ExpansionTile(
             tilePadding: EdgeInsets.zero,
-            title: Text('View as list', style: StrideText.label.copyWith(color: StrideColors.primary)),
+            title: Text('progress_view_as_list'.tr, style: StrideText.label.copyWith(color: StrideColors.primary)),
             children: [
               for (final b in buckets)
                 Semantics(
-                  label: '${bucketLongLabel(period, b.bucket)}: ${b.future ? 'upcoming' : formatValue(b.value)}',
+                  label: 'progress_bar_label'.trArgs([bucketLongLabel(period, b.bucket), b.future ? 'progress_upcoming_lower'.tr : formatValue(b.value)]),
                   excludeSemantics: true,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
@@ -165,7 +166,7 @@ class ProgressBarChart extends StatelessWidget {
                       children: [
                         Expanded(child: Text(bucketLongLabel(period, b.bucket), style: StrideText.body)),
                         Text(
-                          b.future ? 'Upcoming' : formatValue(b.value),
+                          b.future ? 'progress_upcoming'.tr : formatValue(b.value),
                           style: StrideText.body.copyWith(
                             fontFeatures: const [FontFeature.tabularFigures()],
                             color: b.future || b.value == null ? StrideColors.textMuted : StrideColors.textPrimary,

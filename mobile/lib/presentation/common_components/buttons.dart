@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../utils/l10n.dart';
 import '../../values/tokens.dart';
 
 /// Nút chính cao 52, radius 12. Loading giữ bề rộng và chặn bấm lặp (DS mục 04).
@@ -20,7 +21,7 @@ class PrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final child = loading
         ? Semantics(
-            label: '$label, in progress',
+            label: 'common_in_progress'.trArgs([label]),
             child: const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white)),
           )
         : Row(
@@ -137,7 +138,7 @@ class HoldButton extends StatefulWidget {
     this.duration = const Duration(milliseconds: 800),
     this.foreground = StrideColors.error,
     this.background = StrideColors.errorBg,
-    this.semanticsHint = 'Press and hold to confirm',
+    this.semanticsHint,
   });
 
   final String label;
@@ -146,7 +147,7 @@ class HoldButton extends StatefulWidget {
   final Duration duration;
   final Color foreground;
   final Color background;
-  final String semanticsHint;
+  final String? semanticsHint;
 
   @override
   State<HoldButton> createState() => _HoldButtonState();
@@ -173,7 +174,7 @@ class _HoldButtonState extends State<HoldButton> with SingleTickerProviderStateM
     return Semantics(
       button: true,
       label: widget.label,
-      hint: widget.semanticsHint,
+      hint: widget.semanticsHint ?? 'common_hold_confirm_hint'.tr,
       // Screen reader: double-tap = xác nhận rõ ràng (thay cho nhấn giữ).
       onTap: widget.onCompleted,
       child: GestureDetector(

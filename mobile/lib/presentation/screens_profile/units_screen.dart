@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../utils/formatters.dart';
+import '../../utils/l10n.dart';
 import '../../controller/providers.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
@@ -21,13 +22,13 @@ class UnitsScreen extends ConsumerWidget {
     return ref
         .watch(settingsProvider)
         .when(
-          loading: () => const StrideScreen(
-            title: 'Units & language',
-            body: Column(children: [Gap(16), LoadingCard(), Gap(12), LoadingCard()]),
+          loading: () => StrideScreen(
+            title: 'profile_units_title'.tr,
+            body: const Column(children: [Gap(16), LoadingCard(), Gap(12), LoadingCard()]),
           ),
           error: (e, _) => StrideScreen(
-            title: 'Units & language',
-            body: ErrorState(title: 'Couldn’t load settings', message: 'Try again.', onRetry: () => ref.invalidate(settingsProvider)),
+            title: 'profile_units_title'.tr,
+            body: ErrorState(title: 'profile_settings_load_error_title'.tr, message: 'profile_try_again'.tr, onRetry: () => ref.invalidate(settingsProvider)),
           ),
           data: (s) => _UnitsForm(key: ValueKey(s.ownerId), initial: s),
         );
@@ -59,10 +60,10 @@ class _UnitsFormState extends ConsumerState<_UnitsForm> {
         applyUnitPreferences(latest, distanceUnit: _distance, weightUnit: _weight, heightUnit: _height, weekStart: _weekStart, localeTag: 'en-US'),
       );
       if (!mounted) return;
-      showStrideSnack(context, 'Units saved');
+      showStrideSnack(context, 'profile_units_saved'.tr);
       if (context.canPop()) context.pop();
     } catch (_) {
-      if (mounted) showStrideSnack(context, 'Couldn’t save units. Try again.', isError: true);
+      if (mounted) showStrideSnack(context, 'profile_units_save_error'.tr, isError: true);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -100,27 +101,27 @@ class _UnitsFormState extends ConsumerState<_UnitsForm> {
   Widget build(BuildContext context) {
     final preview = StrideFormat(distanceUnit: _distance);
     return StrideScreen(
-      title: 'Units & language',
-      bottom: PrimaryButton(label: 'Save', loading: _saving, onPressed: _saving ? null : _save),
+      title: 'profile_units_title'.tr,
+      bottom: PrimaryButton(label: 'profile_units_save'.tr, loading: _saving, onPressed: _saving ? null : _save),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Gap(8),
           _row(
-            title: 'Distance',
-            subtitle: 'Used for distance in your runs and stats.',
+            title: 'profile_units_distance'.tr,
+            subtitle: 'profile_units_distance_subtitle'.tr,
             control: StrideSegmented<DistanceUnit>(
               values: DistanceUnit.values,
               selected: _distance,
-              labelOf: (u) => u == DistanceUnit.km ? 'Kilometers' : 'Miles',
+              labelOf: (u) => u == DistanceUnit.km ? 'profile_units_kilometers'.tr : 'profile_units_miles'.tr,
               onChanged: (u) => setState(() => _distance = u),
             ),
           ),
           _row(
-            title: 'Pace',
-            subtitle: 'Preview of how pace will be displayed.',
+            title: 'profile_units_pace'.tr,
+            subtitle: 'profile_units_pace_subtitle'.tr,
             control: Semantics(
-              label: 'Pace preview ${preview.pace(unitsPacePreviewSecPerKm)}',
+              label: 'profile_units_pace_preview'.trArgs([preview.pace(unitsPacePreviewSecPerKm)]),
               excludeSemantics: true,
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -128,43 +129,43 @@ class _UnitsFormState extends ConsumerState<_UnitsForm> {
                 child: Column(
                   children: [
                     Text(preview.paceValue(unitsPacePreviewSecPerKm), style: StrideText.metricMedium),
-                    Text(_distance == DistanceUnit.km ? 'min/km' : 'min/mi', style: StrideText.caption),
+                    Text(_distance == DistanceUnit.km ? 'profile_units_min_km'.tr : 'profile_units_min_mi'.tr, style: StrideText.caption),
                   ],
                 ),
               ),
             ),
           ),
           _row(
-            title: 'Weight',
-            subtitle: 'Used for more accurate calorie estimates.',
+            title: 'profile_units_weight'.tr,
+            subtitle: 'profile_units_calorie_subtitle'.tr,
             control: StrideSegmented<WeightUnit>(
               values: WeightUnit.values,
               selected: _weight,
-              labelOf: (u) => u == WeightUnit.kg ? 'Kilograms' : 'Pounds',
+              labelOf: (u) => u == WeightUnit.kg ? 'profile_units_kilograms'.tr : 'profile_units_pounds'.tr,
               onChanged: (u) => setState(() => _weight = u),
             ),
           ),
           _row(
-            title: 'Height',
-            subtitle: 'Used for more accurate calorie estimates.',
+            title: 'profile_units_height'.tr,
+            subtitle: 'profile_units_calorie_subtitle'.tr,
             control: StrideSegmented<HeightUnit>(
               values: HeightUnit.values,
               selected: _height,
-              labelOf: (u) => u == HeightUnit.cm ? 'Centimeters' : 'Feet & inches',
+              labelOf: (u) => u == HeightUnit.cm ? 'profile_units_centimeters'.tr : 'profile_units_feet_inches'.tr,
               onChanged: (u) => setState(() => _height = u),
             ),
           ),
           _row(
-            title: 'Language',
-            subtitle: 'More languages are coming later.',
-            control: const Align(
+            title: 'profile_units_language'.tr,
+            subtitle: 'profile_units_language_subtitle'.tr,
+            control: Align(
               alignment: Alignment.centerRight,
-              child: Text('English (US)', style: StrideText.body),
+              child: Text('profile_units_language_value'.tr, style: StrideText.body),
             ),
           ),
           _row(
-            title: 'Week starts',
-            subtitle: 'Select which day your week begins on.',
+            title: 'profile_units_week_starts'.tr,
+            subtitle: 'profile_units_week_starts_subtitle'.tr,
             control: DropdownButtonFormField<int>(
               key: const Key('units-week-start'),
               initialValue: _weekStart,
@@ -178,14 +179,14 @@ class _UnitsFormState extends ConsumerState<_UnitsForm> {
             ),
           ),
           _row(
-            title: 'Date & time',
-            subtitle: 'Uses your device settings for date, time and time zone.',
-            control: const Align(
+            title: 'profile_units_datetime'.tr,
+            subtitle: 'profile_units_datetime_subtitle'.tr,
+            control: Align(
               alignment: Alignment.centerRight,
-              child: Text('Use device settings', style: StrideText.body),
+              child: Text('profile_units_datetime_value'.tr, style: StrideText.body),
             ),
           ),
-          Text('Changing units only changes how values are shown. Your saved activities stay the same.', style: StrideText.caption),
+          Text('profile_units_footer'.tr, style: StrideText.caption),
         ],
       ),
     );

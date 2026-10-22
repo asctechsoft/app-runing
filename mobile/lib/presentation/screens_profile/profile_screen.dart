@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../utils/l10n.dart';
 import '../../values/routes.dart';
 import '../../controller/providers.dart';
 import '../../values/tokens.dart';
@@ -22,16 +23,17 @@ class ProfileScreen extends ConsumerWidget {
     final gutter = StrideScreen.gutterOf(context);
 
     final rows = <(IconData, String, String, String)>[
-      (Icons.person_outline, 'Edit profile', 'Update your photo, name and more', Routes.editProfile),
-      (Icons.track_changes, 'Goals', 'Set your running and step goals', Routes.profileGoals),
-      (Icons.settings_outlined, 'Run settings', 'Audio cues and auto pause', Routes.runSettings),
-      (Icons.notifications_none, 'Reminders', 'Stay on track with helpful notifications', Routes.reminders),
-      (Icons.language, 'Units & language', 'Distance, pace and app language', Routes.units),
-      (Icons.link, 'Data sources', 'Phone sensor, devices and source priority', Routes.dataSources),
-      if (flags.exploreAny) (Icons.map_outlined, 'Explore', _exploreSubtitle(flags.exploreClubs, flags.exploreChallenges, flags.exploreRoutes), Routes.explore),
-      (Icons.shield_outlined, 'Privacy', 'Control who can see your activities', Routes.privacy),
-      (Icons.storage_outlined, 'Account & data', 'Manage your account and export data', Routes.account),
-      (Icons.help_outline, 'Help', 'Guides, feedback and diagnostics', Routes.help),
+      (Icons.person_outline, 'profile_edit_title'.tr, 'profile_row_edit_subtitle'.tr, Routes.editProfile),
+      (Icons.track_changes, 'profile_goals_title'.tr, 'profile_row_goals_subtitle'.tr, Routes.profileGoals),
+      (Icons.settings_outlined, 'profile_run_settings_title'.tr, 'profile_row_run_subtitle'.tr, Routes.runSettings),
+      (Icons.notifications_none, 'profile_reminders_title'.tr, 'profile_row_reminders_subtitle'.tr, Routes.reminders),
+      (Icons.language, 'profile_units_title'.tr, 'profile_row_units_subtitle'.tr, Routes.units),
+      (Icons.link, 'profile_data_sources_title'.tr, 'profile_row_ds_subtitle'.tr, Routes.dataSources),
+      if (flags.exploreAny)
+        (Icons.map_outlined, 'profile_explore_title'.tr, _exploreSubtitle(flags.exploreClubs, flags.exploreChallenges, flags.exploreRoutes), Routes.explore),
+      (Icons.shield_outlined, 'profile_privacy_title'.tr, 'profile_row_privacy_subtitle'.tr, Routes.privacy),
+      (Icons.storage_outlined, 'profile_account_title'.tr, 'profile_row_account_subtitle'.tr, Routes.account),
+      (Icons.help_outline, 'profile_help_title'.tr, 'profile_row_help_subtitle'.tr, Routes.help),
     ];
 
     return Scaffold(
@@ -67,7 +69,7 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   static String _exploreSubtitle(bool clubs, bool challenges, bool routes) {
-    final parts = [if (clubs) 'clubs', if (challenges) 'challenges', if (routes) 'routes'];
+    final parts = [if (clubs) 'profile_explore_clubs'.tr, if (challenges) 'profile_explore_challenges'.tr, if (routes) 'profile_explore_routes'.tr];
     final s = parts.join(', ');
     return s.isEmpty ? '' : '${s[0].toUpperCase()}${s.substring(1)}';
   }
@@ -82,7 +84,7 @@ class _Header extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final joined = isGuest ? null : ref.watch(profileJoinedProvider).value;
-    final subtitle = isGuest ? 'Guest' : (joined == null ? null : 'Joined ${DateFormat('MMMM y').format(joined)}');
+    final subtitle = isGuest ? 'profile_guest'.tr : (joined == null ? null : 'profile_joined'.trArgs([DateFormat('MMMM y').format(joined)]));
     return Row(
       children: [
         ProfileAvatar(name: name, path: avatarPath),
@@ -91,7 +93,7 @@ class _Header extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(name.trim().isEmpty ? 'Add your name' : name, style: StrideText.heading, maxLines: 2, overflow: TextOverflow.ellipsis),
+              Text(name.trim().isEmpty ? 'profile_add_name'.tr : name, style: StrideText.heading, maxLines: 2, overflow: TextOverflow.ellipsis),
               if (subtitle != null) Text(subtitle, style: StrideText.bodySecondary),
             ],
           ),
@@ -111,27 +113,33 @@ class _StatsCard extends ConsumerWidget {
     return StrideCard(
       child: stats.when(
         loading: () => const Skeleton(height: 96),
-        error: (e, _) => Text('Couldn’t load your stats.', style: StrideText.bodySecondary),
+        error: (e, _) => Text('profile_stats_error'.tr, style: StrideText.bodySecondary),
         data: (s) => Row(
           children: [
             Expanded(
               child: MetricTile(
                 icon: Icons.route_outlined,
-                label: 'Lifetime distance',
+                label: 'profile_stats_distance'.tr,
                 value: s.activityCount == 0 ? '0' : NumberFormat('#,##0.#').format(fmt.metersToUnit(s.distanceM)),
                 unit: fmt.distanceUnitLabel,
                 center: true,
               ),
             ),
             Expanded(
-              child: MetricTile(icon: Icons.directions_run, label: 'Total runs', value: '${s.runCount}', unit: s.runCount == 1 ? 'run' : 'runs', center: true),
+              child: MetricTile(
+                icon: Icons.directions_run,
+                label: 'profile_stats_runs'.tr,
+                value: '${s.runCount}',
+                unit: s.runCount == 1 ? 'profile_unit_run'.tr : 'profile_unit_runs'.tr,
+                center: true,
+              ),
             ),
             Expanded(
               child: MetricTile(
                 icon: Icons.calendar_today_outlined,
-                label: 'Active days',
+                label: 'profile_stats_active_days'.tr,
                 value: '${s.activeDays}',
-                unit: s.activeDays == 1 ? 'day' : 'days',
+                unit: s.activeDays == 1 ? 'profile_unit_day'.tr : 'profile_unit_days'.tr,
                 center: true,
               ),
             ),

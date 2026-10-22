@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../utils/formatters.dart';
+import '../../../utils/l10n.dart';
 import '../../../values/tokens.dart';
 import '../../common_components/widgets.dart';
 import '../../../utils/calc/calories.dart';
@@ -35,7 +36,7 @@ class StepMetricsRow extends StatelessWidget {
             Expanded(
               child: MetricTile(
                 icon: Icons.place_outlined,
-                label: 'Distance',
+                label: 'steps_metric_distance'.tr,
                 value: distM == null ? missingValue : format.distanceValue(distM),
                 unit: distM == null ? null : format.distanceUnitLabel,
                 estimated: true,
@@ -45,9 +46,9 @@ class StepMetricsRow extends StatelessWidget {
             Expanded(
               child: MetricTile(
                 icon: Icons.local_fire_department_outlined,
-                label: 'Calories',
+                label: 'steps_metric_calories'.tr,
                 value: kcal == null ? missingValue : format.kcal(kcal).replaceAll(' kcal', ''),
-                unit: kcal == null ? null : 'kcal',
+                unit: kcal == null ? null : 'steps_unit_kcal'.tr,
                 estimated: true,
                 center: true,
               ),
@@ -55,9 +56,9 @@ class StepMetricsRow extends StatelessWidget {
             Expanded(
               child: MetricTile(
                 icon: Icons.bolt_outlined,
-                label: 'Active min',
+                label: 'steps_metric_active_min'.tr,
                 value: activeMinutes == null ? missingValue : '$activeMinutes',
-                unit: activeMinutes == null ? null : 'min',
+                unit: activeMinutes == null ? null : 'steps_unit_min'.tr,
                 center: true,
               ),
             ),
@@ -74,7 +75,7 @@ class StepMetricsRow extends StatelessWidget {
                 constraints: const BoxConstraints(minHeight: StrideSpace.touchTarget),
                 child: Center(
                   child: Text(
-                    missingHeight ? 'Add height in profile to estimate distance and calories' : 'Add weight in profile to estimate calories',
+                    missingHeight ? 'steps_add_height'.tr : 'steps_add_weight'.tr,
                     style: StrideText.label.copyWith(color: StrideColors.primary),
                     textAlign: TextAlign.center,
                   ),

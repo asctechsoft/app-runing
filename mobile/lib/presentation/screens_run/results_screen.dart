@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../utils/l10n.dart';
 import '../../values/routes.dart';
 import '../../utils/formatters.dart';
 import '../../controller/providers.dart';
@@ -49,10 +50,10 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   Future<void> _discard() => _guard.run(() async {
     final ok = await confirmDialog(
       context,
-      title: 'Discard this activity?',
-      message: 'Your route, time and distance from this activity will be deleted from this device. This can\'t be undone.',
-      confirmLabel: 'Discard activity',
-      cancelLabel: 'Keep activity',
+      title: 'run_discard_title'.tr,
+      message: 'run_results_discard_message'.tr,
+      confirmLabel: 'run_discard_confirm'.tr,
+      cancelLabel: 'run_discard_keep'.tr,
       destructive: true,
       icon: Icons.delete_outline,
     );
@@ -61,7 +62,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       await ref.read(runSessionProvider.notifier).discard();
       if (mounted) context.go(Routes.home);
     } catch (_) {
-      if (mounted) showStrideSnack(context, 'Couldn\'t discard the activity. Try again.', isError: true);
+      if (mounted) showStrideSnack(context, 'run_results_discard_failed'.tr, isError: true);
     }
   });
 
@@ -80,10 +81,10 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       return StrideScreen(
         showBack: false,
         body: EmptyState(
-          title: 'Nothing to review',
-          message: 'There\'s no finished activity waiting to be saved.',
+          title: 'run_results_empty_title'.tr,
+          message: 'run_results_empty_message'.tr,
           icon: Icons.inbox_outlined,
-          actionLabel: 'Back to home',
+          actionLabel: 'run_back_home'.tr,
           onAction: () => context.go(Routes.home),
         ),
       );
@@ -91,8 +92,8 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     final indoor = a.type == ActivityType.indoorRun;
     final short = a.movingMs < 60000 || (a.distanceM != null && a.distanceM! < 100);
     final title = switch (a.type) {
-      ActivityType.walk => 'Walk complete',
-      _ => st.setup.plan != null ? 'Workout complete' : 'Run complete',
+      ActivityType.walk => 'run_results_walk_done'.tr,
+      _ => st.setup.plan != null ? 'run_interval_complete'.tr : 'run_results_run_done'.tr,
     };
 
     return PopScope(
@@ -122,10 +123,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            if (short) ...[
-              const StatusBanner(tone: BannerTone.warning, message: 'This activity is very short. You can still save it or discard it.'),
-              const SizedBox(height: 12),
-            ],
+            if (short) ...[StatusBanner(tone: BannerTone.warning, message: 'run_results_short'.tr), const SizedBox(height: 12)],
             if (a.hasGps && st.segments.isNotEmpty)
               ClipRRect(
                 borderRadius: BorderRadius.circular(StrideRadius.card),
@@ -137,14 +135,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                   children: [
                     IconBadge(icon: indoor ? Icons.home_outlined : Icons.location_off_outlined),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        indoor
-                            ? 'Indoor run · no GPS map. Distance is estimated from steps.'
-                            : 'No GPS data was recorded for this activity, so there\'s no route map or distance.',
-                        style: StrideText.body,
-                      ),
-                    ),
+                    Expanded(child: Text(indoor ? 'run_results_indoor_note'.tr : 'run_results_no_gps'.tr, style: StrideText.body)),
                   ],
                 ),
               ),
@@ -153,26 +144,32 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  MetricTile(label: 'Distance', value: fmt.distanceValue(a.distanceM), unit: fmt.distanceUnitLabel, large: true, estimated: indoor),
+                  MetricTile(
+                    label: 'run_label_distance'.tr,
+                    value: fmt.distanceValue(a.distanceM),
+                    unit: fmt.distanceUnitLabel,
+                    large: true,
+                    estimated: indoor,
+                  ),
                   const Divider(height: 24),
                   Wrap(
                     runSpacing: 16,
                     children: [
                       for (final t in [
-                        MetricTile(label: 'Moving time', value: formatDuration(a.movingMs), icon: Icons.timer_outlined),
-                        MetricTile(label: 'Elapsed time', value: formatDuration(a.elapsedMs), icon: Icons.schedule),
+                        MetricTile(label: 'run_label_moving_time'.tr, value: formatDuration(a.movingMs), icon: Icons.timer_outlined),
+                        MetricTile(label: 'run_label_elapsed_time'.tr, value: formatDuration(a.elapsedMs), icon: Icons.schedule),
                         MetricTile(
-                          label: 'Avg. pace',
+                          label: 'run_label_avg_pace'.tr,
                           value: fmt.paceValue(a.avgPaceSecPerKm),
                           unit: a.avgPaceSecPerKm == null ? null : fmt.paceUnitLabel,
                           icon: Icons.speed,
                           estimated: indoor,
                         ),
-                        MetricTile(label: 'Steps', value: fmt.steps(a.steps), icon: Icons.directions_walk),
+                        MetricTile(label: 'run_label_steps'.tr, value: fmt.steps(a.steps), icon: Icons.directions_walk),
                         MetricTile(
-                          label: 'Calories',
+                          label: 'run_label_calories'.tr,
                           value: a.caloriesKcal == null ? missingValue : a.caloriesKcal!.round().toString(),
-                          unit: a.caloriesKcal == null ? null : 'kcal',
+                          unit: a.caloriesKcal == null ? null : 'run_unit_kcal'.tr,
                           icon: Icons.local_fire_department_outlined,
                           estimated: true,
                         ),
@@ -180,10 +177,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                         FractionallySizedBox(widthFactor: 0.5, child: t),
                     ],
                   ),
-                  if (a.caloriesKcal == null) ...[
-                    const SizedBox(height: 12),
-                    Text('Add your weight in Edit profile to estimate calories.', style: StrideText.caption),
-                  ],
+                  if (a.caloriesKcal == null) ...[const SizedBox(height: 12), Text('run_results_add_weight'.tr, style: StrideText.caption)],
                 ],
               ),
             ),
@@ -198,9 +192,9 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
         bottom: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            PrimaryButton(label: 'Continue to save', trailingIcon: Icons.arrow_forward, onPressed: () => context.push(Routes.saveActivity)),
+            PrimaryButton(label: 'run_results_continue'.tr, trailingIcon: Icons.arrow_forward, onPressed: () => context.push(Routes.saveActivity)),
             const SizedBox(height: 8),
-            OutlineButton(label: 'Discard', onPressed: _discard),
+            OutlineButton(label: 'run_discard'.tr, onPressed: _discard),
           ],
         ),
       ),

@@ -6,6 +6,7 @@ import '../../common_components/widgets.dart';
 import '../../../models/ui_models/live_share_models.dart';
 import '../../../services/application/live_share_plugin.dart';
 import '../../../controller/live/live_share_providers.dart';
+import '../../../utils/l10n.dart';
 
 /// Banner trạng thái chia sẻ trực tiếp để đặt trong màn đang chạy (integrator chèn). Ẩn khi không chia sẻ.
 class LiveShareStatusBanner extends ConsumerWidget {
@@ -24,32 +25,32 @@ class LiveShareStatusBanner extends ConsumerWidget {
       LiveSharePhase.starting => StatusBanner(
         tone: BannerTone.info,
         icon: Icons.location_on_outlined,
-        message: 'Starting live sharing…',
-        actionLabel: 'Stop',
+        message: 'live_banner_starting'.tr,
+        actionLabel: 'live_banner_stop'.tr,
         onAction: stop,
       ),
       LiveSharePhase.active => StatusBanner(
         tone: BannerTone.success,
         icon: Icons.location_on_outlined,
-        message: 'Live sharing on · last update ${lastUpdateText(s.lastUpdateAt)}',
-        actionLabel: 'Stop',
+        message: 'live_banner_on'.trArgs([lastUpdateText(s.lastUpdateAt)]),
+        actionLabel: 'live_banner_stop'.tr,
         onAction: stop,
       ),
       LiveSharePhase.paused => StatusBanner(
         tone: BannerTone.info,
         icon: Icons.pause_circle_outline,
-        message: 'Live sharing paused with your run',
-        actionLabel: 'Stop',
+        message: 'live_banner_paused'.tr,
+        actionLabel: 'live_banner_stop'.tr,
         onAction: stop,
       ),
       LiveSharePhase.interrupted => StatusBanner(
         tone: BannerTone.warning,
-        message: 'Live sharing interrupted — last update ${lastUpdateText(s.lastUpdateAt)}',
-        actionLabel: 'Stop',
+        message: 'live_banner_interrupted'.trArgs([lastUpdateText(s.lastUpdateAt)]),
+        actionLabel: 'live_banner_stop'.tr,
         onAction: stop,
       ),
-      LiveSharePhase.ended => StatusBanner(tone: BannerTone.info, icon: Icons.location_off_outlined, message: s.message ?? 'Live sharing has ended.'),
-      LiveSharePhase.failed => StatusBanner(tone: BannerTone.error, message: s.message ?? 'Live sharing couldn\'t start.'),
+      LiveSharePhase.ended => StatusBanner(tone: BannerTone.info, icon: Icons.location_off_outlined, message: s.message ?? 'live_ended'.tr),
+      LiveSharePhase.failed => StatusBanner(tone: BannerTone.error, message: s.message ?? 'live_banner_failed'.tr),
     };
   }
 }

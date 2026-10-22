@@ -10,6 +10,7 @@ import '../../repository/device_repository.dart';
 import '../../controller/devices/devices_controller.dart';
 import '../../controller/devices/devices_providers.dart';
 import '../../services/application/heart_rate_transport.dart';
+import '../../utils/l10n.dart';
 
 /// Profile → Data sources → Connect a device (L01/L02).
 /// Ma trận hỗ trợ: chỉ cảm biến Bluetooth LE Heart Rate Service chuẩn (0x180D / 0x2A37); không liệt kê tên hãng.
@@ -20,28 +21,24 @@ class DevicesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final flags = ref.watch(flagsProvider);
     if (!flags.devicesBle) {
-      return const StrideScreen(
-        title: 'Connect a device',
-        body: EmptyState(
-          icon: Icons.bluetooth_disabled,
-          title: 'Device connections aren\'t available',
-          message: 'This version of STRIDE can\'t connect to sensors. Your runs still record with your phone.',
-        ),
+      return StrideScreen(
+        title: 'devices_title'.tr,
+        body: EmptyState(icon: Icons.bluetooth_disabled, title: 'devices_unavailable_title'.tr, message: 'devices_unavailable_message'.tr),
       );
     }
     return StrideScreen(
-      title: 'Connect a device',
+      title: 'devices_title'.tr,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: const [
-          SizedBox(height: StrideSpace.s8),
-          Text('Add a heart rate sensor to see your heart rate while you run.', style: StrideText.bodySecondary),
-          SizedBox(height: StrideSpace.s16),
-          _SupportCard(),
-          SizedBox(height: StrideSpace.s24),
-          _PairedSection(),
-          SizedBox(height: StrideSpace.s24),
-          _FindSection(),
+        children: [
+          const SizedBox(height: StrideSpace.s8),
+          Text('devices_intro'.tr, style: StrideText.bodySecondary),
+          const SizedBox(height: StrideSpace.s16),
+          const _SupportCard(),
+          const SizedBox(height: StrideSpace.s24),
+          const _PairedSection(),
+          const SizedBox(height: StrideSpace.s24),
+          const _FindSection(),
         ],
       ),
     );
@@ -55,22 +52,18 @@ class _SupportCard extends StatelessWidget {
   Widget build(BuildContext context) => SageCard(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
+      children: [
         Row(
           children: [
-            IconBadge(icon: Icons.monitor_heart_outlined),
-            SizedBox(width: StrideSpace.s12),
-            Expanded(child: Text('Bluetooth heart rate sensors', style: StrideText.subheading)),
+            const IconBadge(icon: Icons.monitor_heart_outlined),
+            const SizedBox(width: StrideSpace.s12),
+            Expanded(child: Text('devices_support_title'.tr, style: StrideText.subheading)),
           ],
         ),
-        SizedBox(height: StrideSpace.s12),
-        Text(
-          'STRIDE works with sensors that use the standard Bluetooth heart rate service, such as many chest straps and armbands. '
-          'Many watches don\'t share heart rate this way.',
-          style: StrideText.body,
-        ),
-        SizedBox(height: StrideSpace.s8),
-        Text('Not available yet: watch accounts, fitness tracker apps and file import.', style: StrideText.bodySecondary),
+        const SizedBox(height: StrideSpace.s12),
+        Text('devices_support_message'.tr, style: StrideText.body),
+        const SizedBox(height: StrideSpace.s8),
+        Text('devices_support_unavailable'.tr, style: StrideText.bodySecondary),
       ],
     ),
   );
@@ -85,18 +78,18 @@ class _PairedSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SectionHeader(title: 'Your devices'),
+        SectionHeader(title: 'devices_your_devices'.tr),
         const SizedBox(height: StrideSpace.s8),
         paired.when(
           loading: () => const LoadingCard(height: 72),
           error: (e, _) => StatusBanner(
             tone: BannerTone.error,
-            message: 'Couldn\'t load your devices.',
-            actionLabel: 'Try again',
+            message: 'devices_load_error'.tr,
+            actionLabel: 'devices_try_again'.tr,
             onAction: () => ref.invalidate(pairedDevicesProvider),
           ),
           data: (list) => list.isEmpty
-              ? const StrideCard(child: Text('No devices connected yet. Scan below to add a sensor.', style: StrideText.bodySecondary))
+              ? StrideCard(child: Text('devices_none'.tr, style: StrideText.bodySecondary))
               : Column(
                   children: [
                     for (final d in list) ...[_PairedTile(device: d), const SizedBox(height: StrideSpace.s8)],
@@ -120,16 +113,18 @@ class _PairedTile extends ConsumerWidget {
     final connecting = s.connectingRemoteId == device.remoteId;
     final String subtitle;
     if (connecting) {
-      subtitle = 'Connecting…';
+      subtitle = 'devices_connecting'.tr;
     } else if (connectedHere && s.lost) {
-      subtitle = 'Disconnected. Check that the sensor is worn and nearby.';
+      subtitle = 'devices_disconnected'.tr;
     } else if (connectedHere && s.noContact && s.liveBpm == null) {
-      subtitle = 'Connected · sensor isn\'t detecting skin contact';
+      subtitle = 'devices_no_contact'.tr;
     } else if (connectedHere) {
-      subtitle = 'Connected · used automatically on your next run';
+      subtitle = 'devices_connected'.tr;
     } else {
       final at = device.connectedAt;
-      subtitle = at == null ? 'Not connected yet' : 'Last connected ${DateFormat.yMMMd().add_jm().format(DateTime.fromMillisecondsSinceEpoch(at))}';
+      subtitle = at == null
+          ? 'devices_not_connected'.tr
+          : 'devices_last_connected'.trArgs([DateFormat.yMMMd().add_jm().format(DateTime.fromMillisecondsSinceEpoch(at))]);
     }
     return StrideCard(
       child: Column(
@@ -150,14 +145,14 @@ class _PairedTile extends ConsumerWidget {
               ),
               if (connectedHere && !s.lost)
                 Semantics(
-                  label: 'Heart rate ${s.liveBpm ?? 'not available'} bpm',
+                  label: 'devices_hr_semantic'.trArgs([s.liveBpm ?? 'devices_hr_unavailable'.tr]),
                   excludeSemantics: true,
                   child: Text.rich(
                     TextSpan(
                       children: [
                         TextSpan(text: s.liveBpm?.toString() ?? '—', style: StrideText.metricSmall),
                         TextSpan(
-                          text: ' bpm',
+                          text: 'devices_bpm_unit'.tr,
                           style: StrideText.label.copyWith(color: StrideColors.textSecondary),
                         ),
                       ],
@@ -172,16 +167,16 @@ class _PairedTile extends ConsumerWidget {
             spacing: StrideSpace.s8,
             children: [
               if (connectedHere && !s.lost)
-                TextButton(onPressed: ctrl.disconnect, child: const Text('Disconnect'))
+                TextButton(onPressed: ctrl.disconnect, child: Text('devices_disconnect'.tr))
               else
                 TextButton(
                   onPressed: s.busy ? null : () => ctrl.connect(remoteId: device.remoteId, name: device.name),
-                  child: Text(connectedHere && s.lost ? 'Reconnect' : 'Connect'),
+                  child: Text(connectedHere && s.lost ? 'devices_reconnect'.tr : 'devices_connect'.tr),
                 ),
               TextButton(
                 style: TextButton.styleFrom(foregroundColor: StrideColors.error),
                 onPressed: connecting ? null : () => _forget(context, ref),
-                child: const Text('Forget'),
+                child: Text('devices_forget'.tr),
               ),
             ],
           ),
@@ -193,19 +188,19 @@ class _PairedTile extends ConsumerWidget {
   Future<void> _forget(BuildContext context, WidgetRef ref) async {
     final ok = await confirmDialog(
       context,
-      title: 'Forget ${device.name}?',
-      message: 'STRIDE will stop using this sensor. Heart rate already saved in your activities stays.',
-      confirmLabel: 'Forget device',
-      cancelLabel: 'Cancel',
+      title: 'devices_forget_title'.trArgs([device.name]),
+      message: 'devices_forget_message'.tr,
+      confirmLabel: 'devices_forget_confirm'.tr,
+      cancelLabel: 'action_cancel'.tr,
       destructive: true,
       icon: Icons.link_off,
     );
     if (!ok) return;
     try {
       await ref.read(devicesControllerProvider.notifier).forget(device);
-      if (context.mounted) showStrideSnack(context, '${device.name} removed');
+      if (context.mounted) showStrideSnack(context, 'devices_removed'.trArgs([device.name]));
     } catch (_) {
-      if (context.mounted) showStrideSnack(context, 'Couldn\'t remove ${device.name}. Try again.', isError: true);
+      if (context.mounted) showStrideSnack(context, 'devices_remove_failed'.trArgs([device.name]), isError: true);
     }
   }
 }
@@ -219,30 +214,30 @@ class _FindSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SectionHeader(title: 'Find a sensor'),
+        SectionHeader(title: 'devices_find_title'.tr),
         const SizedBox(height: StrideSpace.s8),
         perm.when(
           loading: () => const LoadingCard(height: 96),
           error: (e, _) => StatusBanner(
             tone: BannerTone.error,
-            message: 'Couldn\'t check Bluetooth access.',
-            actionLabel: 'Try again',
+            message: 'devices_bt_check_error'.tr,
+            actionLabel: 'devices_try_again'.tr,
             onAction: () => ref.invalidate(devicesBluetoothPermissionProvider),
           ),
           data: (status) => switch (status) {
             PermStatus.granted || PermStatus.limited => const _AdapterGate(),
             PermStatus.blocked || PermStatus.restricted => PermissionState(
               icon: Icons.bluetooth_disabled,
-              title: 'Bluetooth access is off',
-              message: 'Turn on Bluetooth access for STRIDE in your phone settings to find your sensor. Your runs still record without it.',
-              actionLabel: 'Open phone settings',
+              title: 'devices_bt_access_off_title'.tr,
+              message: 'devices_bt_access_off_message'.tr,
+              actionLabel: 'devices_open_settings'.tr,
               onAction: () => ref.read(permissionsProvider).openSettings(),
             ),
             _ => PermissionState(
               icon: Icons.bluetooth,
-              title: 'Allow Bluetooth',
-              message: 'STRIDE uses Bluetooth only to find and connect your heart rate sensor.',
-              actionLabel: 'Allow Bluetooth',
+              title: 'devices_allow_bt'.tr,
+              message: 'devices_allow_bt_message'.tr,
+              actionLabel: 'devices_allow_bt'.tr,
               onAction: () async {
                 await ref.read(permissionsProvider).request(PermKind.bluetooth);
                 ref.invalidate(devicesBluetoothPermissionProvider);
@@ -263,21 +258,21 @@ class _AdapterGate extends ConsumerWidget {
     final adapter = ref.watch(devicesAdapterProvider);
     return adapter.when(
       loading: () => const LoadingCard(height: 96),
-      error: (e, _) => const StatusBanner(tone: BannerTone.error, message: 'Couldn\'t read Bluetooth status on this phone.'),
+      error: (e, _) => StatusBanner(tone: BannerTone.error, message: 'devices_bt_status_error'.tr),
       data: (a) => switch (a) {
         BleAdapter.on => const _ScanPanel(),
-        BleAdapter.off => const StatusBanner(
+        BleAdapter.off => StatusBanner(
           tone: BannerTone.warning,
           icon: Icons.bluetooth_disabled,
-          title: 'Bluetooth is off',
-          message: 'Turn on Bluetooth in your phone settings to find sensors.',
+          title: 'devices_bt_off_title'.tr,
+          message: 'devices_bt_off_message'.tr,
         ),
-        BleAdapter.unsupported => const StatusBanner(tone: BannerTone.error, message: 'This phone doesn\'t support Bluetooth LE sensors.'),
+        BleAdapter.unsupported => StatusBanner(tone: BannerTone.error, message: 'devices_bt_unsupported'.tr),
         BleAdapter.unauthorized => PermissionState(
           icon: Icons.bluetooth_disabled,
-          title: 'Bluetooth access is off',
-          message: 'Turn on Bluetooth access for STRIDE in your phone settings to find your sensor.',
-          actionLabel: 'Open phone settings',
+          title: 'devices_bt_access_off_title'.tr,
+          message: 'devices_bt_unauthorized_message'.tr,
+          actionLabel: 'devices_open_settings'.tr,
           onAction: () => ref.read(permissionsProvider).openSettings(),
         ),
         BleAdapter.unknown => const LoadingCard(height: 96),
@@ -306,25 +301,25 @@ class _ScanPanel extends ConsumerWidget {
           StatusBanner(
             tone: BannerTone.error,
             message: s.connectError!,
-            actionLabel: s.connectErrorRemoteId != null ? 'Retry' : null,
+            actionLabel: s.connectErrorRemoteId != null ? 'action_retry'.tr : null,
             onAction: s.connectErrorRemoteId != null ? ctrl.retryConnect : null,
           ),
           const SizedBox(height: StrideSpace.s12),
         ],
         if (s.scanError != null) ...[StatusBanner(tone: BannerTone.error, message: s.scanError!), const SizedBox(height: StrideSpace.s12)],
-        const Text('Wear your sensor so it wakes up, keep it close to your phone and disconnect it from other apps.', style: StrideText.bodySecondary),
+        Text('devices_scan_hint'.tr, style: StrideText.bodySecondary),
         const SizedBox(height: StrideSpace.s12),
         if (s.scan == ScanPhase.scanning)
-          SecondaryButton(label: 'Stop scanning', icon: Icons.stop, onPressed: ctrl.stopScan)
+          SecondaryButton(label: 'devices_stop_scan'.tr, icon: Icons.stop, onPressed: ctrl.stopScan)
         else
-          PrimaryButton(label: 'Scan for sensors', icon: Icons.bluetooth_searching, onPressed: s.busy ? null : ctrl.startScan),
+          PrimaryButton(label: 'devices_scan'.tr, icon: Icons.bluetooth_searching, onPressed: s.busy ? null : ctrl.startScan),
         if (s.scan == ScanPhase.scanning) ...[
           const SizedBox(height: StrideSpace.s12),
-          const Row(
+          Row(
             children: [
-              SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-              SizedBox(width: StrideSpace.s12),
-              Expanded(child: Text('Looking for heart rate sensors…', style: StrideText.body)),
+              const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+              const SizedBox(width: StrideSpace.s12),
+              Expanded(child: Text('devices_scanning'.tr, style: StrideText.body)),
             ],
           ),
         ],
@@ -336,13 +331,13 @@ class _ScanPanel extends ConsumerWidget {
                 SettingsRow(
                   icon: Icons.monitor_heart_outlined,
                   title: f.displayName,
-                  subtitle: s.connectingRemoteId == f.remoteId ? 'Connecting…' : 'Heart rate sensor',
+                  subtitle: s.connectingRemoteId == f.remoteId ? 'devices_connecting'.tr : 'devices_hr_sensor'.tr,
                   showChevron: false,
                   trailing: s.connectingRemoteId == f.remoteId
                       ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
                       : TextButton(
                           onPressed: s.busy ? null : () => ctrl.connect(remoteId: f.remoteId, name: f.displayName),
-                          child: const Text('Connect'),
+                          child: Text('devices_connect'.tr),
                         ),
                 ),
             ],
@@ -353,14 +348,9 @@ class _ScanPanel extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('No new sensors found', style: StrideText.subheading),
+                Text('devices_none_found_title'.tr, style: StrideText.subheading),
                 const SizedBox(height: StrideSpace.s4),
-                Text(
-                  s.found.isEmpty
-                      ? 'Make sure your sensor is worn, nearby and not connected to another app, then scan again.'
-                      : 'The sensors nearby are already in your devices.',
-                  style: StrideText.bodySecondary,
-                ),
+                Text(s.found.isEmpty ? 'devices_none_found_message'.tr : 'devices_all_paired'.tr, style: StrideText.bodySecondary),
               ],
             ),
           ),

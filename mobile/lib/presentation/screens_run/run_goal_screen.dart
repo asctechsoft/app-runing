@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../controller/providers.dart';
+import '../../utils/l10n.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
 import '../../models/data_models/activity.dart';
@@ -45,19 +46,19 @@ class _RunGoalScreenState extends ConsumerState<RunGoalScreen> {
     String num(double v) => v == v.roundToDouble() ? v.round().toString() : v.toStringAsFixed(1);
 
     return StrideScreen(
-      title: 'Run goal',
+      title: 'run_goal_title'.tr,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Set a target for this activity. Your daily goals don\'t change.', style: StrideText.bodySecondary),
+          Text('run_goal_intro'.tr, style: StrideText.bodySecondary),
           const SizedBox(height: 16),
           StrideSegmented<RunGoalType>(
             values: RunGoalType.values,
             selected: _type,
             labelOf: (t) => switch (t) {
-              RunGoalType.free => 'Free',
-              RunGoalType.distance => 'Distance',
-              RunGoalType.time => 'Time',
+              RunGoalType.free => 'run_goal_tab_free'.tr,
+              RunGoalType.distance => 'run_label_distance'.tr,
+              RunGoalType.time => 'run_goal_tab_time'.tr,
             },
             onChanged: (t) => setState(() => _type = t),
           ),
@@ -68,7 +69,7 @@ class _RunGoalScreenState extends ConsumerState<RunGoalScreen> {
                 children: [
                   const IconBadge(icon: Icons.all_inclusive),
                   const SizedBox(width: 12),
-                  Expanded(child: Text('Run as long as you like. Finish whenever you\'re ready.', style: StrideText.body)),
+                  Expanded(child: Text('run_goal_free_desc'.tr, style: StrideText.body)),
                 ],
               ),
             ),
@@ -77,13 +78,13 @@ class _RunGoalScreenState extends ConsumerState<RunGoalScreen> {
               child: ValueStepper(
                 valueText: num(_distanceUnits),
                 unitLabel: fmt.distanceUnitLabel,
-                semanticLabel: 'Distance goal',
+                semanticLabel: 'run_goal_distance_semantic'.tr,
                 onDecrement: _distanceUnits > 0.5 ? () => setState(() => _distanceUnits = (_distanceUnits - 0.5).clamp(0.5, 100)) : null,
                 onIncrement: _distanceUnits < 100 ? () => setState(() => _distanceUnits = (_distanceUnits + 0.5).clamp(0.5, 100)) : null,
               ),
             ),
             const SizedBox(height: 12),
-            Text('Quick presets', style: StrideText.caption),
+            Text('run_goal_presets'.tr, style: StrideText.caption),
             PresetChips<double>(
               values: presets,
               selected: presets.contains(_distanceUnits) ? _distanceUnits : null,
@@ -95,20 +96,25 @@ class _RunGoalScreenState extends ConsumerState<RunGoalScreen> {
             StrideCard(
               child: ValueStepper(
                 valueText: '$_minutes',
-                unitLabel: 'minutes',
-                semanticLabel: 'Time goal',
+                unitLabel: 'run_goal_minutes'.tr,
+                semanticLabel: 'run_goal_time_semantic'.tr,
                 onDecrement: _minutes > 5 ? () => setState(() => _minutes -= 5) : null,
                 onIncrement: _minutes < 600 ? () => setState(() => _minutes += 5) : null,
               ),
             ),
             const SizedBox(height: 12),
-            Text('Quick presets', style: StrideText.caption),
-            PresetChips<int>(values: const [15, 30, 45, 60, 90], selected: _minutes, labelOf: (v) => '$v min', onSelected: (v) => setState(() => _minutes = v)),
+            Text('run_goal_presets'.tr, style: StrideText.caption),
+            PresetChips<int>(
+              values: const [15, 30, 45, 60, 90],
+              selected: _minutes,
+              labelOf: (v) => 'run_goal_min_short'.trArgs([v]),
+              onSelected: (v) => setState(() => _minutes = v),
+            ),
           ],
         ],
       ),
       bottom: PrimaryButton(
-        label: 'Save',
+        label: 'run_save'.tr,
         onPressed: () {
           final goal = switch (_type) {
             RunGoalType.free => const RunGoal.free(),

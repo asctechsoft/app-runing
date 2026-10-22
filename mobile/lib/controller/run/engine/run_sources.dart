@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../utils/l10n.dart';
 import '../../../utils/logger.dart';
 import '../../providers.dart';
 import '../../../models/data_models/activity.dart';
@@ -55,10 +56,10 @@ class GeolocatorRunLocationSource implements RunLocationSource {
         distanceFilter: 0,
         intervalDuration: const Duration(seconds: 1),
         foregroundNotificationConfig: recording
-            ? const geo.ForegroundNotificationConfig(
-                notificationTitle: 'STRIDE is recording your activity',
-                notificationText: 'Location is used only while this activity is recording.',
-                notificationChannelName: 'Activity recording',
+            ? geo.ForegroundNotificationConfig(
+                notificationTitle: 'run_notif_title'.tr,
+                notificationText: 'run_notif_text'.tr,
+                notificationChannelName: 'run_notif_channel'.tr,
                 enableWakeLock: true,
                 setOngoing: true,
               )

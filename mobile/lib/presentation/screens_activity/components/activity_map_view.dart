@@ -7,6 +7,7 @@ import '../../../controller/providers.dart';
 import '../../../values/tokens.dart';
 import '../../../controller/activity/activity_providers.dart';
 import '../../../utils/route_geometry.dart';
+import '../../../utils/l10n.dart';
 
 /// Bản đồ tuyến: segment vẽ riêng (không nối qua pause/gap), marker start + cờ đích.
 /// Khi tile tắt (test) hoặc tuyến rỗng → vẽ sơ đồ tĩnh bằng painter; offline tile lỗi thì polyline vẫn hiện.
@@ -81,7 +82,7 @@ class ActivityRouteMapState extends ConsumerState<ActivityRouteMap> {
               width: 22,
               height: 22,
               child: Semantics(
-                label: 'Start',
+                label: 'activity_map_start'.tr,
                 child: Container(
                   decoration: BoxDecoration(
                     color: StrideColors.primary,
@@ -96,7 +97,7 @@ class ActivityRouteMapState extends ConsumerState<ActivityRouteMap> {
               width: 30,
               height: 30,
               child: Semantics(
-                label: 'Finish',
+                label: 'activity_map_finish'.tr,
                 child: Container(
                   decoration: BoxDecoration(
                     color: StrideColors.surface,

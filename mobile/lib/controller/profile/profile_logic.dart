@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 import '../../configs/env.dart';
+import '../../utils/l10n.dart';
 import '../../services/application/firebase_providers.dart';
 import '../../utils/formatters.dart';
 import '../../services/native/permission_coordinator.dart';
@@ -16,7 +17,7 @@ import '../../models/data_models/steps.dart';
 /// Phiên bản app — khớp `version: 1.0.0+1` trong pubspec (không thêm package đọc version).
 const String profileAppVersion = '1.0.0';
 const String profileAppBuild = '1';
-String get profileVersionLabel => 'Version $profileAppVersion ($profileAppBuild)';
+String get profileVersionLabel => 'profile_version_label'.trArgs([profileAppVersion, profileAppBuild]);
 
 // ---------------------------------------------------------------------------
 // Khóa kv dùng chung với các feature khác.
@@ -78,8 +79,8 @@ class MeasureResult {
 
 String? validateDisplayName(String v) {
   final t = v.trim();
-  if (t.isEmpty) return 'Enter your name';
-  if (t.length > 60) return 'Use 60 characters or fewer';
+  if (t.isEmpty) return 'profile_err_name_required'.tr;
+  if (t.length > 60) return 'profile_err_name_too_long'.tr;
   return null;
 }
 
@@ -91,17 +92,17 @@ MeasureResult parseHeightInput(HeightUnit unit, String primary, [String secondar
   double cm;
   if (unit == HeightUnit.cm) {
     final v = _num(primary);
-    if (v == null) return const MeasureResult(null, 'Enter a number');
+    if (v == null) return MeasureResult(null, 'profile_err_enter_number'.tr);
     cm = v;
   } else {
     final ft = primary.trim().isEmpty ? 0.0 : _num(primary);
     final inch = secondary.trim().isEmpty ? 0.0 : _num(secondary);
-    if (ft == null || inch == null || ft != ft.roundToDouble()) return const MeasureResult(null, 'Enter whole feet and inches');
-    if (inch < 0 || inch >= 12) return const MeasureResult(null, 'Inches must be between 0 and 11');
+    if (ft == null || inch == null || ft != ft.roundToDouble()) return MeasureResult(null, 'profile_err_whole_feet'.tr);
+    if (inch < 0 || inch >= 12) return MeasureResult(null, 'profile_err_inches_range'.tr);
     cm = ftInToCm(ft.toInt(), inch);
   }
   if (cm < minHeightCm || cm > maxHeightCm) {
-    return MeasureResult(null, unit == HeightUnit.cm ? 'Enter a height between 100 and 250 cm' : 'Enter a height between 3′4″ and 8′2″');
+    return MeasureResult(null, unit == HeightUnit.cm ? 'profile_err_height_cm'.tr : 'profile_err_height_ftin'.tr);
   }
   return MeasureResult(cm, null);
 }
@@ -110,10 +111,10 @@ MeasureResult parseHeightInput(HeightUnit unit, String primary, [String secondar
 MeasureResult parseWeightInput(WeightUnit unit, String text) {
   if (text.trim().isEmpty) return const MeasureResult(null, null);
   final v = _num(text);
-  if (v == null) return const MeasureResult(null, 'Enter a number');
+  if (v == null) return MeasureResult(null, 'profile_err_enter_number'.tr);
   final kg = unit == WeightUnit.kg ? v : lbToKg(v);
   if (kg < minWeightKg || kg > maxWeightKg) {
-    return MeasureResult(null, unit == WeightUnit.kg ? 'Enter a weight between 25 and 300 kg' : 'Enter a weight between 55 and 661 lb');
+    return MeasureResult(null, unit == WeightUnit.kg ? 'profile_err_weight_kg'.tr : 'profile_err_weight_lb'.tr);
   }
   return MeasureResult(kg, null);
 }
@@ -123,23 +124,23 @@ MeasureResult parseWeightInput(WeightUnit unit, String text) {
 double? keepStoredIfUnchanged({required double? stored, required bool unchanged, required double? parsed}) => unchanged ? stored : parsed;
 
 String activityLevelLabel(ActivityLevel l) => switch (l) {
-  ActivityLevel.newbie => 'New to running',
-  ActivityLevel.occasional => 'Occasional',
-  ActivityLevel.regular => 'Regular',
-  ActivityLevel.active => 'Very active',
+  ActivityLevel.newbie => 'profile_level_newbie'.tr,
+  ActivityLevel.occasional => 'profile_level_occasional'.tr,
+  ActivityLevel.regular => 'profile_level_regular'.tr,
+  ActivityLevel.active => 'profile_level_active'.tr,
 };
 
 String activityLevelHelp(ActivityLevel l) => switch (l) {
-  ActivityLevel.newbie => 'I’m just getting started.',
-  ActivityLevel.occasional => 'I run now and then.',
-  ActivityLevel.regular => 'I run regularly, a few times per week.',
-  ActivityLevel.active => 'I run most days.',
+  ActivityLevel.newbie => 'profile_level_newbie_help'.tr,
+  ActivityLevel.occasional => 'profile_level_occasional_help'.tr,
+  ActivityLevel.regular => 'profile_level_regular_help'.tr,
+  ActivityLevel.active => 'profile_level_active_help'.tr,
 };
 
 String weekStartLabel(int d) => switch (d) {
-  DateTime.sunday => 'Sunday',
-  DateTime.saturday => 'Saturday',
-  _ => 'Monday',
+  DateTime.sunday => 'profile_weekday_sunday'.tr,
+  DateTime.saturday => 'profile_weekday_saturday'.tr,
+  _ => 'profile_weekday_monday'.tr,
 };
 
 /// Áp dụng thay đổi đơn vị/ngôn ngữ — không đụng tới số đo hay hoạt động đã lưu.
@@ -204,10 +205,10 @@ List<StepSource> reorderVisible(List<StepSource> full, List<StepSource> visibleO
 }
 
 String stepSourceLabel(StepSource s) => switch (s) {
-  StepSource.phoneSensor => 'Phone',
-  StepSource.healthConnect => 'Health Connect',
-  StepSource.healthKit => 'Apple Health',
-  StepSource.device => 'Connected devices',
+  StepSource.phoneSensor => 'profile_source_phone'.tr,
+  StepSource.healthConnect => 'profile_source_health_connect'.tr,
+  StepSource.healthKit => 'profile_source_apple_health'.tr,
+  StepSource.device => 'profile_source_devices'.tr,
 };
 
 // ---------------------------------------------------------------------------
@@ -302,11 +303,11 @@ final profileVoiceProvider = Provider<ProfileVoice>((ref) => FlutterTtsProfileVo
 
 /// Câu đọc thử theo cài đặt hiện tại (dùng format thật, không số liệu giả từ hoạt động).
 String voiceTestPhrase(AudioCueSettings cues, StrideFormat fmt) {
-  final parts = <String>['Audio cues are on.'];
-  final unit = fmt.distanceUnit == DistanceUnit.km ? 'kilometer' : 'mile';
-  parts.add('You will hear an update every ${_trimNum(cueIntervalInUnit(cues.everyKm, fmt.distanceUnit))} $unit.');
-  if (cues.announceTime) parts.add('Time will be announced.');
-  if (cues.announcePace) parts.add('Pace will be announced.');
+  final parts = <String>['profile_voice_on'.tr];
+  final unit = fmt.distanceUnit == DistanceUnit.km ? 'profile_voice_unit_km'.tr : 'profile_voice_unit_mile'.tr;
+  parts.add('profile_voice_interval'.trArgs([_trimNum(cueIntervalInUnit(cues.everyKm, fmt.distanceUnit)), unit]));
+  if (cues.announceTime) parts.add('profile_voice_time'.tr);
+  if (cues.announcePace) parts.add('profile_voice_pace'.tr);
   return parts.join(' ');
 }
 

@@ -11,6 +11,7 @@ import '../services/application/firebase_providers.dart';
 import '../services/application/api_client.dart';
 import '../controller/providers.dart';
 import '../utils/clock.dart';
+import '../utils/l10n.dart';
 import 'settings_repository.dart';
 import 'auth_repository.dart';
 
@@ -246,7 +247,7 @@ class AccountRepository {
       final snap = await _fsFn().collection('users').doc(uid).get();
       final at = (snap.data()?['deletionRequestedAt'] as num?)?.toInt();
       if (at == null) return null;
-      return AccountJob(id: 'delete-$uid', kind: 'deleteAccount', status: 'failed', createdAt: at, error: 'Deletion was interrupted. Try again.');
+      return AccountJob(id: 'delete-$uid', kind: 'deleteAccount', status: 'failed', createdAt: at, error: 'account_deletion_interrupted'.tr);
     } catch (e) {
       final err = mapFirebaseError(e);
       if (err.isNotFound) return null;
@@ -259,30 +260,30 @@ class AccountRepository {
 String accountErrorMessage(Object e) {
   if (e is FirebaseException) e = mapFirebaseError(e);
   if (e is ApiException) {
-    if (e.code == 'not_configured') return "Accounts aren't available in this build.";
-    if (e.isNetwork) return "You're offline. Connect to the internet and try again.";
+    if (e.code == 'not_configured') return 'auth_err_not_configured'.tr;
+    if (e.isNetwork) return 'auth_err_offline'.tr;
     switch (e.code) {
       case 'invalid_credentials':
-        return 'That password is incorrect.';
+        return 'auth_err_wrong_password'.tr;
       case 'reauth_required':
-        return 'Confirm your password again to continue.';
+        return 'auth_err_reauth_required'.tr;
       case 'export_not_ready':
-        return 'Your export is still being prepared.';
+        return 'account_err_export_not_ready'.tr;
       case 'export_expired':
-        return 'This export has expired. Create a new one.';
+        return 'account_err_export_expired'.tr;
       case 'rate_limited':
-        return 'Too many attempts. Wait a minute and try again.';
+        return 'auth_err_rate_limited'.tr;
       case 'account_disabled':
-        return 'This account is being deleted or has been deleted.';
+        return 'auth_err_account_disabled'.tr;
       case 'validation_error':
-        return 'Some details are not valid. Check and try again.';
+        return 'auth_err_validation'.tr;
       case 'forbidden':
-        return "You don't have permission to do that.";
+        return 'account_err_forbidden'.tr;
       case 'unauthorized':
       case 'invalid_token':
-        return 'Your session has expired. Log in again.';
+        return 'account_err_session_expired'.tr;
     }
-    if (e.status >= 500) return 'Something went wrong on our side. Please try again.';
+    if (e.status >= 500) return 'auth_err_server'.tr;
   }
-  return 'Something went wrong. Please try again.';
+  return 'auth_err_generic'.tr;
 }

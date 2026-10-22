@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../services/application/firebase_providers.dart';
+import '../../utils/l10n.dart';
 import '../../services/application/api_client.dart';
 import '../../services/native/permission_coordinator.dart';
 import '../../controller/providers.dart';
@@ -153,16 +154,16 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
     try {
       final text = await collectDiagnostics(ref);
       await Clipboard.setData(ClipboardData(text: text));
-      if (mounted) showStrideSnack(context, 'Diagnostics copied');
+      if (mounted) showStrideSnack(context, 'profile_help_diag_copied'.tr);
     } catch (_) {
-      if (mounted) showStrideSnack(context, 'Couldn’t collect diagnostics. Try again.', isError: true);
+      if (mounted) showStrideSnack(context, 'profile_help_diag_error'.tr, isError: true);
     }
   });
 
   Future<void> _shareFeedback() => _guard.run(() async {
     final text = _feedback.text.trim();
     if (text.isEmpty) {
-      setState(() => _feedbackError = 'Tell us what happened');
+      setState(() => _feedbackError = 'profile_help_feedback_empty'.tr);
       return;
     }
     try {
@@ -171,21 +172,21 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
       if (!mounted) return;
       if (result == FeedbackResult.sent) {
         _feedback.clear();
-        showStrideSnack(context, 'Feedback sent. Thank you!');
+        showStrideSnack(context, 'profile_help_feedback_sent'.tr);
         return;
       }
       // Không gửi được lên server: để người dùng tự chọn app gửi (không báo "đã gửi" khi chưa chắc).
       final body = diagnostics == null ? text : '$text\n\n---\n$diagnostics';
-      final shared = await ref.read(profileShareProvider).shareText(body, subject: 'STRIDE feedback');
+      final shared = await ref.read(profileShareProvider).shareText(body, subject: 'profile_help_feedback_subject'.tr);
       if (!mounted) return;
       if (shared) {
         _feedback.clear();
-        showStrideSnack(context, 'Feedback handed to the app you chose');
+        showStrideSnack(context, 'profile_help_feedback_handed'.tr);
       }
     } on ApiException catch (e) {
-      if (mounted) showStrideSnack(context, e.status == 429 ? 'Too many messages. Try again later.' : 'Couldn’t send feedback. Try again.', isError: true);
+      if (mounted) showStrideSnack(context, e.status == 429 ? 'profile_help_too_many'.tr : 'profile_help_send_error'.tr, isError: true);
     } catch (_) {
-      if (mounted) showStrideSnack(context, 'Couldn’t send feedback. Copy diagnostics instead.', isError: true);
+      if (mounted) showStrideSnack(context, 'profile_help_send_error_copy'.tr, isError: true);
     }
   });
 
@@ -211,58 +212,51 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
   Widget build(BuildContext context) {
     final isAndroid = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
     final openSettings = OutlineButton(
-      label: 'Open app settings',
+      label: 'profile_help_open_settings'.tr,
       icon: Icons.settings_outlined,
       onPressed: () => ref.read(permissionsProvider).openSettings(),
     );
     return StrideScreen(
-      title: 'Help',
+      title: 'profile_help_title'.tr,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Gap(8),
-          const SectionHeader(title: 'Guides'),
+          SectionHeader(title: 'profile_help_guides'.tr),
           SettingsGroup(
             children: [
               SettingsRow(
                 icon: Icons.gps_fixed,
-                title: 'GPS accuracy',
-                subtitle: 'Get a better signal before you start',
-                onTap: () => _guide('GPS accuracy', const [
-                  'Wait for the GPS indicator to show a good signal before you start. Open sky gives the best results.',
-                  'Tall buildings, tunnels and dense trees can make distance jump or drop. STRIDE filters inaccurate points and leaves gaps instead of guessing.',
-                  'Allow precise location while using the app. Approximate location can’t record a route.',
-                ], action: openSettings),
+                title: 'profile_help_gps_title'.tr,
+                subtitle: 'profile_help_gps_subtitle'.tr,
+                onTap: () =>
+                    _guide('profile_help_gps_title'.tr, ['profile_help_gps_p1'.tr, 'profile_help_gps_p2'.tr, 'profile_help_gps_p3'.tr], action: openSettings),
               ),
               SettingsRow(
                 icon: Icons.directions_walk,
-                title: 'Step counting',
-                subtitle: 'How daily steps are counted',
-                onTap: () => _guide('Step counting', const [
-                  'Daily steps come from your phone’s motion sensor and are separate from recorded runs.',
-                  'Carry your phone for steps to count. If motion access is off, STRIDE shows no data instead of zero.',
-                  'Distance and calories from steps are estimated.',
+                title: 'profile_help_steps_title'.tr,
+                subtitle: 'profile_help_steps_subtitle'.tr,
+                onTap: () => _guide('profile_help_steps_title'.tr, [
+                  'profile_help_steps_p1'.tr,
+                  'profile_help_steps_p2'.tr,
+                  'profile_help_steps_p3'.tr,
                 ], action: openSettings),
               ),
               SettingsRow(
                 icon: Icons.battery_alert_outlined,
-                title: 'Battery optimization',
-                subtitle: 'Keep recording when the screen is off',
-                onTap: () => _guide('Battery optimization', [
-                  if (isAndroid) ...[
-                    'Some Android phones stop apps in the background to save battery. This can pause GPS recording or step updates when the screen is off.',
-                    'In app settings, open Battery and choose Unrestricted (or turn off battery optimization) for STRIDE. The name varies by phone maker.',
-                  ] else
-                    'Keep Background App Refresh on for STRIDE and allow location while using the app so recording continues when the screen is locked.',
-                  'STRIDE only uses GPS while you’re recording an activity.',
+                title: 'profile_help_battery_title'.tr,
+                subtitle: 'profile_help_battery_subtitle'.tr,
+                onTap: () => _guide('profile_help_battery_title'.tr, [
+                  if (isAndroid) ...['profile_help_battery_android_p1'.tr, 'profile_help_battery_android_p2'.tr] else 'profile_help_battery_ios'.tr,
+                  'profile_help_battery_common'.tr,
                 ], action: openSettings),
               ),
             ],
           ),
           const Gap(16),
           ProfileSection(
-            title: 'Send feedback',
-            subtitle: 'Opens your share sheet so you can send it by email or another app. Nothing is sent until you choose.',
+            title: 'profile_help_send_feedback'.tr,
+            subtitle: 'profile_help_send_subtitle'.tr,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -272,19 +266,19 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
                   minLines: 3,
                   maxLines: 6,
                   maxLength: 2000,
-                  decoration: InputDecoration(labelText: 'What happened?', errorText: _feedbackError),
+                  decoration: InputDecoration(labelText: 'profile_help_what_happened'.tr, errorText: _feedbackError),
                   onChanged: (_) {
                     if (_feedbackError != null) setState(() => _feedbackError = null);
                   },
                 ),
                 ProfileSwitchRow(
-                  title: 'Include diagnostics',
-                  subtitle: 'App version, settings and permission status. No location or account tokens.',
+                  title: 'profile_help_include_diag'.tr,
+                  subtitle: 'profile_help_include_diag_subtitle'.tr,
                   value: _includeDiagnostics,
                   onChanged: (v) => setState(() => _includeDiagnostics = v),
                 ),
                 const Gap(8),
-                PrimaryButton(label: 'Send feedback', icon: Icons.send_outlined, onPressed: _shareFeedback),
+                PrimaryButton(label: 'profile_help_send_feedback'.tr, icon: Icons.send_outlined, onPressed: _shareFeedback),
               ],
             ),
           ),
@@ -292,12 +286,12 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
             children: [
               SettingsRow(
                 icon: Icons.content_copy,
-                title: 'Copy diagnostics',
-                subtitle: 'No location, email or account tokens',
+                title: 'profile_help_copy_diag'.tr,
+                subtitle: 'profile_help_copy_diag_subtitle'.tr,
                 showChevron: false,
                 onTap: _copyDiagnostics,
               ),
-              SettingsRow(icon: Icons.info_outline, title: 'App version', subtitle: profileVersionLabel, showChevron: false),
+              SettingsRow(icon: Icons.info_outline, title: 'profile_help_app_version'.tr, subtitle: profileVersionLabel, showChevron: false),
             ],
           ),
         ],

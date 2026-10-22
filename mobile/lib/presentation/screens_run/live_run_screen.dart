@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../utils/l10n.dart';
 import '../../values/routes.dart';
 import '../../utils/formatters.dart';
 import '../../controller/providers.dart';
@@ -85,14 +86,14 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
               children: [
                 const IconBadge(icon: Icons.pause, size: 48),
                 const SizedBox(height: 12),
-                Text('Finish this run?', style: StrideText.heading, textAlign: TextAlign.center),
+                Text('run_live_finish_title'.tr, style: StrideText.heading, textAlign: TextAlign.center),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     Expanded(
                       child: MetricTile(
-                        label: 'Distance',
+                        label: 'run_label_distance'.tr,
                         value: fmt.distanceValue(st.distanceM),
                         unit: fmt.distanceUnitLabel,
                         center: true,
@@ -100,16 +101,16 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
                       ),
                     ),
                     Expanded(
-                      child: MetricTile(label: 'Moving time', value: formatDuration(ctl.movingMsNow()), center: true),
+                      child: MetricTile(label: 'run_label_moving_time'.tr, value: formatDuration(ctl.movingMsNow()), center: true),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                Text('You can review and save your activity next.', style: StrideText.bodySecondary, textAlign: TextAlign.center),
+                Text('run_live_finish_hint'.tr, style: StrideText.bodySecondary, textAlign: TextAlign.center),
                 const SizedBox(height: 20),
-                PrimaryButton(label: 'Finish & review', onPressed: () => Navigator.of(ctx).pop(true)),
+                PrimaryButton(label: 'run_live_finish_confirm'.tr, onPressed: () => Navigator.of(ctx).pop(true)),
                 const SizedBox(height: 8),
-                SecondaryButton(label: 'Keep paused', onPressed: () => Navigator.of(ctx).pop(false)),
+                SecondaryButton(label: 'run_live_keep_paused'.tr, onPressed: () => Navigator.of(ctx).pop(false)),
               ],
             ),
           ),
@@ -122,7 +123,7 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
         await ctl.finish();
         if (mounted) context.go(Routes.results);
       } catch (e) {
-        if (mounted) showStrideSnack(context, 'Couldn\'t finish the activity. Your recording is safe — try again.', isError: true);
+        if (mounted) showStrideSnack(context, 'run_live_finish_failed'.tr, isError: true);
       }
     });
   }
@@ -135,7 +136,7 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
     final settings = ref.watch(settingsProvider).value;
 
     ref.listen(runSessionProvider.select((s) => s.targetReached), (prev, next) {
-      if (prev == false && next == true) showStrideSnack(context, 'Target reached! Keep going, or finish when you\'re ready.');
+      if (prev == false && next == true) showStrideSnack(context, 'run_live_target_reached'.tr);
     });
     ref.listen(runSessionProvider.select((s) => s.phase), (prev, next) {
       if (next != SessionPhase.recording && next != SessionPhase.paused) _redirectIfNotActive();
@@ -169,7 +170,7 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         // Back không kết thúc phiên ghi.
-        if (!st.locked) showStrideSnack(context, 'Pause first, then hold to finish.');
+        if (!st.locked) showStrideSnack(context, 'run_live_back_hint'.tr);
       },
       child: body,
     );
@@ -199,7 +200,7 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
                         dense: true,
                         values: const [0, 1],
                         selected: _page,
-                        labelOf: (i) => i == 0 ? 'Metrics' : 'Map',
+                        labelOf: (i) => i == 0 ? 'run_live_tab_metrics'.tr : 'run_live_tab_map'.tr,
                         onChanged: _goPage,
                       ),
                     ),
@@ -211,10 +212,8 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
                 padding: EdgeInsets.fromLTRB(g, 8, g, 0),
                 child: StatusBanner(
                   tone: BannerTone.warning,
-                  title: 'GPS signal lost',
-                  message: st.lastFixWallMs == null
-                      ? 'Time is still recording. Distance resumes when GPS returns.'
-                      : 'Last known location at ${clockTime(st.lastFixWallMs!)}. Time is still recording.',
+                  title: 'run_live_gps_lost_title'.tr,
+                  message: st.lastFixWallMs == null ? 'run_live_gps_lost_no_fix'.tr : 'run_live_gps_lost_last_known'.trArgs([clockTime(st.lastFixWallMs!)]),
                 ),
               ),
             if (st.interval != null)
@@ -252,13 +251,13 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
                                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                 children: [
                                   Expanded(
-                                    child: RunMetric(value: m.distance, unit: m.unit, label: 'Distance', estimated: m.estimatedDistance),
+                                    child: RunMetric(value: m.distance, unit: m.unit, label: 'run_label_distance'.tr, estimated: m.estimatedDistance),
                                   ),
                                   Expanded(
-                                    child: RunMetric(value: m.time, label: 'Moving time'),
+                                    child: RunMetric(value: m.time, label: 'run_label_moving_time'.tr),
                                   ),
                                   Expanded(
-                                    child: RunMetric(value: m.avgPace, unit: m.avgPace == missingValue ? null : m.paceUnit, label: 'Avg. pace'),
+                                    child: RunMetric(value: m.avgPace, unit: m.avgPace == missingValue ? null : m.paceUnit, label: 'run_label_avg_pace'.tr),
                                   ),
                                 ],
                               ),
@@ -286,13 +285,13 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
               child: Row(
                 children: [
                   const Expanded(child: SizedBox()),
-                  RoundActionButton(icon: Icons.pause, label: 'Pause', size: 80, onPressed: ctl.pause),
+                  RoundActionButton(icon: Icons.pause, label: 'run_live_pause'.tr, size: 80, onPressed: ctl.pause),
                   Expanded(
                     child: Align(
                       alignment: Alignment.centerRight,
                       child: SizedBox(
                         height: 52,
-                        child: OutlineButton(label: 'Lock', icon: Icons.lock_outline, expand: false, onPressed: ctl.lock),
+                        child: OutlineButton(label: 'run_live_lock'.tr, icon: Icons.lock_outline, expand: false, onPressed: ctl.lock),
                       ),
                     ),
                   ),
@@ -344,18 +343,18 @@ class _MetricsPage extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                RunMetric(value: m.time, label: 'Moving time', big: true),
+                RunMetric(value: m.time, label: 'run_label_moving_time'.tr, big: true),
                 const SizedBox(height: 24),
-                RunMetric(value: m.distance, unit: m.unit, label: 'Distance', big: true, estimated: m.estimatedDistance),
+                RunMetric(value: m.distance, unit: m.unit, label: 'run_label_distance'.tr, big: true, estimated: m.estimatedDistance),
                 const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     Expanded(
-                      child: RunMetric(value: m.avgPace, unit: m.avgPace == missingValue ? null : m.paceUnit, label: 'Avg. pace'),
+                      child: RunMetric(value: m.avgPace, unit: m.avgPace == missingValue ? null : m.paceUnit, label: 'run_label_avg_pace'.tr),
                     ),
                     Expanded(
-                      child: RunMetric(value: m.curPace, unit: m.curPace == missingValue ? null : m.paceUnit, label: 'Current pace'),
+                      child: RunMetric(value: m.curPace, unit: m.curPace == missingValue ? null : m.paceUnit, label: 'run_label_current_pace'.tr),
                     ),
                   ],
                 ),
@@ -363,10 +362,15 @@ class _MetricsPage extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: RunMetric(value: m.steps, label: 'Steps'),
+                      child: RunMetric(value: m.steps, label: 'run_label_steps'.tr),
                     ),
                     Expanded(
-                      child: RunMetric(value: m.kcal, unit: m.kcal == missingValue ? null : 'kcal', label: 'Calories', estimated: true),
+                      child: RunMetric(
+                        value: m.kcal,
+                        unit: m.kcal == missingValue ? null : 'run_unit_kcal'.tr,
+                        label: 'run_label_calories'.tr,
+                        estimated: true,
+                      ),
                     ),
                   ],
                 ),
@@ -387,7 +391,7 @@ class _IntervalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cur = status.current;
     return SageCard(
-      semanticLabel: cur == null ? 'Workout complete' : '${cur.label}, ${formatDuration(status.position.remainingMs)} left',
+      semanticLabel: cur == null ? 'run_interval_complete'.tr : 'run_interval_left'.trArgs([cur.label, formatDuration(status.position.remainingMs)]),
       child: Row(
         children: [
           IconBadge(icon: cur == null ? Icons.check : Icons.timer_outlined, size: 36),
@@ -396,9 +400,11 @@ class _IntervalCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(cur?.label ?? 'Workout complete', style: StrideText.label),
+                Text(cur?.label ?? 'run_interval_complete'.tr, style: StrideText.label),
                 Text(
-                  cur == null ? 'Keep going, or finish when you\'re ready.' : (status.next == null ? 'Last phase' : 'Next: ${status.next!.label}'),
+                  cur == null
+                      ? 'run_interval_keep_going'.tr
+                      : (status.next == null ? 'run_interval_last'.tr : 'run_interval_next'.trArgs([status.next!.label])),
                   style: StrideText.caption,
                 ),
               ],
@@ -431,7 +437,7 @@ class _PausedView extends StatelessWidget {
             const SizedBox(height: 12),
             Semantics(
               liveRegion: true,
-              label: auto ? 'Paused automatically' : 'Paused',
+              label: auto ? 'run_live_paused_auto_semantic'.tr : 'run_live_paused'.tr,
               excludeSemantics: true,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -441,7 +447,7 @@ class _PausedView extends StatelessWidget {
                   children: [
                     const Icon(Icons.pause_circle_filled, color: StrideColors.warning, size: 20),
                     const SizedBox(width: 6),
-                    Text('Paused', style: StrideText.label.copyWith(color: StrideColors.warning)),
+                    Text('run_live_paused'.tr, style: StrideText.label.copyWith(color: StrideColors.warning)),
                   ],
                 ),
               ),
@@ -466,29 +472,29 @@ class _PausedView extends StatelessWidget {
               padding: EdgeInsets.fromLTRB(g, 16, g, 0),
               child: Column(
                 children: [
-                  Text('Take your time', style: StrideText.heading),
-                  Text('Time and distance are paused.', style: StrideText.bodySecondary),
+                  Text('run_live_take_time'.tr, style: StrideText.heading),
+                  Text('run_live_paused_hint'.tr, style: StrideText.bodySecondary),
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       Expanded(
-                        child: RunMetric(value: m.time, label: 'Moving time'),
+                        child: RunMetric(value: m.time, label: 'run_label_moving_time'.tr),
                       ),
                       Expanded(
-                        child: RunMetric(value: m.distance, unit: m.unit, label: 'Distance', estimated: m.estimatedDistance),
+                        child: RunMetric(value: m.distance, unit: m.unit, label: 'run_label_distance'.tr, estimated: m.estimatedDistance),
                       ),
                       Expanded(
-                        child: RunMetric(value: m.avgPace, unit: m.avgPace == missingValue ? null : m.paceUnit, label: 'Avg. pace'),
+                        child: RunMetric(value: m.avgPace, unit: m.avgPace == missingValue ? null : m.paceUnit, label: 'run_label_avg_pace'.tr),
                       ),
                     ],
                   ),
                   const SizedBox(height: 20),
-                  PrimaryButton(label: 'Resume', icon: Icons.play_arrow, onPressed: ctl.resume),
+                  PrimaryButton(label: 'run_live_resume'.tr, icon: Icons.play_arrow, onPressed: ctl.resume),
                   const SizedBox(height: 12),
-                  HoldButton(label: 'Hold to finish', icon: Icons.stop_circle_outlined, onCompleted: onFinish),
+                  HoldButton(label: 'run_live_hold_finish'.tr, icon: Icons.stop_circle_outlined, onCompleted: onFinish),
                   const SizedBox(height: 8),
-                  Text(auto ? 'Paused automatically · resumes when you move' : 'Paused manually', style: StrideText.caption),
+                  Text(auto ? 'run_live_paused_auto_note'.tr : 'run_live_paused_manual'.tr, style: StrideText.caption),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -522,20 +528,23 @@ class _LockedView extends StatelessWidget {
                 children: [
                   const Icon(Icons.lock, color: StrideColors.lime, size: 18),
                   const SizedBox(width: 6),
-                  Text(st.phase == SessionPhase.paused ? 'Locked · paused' : 'Locked · recording', style: StrideText.label.copyWith(color: StrideColors.lime)),
+                  Text(
+                    st.phase == SessionPhase.paused ? 'run_live_locked_paused'.tr : 'run_live_locked_recording'.tr,
+                    style: StrideText.label.copyWith(color: StrideColors.lime),
+                  ),
                 ],
               ),
               const Spacer(),
-              RunMetric(value: m.time, label: 'Moving time', big: true, color: fg),
+              RunMetric(value: m.time, label: 'run_label_moving_time'.tr, big: true, color: fg),
               const SizedBox(height: 24),
-              RunMetric(value: m.distance, unit: m.unit, label: 'Distance', big: true, color: StrideColors.lime, estimated: m.estimatedDistance),
+              RunMetric(value: m.distance, unit: m.unit, label: 'run_label_distance'.tr, big: true, color: StrideColors.lime, estimated: m.estimatedDistance),
               const SizedBox(height: 24),
-              RunMetric(value: m.avgPace, unit: m.avgPace == missingValue ? null : m.paceUnit, label: 'Avg. pace', color: fg),
+              RunMetric(value: m.avgPace, unit: m.avgPace == missingValue ? null : m.paceUnit, label: 'run_label_avg_pace'.tr, color: fg),
               const Spacer(),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: StrideSpace.maxContentWidth),
                 child: HoldButton(
-                  label: 'Hold to unlock',
+                  label: 'run_live_hold_unlock'.tr,
                   icon: Icons.lock_open,
                   foreground: StrideColors.lime,
                   background: StrideColors.iconNavy,

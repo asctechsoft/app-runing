@@ -6,7 +6,9 @@ import '../../values/routes.dart';
 import '../../controller/providers.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
+import '../../utils/l10n.dart';
 
+/// [title], [body], [semantic] là khóa chuỗi — gọi `.tr` ở nơi hiển thị.
 class _IntroPage {
   const _IntroPage(this.image, this.title, this.body, this.semantic);
   final String image;
@@ -16,24 +18,9 @@ class _IntroPage {
 }
 
 const _pages = [
-  _IntroPage(
-    'assets/images/onboarding_steps.jpg',
-    'Make every step count',
-    'Track your daily steps, stay active and reach achievable goals for a healthier, happier you.',
-    'Illustration of people walking and running in a park',
-  ),
-  _IntroPage(
-    'assets/images/onboarding_map.jpg',
-    'Your run, mapped',
-    'Track distance, pace and every turn with GPS.',
-    'Illustration of a running route on a map',
-  ),
-  _IntroPage(
-    'assets/images/onboarding_progress.jpg',
-    'Build your own momentum',
-    'Set your goals, track your progress, and celebrate every milestone on your running journey.',
-    'Illustration of runners and a rising progress chart',
-  ),
+  _IntroPage('assets/images/onboarding_steps.jpg', 'onboarding_p1_title', 'onboarding_p1_body', 'onboarding_p1_semantic'),
+  _IntroPage('assets/images/onboarding_map.jpg', 'onboarding_p2_title', 'onboarding_p2_body', 'onboarding_p2_semantic'),
+  _IntroPage('assets/images/onboarding_progress.jpg', 'onboarding_p3_title', 'onboarding_p3_body', 'onboarding_p3_semantic'),
 ];
 
 /// Ba trang giới thiệu (E01). intro_seen chỉ lưu khi bấm Skip hoặc Get started.
@@ -89,7 +76,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   height: StrideSpace.touchTarget,
                   child: Align(
                     alignment: Alignment.centerRight,
-                    child: last ? null : TextButton(onPressed: _finish, child: const Text('Skip')),
+                    child: last ? null : TextButton(onPressed: _finish, child: Text('onboarding_skip'.tr)),
                   ),
                 ),
                 Expanded(
@@ -103,7 +90,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 _Dots(count: _pages.length, index: _index),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(StrideSpace.gutter, StrideSpace.s16, StrideSpace.gutter, StrideSpace.s8),
-                  child: PrimaryButton(label: last ? 'Get started' : 'Next', trailingIcon: Icons.arrow_forward, onPressed: _next),
+                  child: PrimaryButton(label: last ? 'onboarding_get_started'.tr : 'onboarding_next'.tr, trailingIcon: Icons.arrow_forward, onPressed: _next),
                 ),
                 SizedBox(
                   height: 56,
@@ -111,11 +98,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       ? Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Flexible(child: Text('Already have an account?', style: StrideText.bodySecondary)),
+                            Flexible(child: Text('auth_have_account'.tr, style: StrideText.bodySecondary)),
                             TextButton(
                               onPressed: () => context.push(Routes.login),
                               child: Text(
-                                'Log in',
+                                'auth_log_in'.tr,
                                 style: StrideText.body.copyWith(color: StrideColors.primary, fontWeight: FontWeight.w600),
                               ),
                             ),
@@ -148,7 +135,7 @@ class _PageBody extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(StrideRadius.card),
                 child: Semantics(
-                  label: page.semantic,
+                  label: page.semantic.tr,
                   image: true,
                   child: Image.asset(
                     page.image,
@@ -162,15 +149,15 @@ class _PageBody extends StatelessWidget {
               const SizedBox(height: StrideSpace.s24),
               Semantics(
                 header: true,
-                child: Text(page.title, style: StrideText.title, textAlign: TextAlign.center),
+                child: Text(page.title.tr, style: StrideText.title, textAlign: TextAlign.center),
               ),
               const SizedBox(height: StrideSpace.s8),
-              Text(page.body, style: StrideText.bodySecondary, textAlign: TextAlign.center),
+              Text(page.body.tr, style: StrideText.bodySecondary, textAlign: TextAlign.center),
               if (showFeatures) ...[
                 const SizedBox(height: StrideSpace.s16),
-                const _Feature(icon: Icons.flag_outlined, title: 'Set meaningful goals', body: 'From your first 5K to a personal best.'),
-                const _Feature(icon: Icons.bar_chart, title: 'Track your progress', body: 'See your improvements over time.'),
-                const _Feature(icon: Icons.emoji_events_outlined, title: 'Celebrate milestones', body: 'Every step forward counts.'),
+                _Feature(icon: Icons.flag_outlined, title: 'onboarding_feature_goals_title'.tr, body: 'onboarding_feature_goals_body'.tr),
+                _Feature(icon: Icons.bar_chart, title: 'onboarding_feature_progress_title'.tr, body: 'onboarding_feature_progress_body'.tr),
+                _Feature(icon: Icons.emoji_events_outlined, title: 'onboarding_feature_milestones_title'.tr, body: 'onboarding_feature_milestones_body'.tr),
               ],
             ],
           ),
@@ -217,7 +204,7 @@ class _Dots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
-    label: 'Page ${index + 1} of $count',
+    label: 'onboarding_page_semantic'.trArgs([index + 1, count]),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [

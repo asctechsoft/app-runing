@@ -1,4 +1,5 @@
 import 'clock.dart';
+import 'l10n.dart';
 import '../repository/activity_repository.dart';
 import '../repository/settings_repository.dart';
 import '../repository/step_repository.dart';
@@ -9,7 +10,31 @@ import '../models/data_models/profile.dart';
 import '../models/data_models/steps.dart';
 import '../models/ui_models/period.dart';
 
-/// Loại tính vào "Running": chạy ngoài trời + chạy trong nhà (không gồm đi bộ).
+/// Nhãn Week/Month/Year cho phân đoạn chọn kỳ.
+String periodSegmentLabel(ProgressPeriod p) => switch (p) {
+  ProgressPeriod.week => 'progress_period_week'.tr,
+  ProgressPeriod.month => 'progress_period_month'.tr,
+  ProgressPeriod.year => 'progress_period_year'.tr,
+};
+
+/// Danh từ của kỳ (tuần/tháng/năm) để ghép vào câu có placeholder.
+String periodNounText(ProgressPeriod p) => switch (p) {
+  ProgressPeriod.week => 'progress_noun_week'.tr,
+  ProgressPeriod.month => 'progress_noun_month'.tr,
+  ProgressPeriod.year => 'progress_noun_year'.tr,
+};
+
+/// Chọn một trong ba key theo kỳ rồi dịch (kèm [args] nếu có).
+String periodTr(ProgressPeriod p, String weekKey, String monthKey, String yearKey, [List<Object?> args = const []]) {
+  final key = switch (p) {
+    ProgressPeriod.week => weekKey,
+    ProgressPeriod.month => monthKey,
+    ProgressPeriod.year => yearKey,
+  };
+  return args.isEmpty ? key.tr : key.trArgs(args);
+}
+
+/// Loại tính vào "Running":chạy ngoài trời + chạy trong nhà (không gồm đi bộ).
 Set<ActivityType> runningTypes({required bool indoor}) => {ActivityType.run, if (indoor) ActivityType.indoorRun};
 
 /// Hệ số quy đổi mục tiêu tuần sang tháng/năm — chỉ là "target" ước lượng, ghi rõ trên UI.

@@ -8,6 +8,7 @@ import '../../repository/settings_repository.dart';
 import '../../utils/calc/records.dart';
 import '../../utils/calc/run_metrics.dart';
 import '../../models/data_models/activity.dart';
+import '../../utils/l10n.dart';
 
 /// Khóa cache effort theo hoạt động; gắn revision để sửa/đồng bộ lại thì tính lại.
 String effortCacheKey(String activityId) => 'records.effort.$activityId';
@@ -60,21 +61,21 @@ final personalRecordsProvider = FutureProvider.autoDispose<List<PersonalRecord>>
 });
 
 String recordTitle(RecordKind k) => switch (k) {
-  RecordKind.longestRun => 'Longest run',
-  RecordKind.longestDuration => 'Longest duration',
-  RecordKind.fastest1k => 'Fastest 1 km',
-  RecordKind.fastest5k => 'Fastest 5 km',
+  RecordKind.longestRun => 'svc_record_longest_run_title'.tr,
+  RecordKind.longestDuration => 'svc_record_longest_duration_title'.tr,
+  RecordKind.fastest1k => 'svc_record_fastest_1k_title'.tr,
+  RecordKind.fastest5k => 'svc_record_fastest_5k_title'.tr,
 };
 
 String recordDescription(RecordKind k) => switch (k) {
-  RecordKind.longestRun => 'Farthest distance in a single run.',
-  RecordKind.longestDuration => 'Longest moving time in a single run.',
-  RecordKind.fastest1k => 'Best continuous 1 km.',
-  RecordKind.fastest5k => 'Best continuous 5 km.',
+  RecordKind.longestRun => 'svc_record_longest_run_desc'.tr,
+  RecordKind.longestDuration => 'svc_record_longest_duration_desc'.tr,
+  RecordKind.fastest1k => 'svc_record_fastest_1k_desc'.tr,
+  RecordKind.fastest5k => 'svc_record_fastest_5k_desc'.tr,
 };
 
 String recordEmptyHint(RecordKind k) => switch (k) {
-  RecordKind.longestRun || RecordKind.longestDuration => 'Save an outdoor run with GPS to set this record.',
-  RecordKind.fastest1k => 'Run at least 1 km continuously with GPS.',
-  RecordKind.fastest5k => 'Run at least 5 km continuously with GPS.',
+  RecordKind.longestRun || RecordKind.longestDuration => 'svc_record_empty_longest'.tr,
+  RecordKind.fastest1k => 'svc_record_empty_1k'.tr,
+  RecordKind.fastest5k => 'svc_record_empty_5k'.tr,
 };

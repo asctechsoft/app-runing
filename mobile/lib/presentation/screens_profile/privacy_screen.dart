@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../utils/l10n.dart';
 import '../../values/routes.dart';
 import '../../controller/providers.dart';
 import '../../values/tokens.dart';
@@ -20,15 +21,15 @@ final profileDefaultPrivacyProvider = FutureProvider.autoDispose<Privacy>((ref) 
 List<Privacy> privacyChoices({required bool clubsEnabled}) => [Privacy.onlyMe, if (clubsEnabled) Privacy.followers];
 
 String privacyLabel(Privacy p) => switch (p) {
-  Privacy.onlyMe => 'Only me',
-  Privacy.followers => 'Club members',
-  Privacy.public => 'Public',
+  Privacy.onlyMe => 'profile_privacy_only_me'.tr,
+  Privacy.followers => 'profile_privacy_club_members'.tr,
+  Privacy.public => 'profile_privacy_public'.tr,
 };
 
 String privacyHelp(Privacy p) => switch (p) {
-  Privacy.onlyMe => 'Only you can see new activities.',
-  Privacy.followers => 'Members of clubs you’ve joined can see new activities. Start and finish locations stay hidden.',
-  Privacy.public => 'Anyone with access can see new activities.',
+  Privacy.onlyMe => 'profile_privacy_only_me_help'.tr,
+  Privacy.followers => 'profile_privacy_club_members_help'.tr,
+  Privacy.public => 'profile_privacy_public_help'.tr,
 };
 
 /// Privacy (J04): mặc định Only me; giải thích chia sẻ ảnh tách khỏi quyền xem; vị trí chỉ khi ghi hoạt động.
@@ -40,7 +41,7 @@ class PrivacyScreen extends ConsumerWidget {
       await saveDefaultPrivacy(ref.read(settingsRepositoryProvider), ref.read(ownerProvider).ownerId, p);
       ref.invalidate(profileDefaultPrivacyProvider);
     } catch (_) {
-      if (context.mounted) showStrideSnack(context, 'Couldn’t save this setting. Try again.', isError: true);
+      if (context.mounted) showStrideSnack(context, 'profile_save_setting_error'.tr, isError: true);
     }
   }
 
@@ -50,17 +51,17 @@ class PrivacyScreen extends ConsumerWidget {
     final current = ref.watch(profileDefaultPrivacyProvider);
     final choices = privacyChoices(clubsEnabled: flags.exploreClubs);
     return StrideScreen(
-      title: 'Privacy',
+      title: 'profile_privacy_title'.tr,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Gap(8),
           ProfileSection(
-            title: 'Default activity visibility',
-            subtitle: 'Applies to activities you save from now on. You can change it for each activity.',
+            title: 'profile_privacy_default_title'.tr,
+            subtitle: 'profile_privacy_default_subtitle'.tr,
             child: current.when(
               loading: () => const Skeleton(height: 56),
-              error: (e, _) => TextButton(onPressed: () => ref.invalidate(profileDefaultPrivacyProvider), child: const Text('Couldn’t load. Try again')),
+              error: (e, _) => TextButton(onPressed: () => ref.invalidate(profileDefaultPrivacyProvider), child: Text('profile_load_retry'.tr)),
               data: (value) {
                 final selected = choices.contains(value) ? value : Privacy.onlyMe;
                 return RadioGroup<Privacy>(
@@ -84,26 +85,20 @@ class PrivacyScreen extends ConsumerWidget {
               },
             ),
           ),
-          const ProfileSection(
-            title: 'Share images',
-            child: Text(
-              'Sharing an activity image is separate from who can see the activity in STRIDE. Images hide your start and finish by default, and nothing is shared until you choose an app.',
-              style: StrideText.bodySecondary,
-            ),
+          ProfileSection(
+            title: 'profile_privacy_share_title'.tr,
+            child: Text('profile_privacy_share_text'.tr, style: StrideText.bodySecondary),
           ),
-          const ProfileSection(
-            title: 'Location data',
-            child: Text(
-              'STRIDE only records GPS while you’re recording an activity you started. Daily steps use the motion sensor, not your location. Location isn’t sent to analytics.',
-              style: StrideText.bodySecondary,
-            ),
+          ProfileSection(
+            title: 'profile_privacy_location_title'.tr,
+            child: Text('profile_privacy_location_text'.tr, style: StrideText.bodySecondary),
           ),
           SettingsGroup(
             children: [
               SettingsRow(
                 icon: Icons.storage_outlined,
-                title: 'Export or delete your data',
-                subtitle: 'Account & data',
+                title: 'profile_privacy_export_title'.tr,
+                subtitle: 'profile_account_title'.tr,
                 onTap: () => context.push(Routes.account),
               ),
             ],

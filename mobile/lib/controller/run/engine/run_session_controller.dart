@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../utils/l10n.dart';
 import '../../../utils/logger.dart';
 import '../../providers.dart';
 import '../../run_plugins.dart';
@@ -510,7 +511,7 @@ class RunSessionController extends Notifier<RunSessionState> {
       final reached = g.type == RunGoalType.distance ? (dist != null && dist >= g.value!) : moving >= g.value!;
       if (reached) {
         state = state.copyWith(targetReached: true);
-        _speak('Target reached. Keep going, or finish when you are ready.');
+        _speak('run_audio_target_reached'.tr);
         _haptic();
         changed = true;
       }
@@ -548,7 +549,7 @@ class RunSessionController extends Notifier<RunSessionState> {
         if (dist != null) _phaseDistance[pos.index] = dist;
         _lastPhaseIndex = pos.index;
         if (plan.audioCues) {
-          _speak(done ? 'Workout complete. Keep going, or finish when you are ready.' : phaseSpeech(phases[pos.index].label, phases[pos.index].plannedMs));
+          _speak(done ? 'run_audio_workout_complete'.tr : phaseSpeech(phases[pos.index].label, phases[pos.index].plannedMs));
         }
         _haptic();
         changed = true;

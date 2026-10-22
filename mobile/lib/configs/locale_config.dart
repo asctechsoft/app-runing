@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:asc_common/asc_common.dart';
+import 'package:get/get.dart' as g;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'pref_const.dart';
@@ -19,6 +20,8 @@ class AppLocaleConfig {
   /// Chọn locale lúc khởi động: ngôn ngữ đã ghim (nếu còn được hỗ trợ), nếu không thì ngôn ngữ của thiết bị.
   /// [AscLocale.setAppLocale] tự lưu lựa chọn nên không cần ghi pref thêm.
   static Future<void> ensureConfigured() async {
+    // Không có GetMaterialApp nên tự đặt locale dự phòng: key thiếu ở ngôn ngữ hiện tại rơi về tiếng Anh.
+    g.Get.fallbackLocale = const Locale('en', 'US');
     final prefs = await SharedPreferences.getInstance();
     final followSystem = prefs.getBool(PrefConst.followSystemLanguage) ?? false;
 

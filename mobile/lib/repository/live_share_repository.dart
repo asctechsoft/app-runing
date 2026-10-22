@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../services/application/api_client.dart';
 import '../models/data_models/activity.dart';
 import '../models/ui_models/live_share_models.dart';
+import '../utils/l10n.dart';
 
 enum LiveShareErrorKind {
   network,
@@ -72,7 +73,7 @@ bool isLookupEmail(String email) {
 List<String> validateViewerIds(List<String> viewerIds, {required String ownerId}) {
   final unique = viewerIds.toSet().toList();
   if (unique.isEmpty || unique.length > maxLiveViewers || unique.contains(ownerId)) {
-    throw LiveShareException(LiveShareErrorKind.invalidViewers, 'One or more people can\'t follow this run. Check who you selected.');
+    throw LiveShareException(LiveShareErrorKind.invalidViewers, 'live_err_invalid_viewers'.tr);
   }
   return unique;
 }
@@ -121,30 +122,30 @@ class LiveShareRepository {
 
   static LiveShareException mapError(Object e, {bool lookup = false}) {
     if (e is LiveShareException) return e;
-    if (e is TimeoutException) return LiveShareException(LiveShareErrorKind.network, 'No connection');
+    if (e is TimeoutException) return LiveShareException(LiveShareErrorKind.network, 'live_err_network'.tr);
     if (e is FirebaseException) e = mapFirebaseError(e);
     if (e is! ApiException) return LiveShareException(LiveShareErrorKind.server, e.toString());
     if (e.status == 0) {
       return e.code == 'not_configured'
-          ? LiveShareException(LiveShareErrorKind.notConfigured, 'Live sharing needs a connection to STRIDE online services.')
-          : LiveShareException(LiveShareErrorKind.network, 'No connection');
+          ? LiveShareException(LiveShareErrorKind.notConfigured, 'live_err_not_configured'.tr)
+          : LiveShareException(LiveShareErrorKind.network, 'live_err_network'.tr);
     }
-    if (e.status == 401) return LiveShareException(LiveShareErrorKind.unauthorized, 'Sign in again to share your live location.');
-    if (e.status == 403) return LiveShareException(LiveShareErrorKind.unauthorized, 'You don\'t have permission to do that.');
+    if (e.status == 401) return LiveShareException(LiveShareErrorKind.unauthorized, 'live_err_sign_in'.tr);
+    if (e.status == 403) return LiveShareException(LiveShareErrorKind.unauthorized, 'live_err_permission'.tr);
     if (e.status == 404) {
       return lookup
-          ? LiveShareException(LiveShareErrorKind.viewerNotFound, 'No STRIDE account uses that email.')
-          : LiveShareException(LiveShareErrorKind.ended, 'Live sharing has ended.');
+          ? LiveShareException(LiveShareErrorKind.viewerNotFound, 'live_err_viewer_not_found'.tr)
+          : LiveShareException(LiveShareErrorKind.ended, 'live_ended'.tr);
     }
     if (e.status == 409) {
       return switch (e.code) {
-        'live_share_active' => LiveShareException(LiveShareErrorKind.alreadyActive, 'Live sharing is already on for this run.'),
-        'live_share_ended' => LiveShareException(LiveShareErrorKind.ended, 'Live sharing has ended.'),
+        'live_share_active' => LiveShareException(LiveShareErrorKind.alreadyActive, 'live_err_already_active'.tr),
+        'live_share_ended' => LiveShareException(LiveShareErrorKind.ended, 'live_ended'.tr),
         _ => LiveShareException(LiveShareErrorKind.server, e.message),
       };
     }
     if (e.status == 400 || e.status == 422) return LiveShareException(LiveShareErrorKind.validation, e.message);
-    return LiveShareException(LiveShareErrorKind.server, 'STRIDE couldn\'t complete the request.');
+    return LiveShareException(LiveShareErrorKind.server, 'live_err_server'.tr);
   }
 
   Future<T> _guard<T>(Future<T> Function(FirebaseFirestore db, String uid) f, {bool lookup = false}) async {
@@ -224,7 +225,7 @@ class LiveShareRepository {
     final d = snap.data();
     final viewerUid = d?['uid'];
     if (!snap.exists || viewerUid is! String || viewerUid.isEmpty) throw ApiException(404, 'not_found', 'No account');
-    if (viewerUid == uid) throw ApiException(400, 'validation_error', 'You can\'t follow your own run.');
+    if (viewerUid == uid) throw ApiException(400, 'validation_error', 'live_err_follow_self'.tr);
     final name = (d?['displayName'] as String?)?.trim();
     return LiveShareViewer(userId: viewerUid, label: (name == null || name.isEmpty) ? e : name, email: e);
   }, lookup: true);

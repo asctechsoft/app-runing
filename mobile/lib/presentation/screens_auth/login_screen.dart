@@ -11,6 +11,7 @@ import '../../controller/auth/auth_flow.dart';
 import '../../repository/auth_repository.dart';
 import 'components/google_sign_in_button.dart';
 import 'components/auth_widgets.dart';
+import '../../utils/l10n.dart';
 
 /// Đăng nhập email (E02). Lỗi cụ thể; offline báo rõ; hủy quay lại màn trước.
 class LoginScreen extends ConsumerStatefulWidget {
@@ -59,8 +60,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final flags = ref.watch(flagsProvider);
     final available = ref.watch(authRepositoryProvider).available;
     return AuthScaffold(
-      title: 'Welcome back',
-      subtitle: 'Log in to continue your running journey.',
+      title: 'auth_login_title'.tr,
+      subtitle: 'auth_login_subtitle'.tr,
       children: [
         if (!available)
           const AccountsUnavailable()
@@ -73,7 +74,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 if (_error != null) ...[StatusBanner(tone: BannerTone.error, message: _error!), const SizedBox(height: StrideSpace.s12)],
                 AuthTextField(
                   controller: _email,
-                  label: 'Email',
+                  label: 'auth_email'.tr,
                   icon: Icons.mail_outline,
                   keyboardType: TextInputType.emailAddress,
                   autofillHints: const [AutofillHints.email],
@@ -82,34 +83,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 AuthTextField(
                   controller: _password,
-                  label: 'Password',
+                  label: 'auth_password'.tr,
                   icon: Icons.lock_outline,
                   password: true,
                   autofillHints: const [AutofillHints.password],
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => _submit(),
-                  validator: (v) => (v == null || v.isEmpty) ? 'Enter your password.' : null,
+                  validator: (v) => (v == null || v.isEmpty) ? 'auth_err_password_empty'.tr : null,
                   enabled: !_busy,
                 ),
                 Align(
                   alignment: Alignment.centerRight,
-                  child: TextButton(onPressed: _busy ? null : () => context.push(Routes.forgotPassword), child: const Text('Forgot password?')),
+                  child: TextButton(onPressed: _busy ? null : () => context.push(Routes.forgotPassword), child: Text('auth_forgot_password'.tr)),
                 ),
                 const SizedBox(height: StrideSpace.s8),
-                PrimaryButton(label: 'Log in', trailingIcon: Icons.arrow_forward, loading: _busy, onPressed: _submit),
+                PrimaryButton(label: 'auth_log_in'.tr, trailingIcon: Icons.arrow_forward, loading: _busy, onPressed: _submit),
                 if (flags.authApple || flags.authGoogle) ...[
                   const OrDivider(),
                   if (flags.authApple)
-                    OutlineButton(
-                      label: 'Continue with Apple',
-                      icon: Icons.apple,
-                      onPressed: () => showStrideSnack(context, "Sign in with Apple isn't available yet. Use your email instead."),
-                    ),
+                    OutlineButton(label: 'auth_continue_apple'.tr, icon: Icons.apple, onPressed: () => showStrideSnack(context, 'auth_apple_unavailable'.tr)),
                   if (flags.authApple && flags.authGoogle) const SizedBox(height: StrideSpace.s8),
                   if (flags.authGoogle) const GoogleSignInButton(),
                 ],
                 const SizedBox(height: StrideSpace.s16),
-                InlineLink(prefix: "Don't have an account?", label: 'Create account', onTap: () => context.pushReplacement(Routes.register)),
+                InlineLink(prefix: 'auth_no_account'.tr, label: 'auth_create_account'.tr, onTap: () => context.pushReplacement(Routes.register)),
               ],
             ),
           ),

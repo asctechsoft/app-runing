@@ -1,4 +1,5 @@
 import '../../../models/data_models/activity.dart';
+import '../../../utils/l10n.dart';
 import '../../../models/data_models/session_state.dart';
 import '../../../models/ui_models/workout_models.dart';
 import 'run_sources.dart';
@@ -154,22 +155,22 @@ class RunSessionState {
 String defaultActivityTitle(ActivityType type, DateTime local) {
   final h = local.hour;
   final part = h >= 5 && h < 12
-      ? 'Morning'
+      ? 'morning'
       : h >= 12 && h < 17
-      ? 'Afternoon'
+      ? 'afternoon'
       : h >= 17 && h < 21
-      ? 'Evening'
-      : 'Night';
+      ? 'evening'
+      : 'night';
   final noun = switch (type) {
     ActivityType.run => 'run',
     ActivityType.walk => 'walk',
-    ActivityType.indoorRun => 'indoor run',
+    ActivityType.indoorRun => 'indoor',
   };
-  return '$part $noun';
+  return 'run_title_${part}_$noun'.tr;
 }
 
 String activityTypeLabel(ActivityType type) => switch (type) {
-  ActivityType.run => 'Outdoor run',
-  ActivityType.walk => 'Outdoor walk',
-  ActivityType.indoorRun => 'Indoor run',
+  ActivityType.run => 'run_type_run'.tr,
+  ActivityType.walk => 'run_type_walk'.tr,
+  ActivityType.indoorRun => 'run_type_indoor'.tr,
 };

@@ -33,6 +33,18 @@ Repo hiện chỉ chứa tài liệu đặc tả và ảnh UI; **chưa có sourc
 - Khởi động: `lib/main.dart` → `services/application/stride_base.dart` (Firebase, App Check, Crashlytics, Remote Config chạy nền). Chưa có quảng cáo: không gọi `DspAdsController.start` khi chưa có quyết định sản phẩm. Vòng đời: `services/application/app_lifecycle.dart`. Analytics: `utils/analytics.dart`, `utils/route_analytics.dart` (không đưa id/tọa độ vào event).
 - Flavor `alpha | dev | product | claude` (bắt buộc truyền `--flavor`); cờ trong code: `configs/app_figs.dart`. Build tự động, secret và AdMob: `docs/build.md`.
 
+## Chuỗi giao diện (đa ngôn ngữ) — bắt buộc
+- **Không viết chữ cứng** trong widget/logic/model/repository nếu người dùng có thể nhìn thấy. Thêm key vào CẢ HAI file
+  `mobile/lib/xml_strings/values/strings.xml` (en) và `values-vi/strings.xml` (vi), rồi gọi `'key'.tr` hoặc `'key'.trArgs([a, b])`
+  (`import '.../utils/l10n.dart'`, không import `package:get/get.dart` trực tiếp). Placeholder trong XML dùng `%1$s`, `%2$s`.
+- Tên key: snake_case, tiền tố theo màn/khu vực (`run_`, `profile_`, `explore_`, `activity_`, `progress_`, `history_`, `steps_`, `goals_`, `account_`, `auth_`,
+  `setup_`, `home_`, `workout_`, `devices_`, `live_`, `reminders_`, `model_`, `common_`...). Đặt theo ý nghĩa, không theo nguyên văn.
+- Không gọi `.tr` ở khởi tạo tĩnh (`const`/`static final`): lưu key rồi `.tr` ở nơi hiển thị. `.tr` không phải `const` nên bỏ `const` của widget bao quanh.
+- Không đưa vào XML: log, lỗi lập trình nội bộ, tên field/collection, route, tên event analytics, mẫu `DateFormat`. Tên thương hiệu `STRIDE` giữ nguyên.
+- Ngày giờ: `DateFormat(pattern, appDateLocale)` (`utils/date_locale.dart`), không ghi cứng `'en_US'`.
+- `test/core/strings_xml_test.dart` kiểm tra en/vi đủ key, placeholder khớp, mọi key dùng trong code đều tồn tại — chạy `flutter test` sau khi thêm chuỗi.
+- Hạn chế đã biết: đổi ngôn ngữ lúc chạy chưa làm UI cập nhật ngay (app Riverpod, không có `GetMaterialApp`) — áp dụng ở lần mở sau; giọng đọc TTS (chạy bộ, thử giọng) vẫn đặt `en-US`.
+
 ## Cấu trúc `mobile/lib` (cùng bố cục với smart_drink)
 ```
 main.dart

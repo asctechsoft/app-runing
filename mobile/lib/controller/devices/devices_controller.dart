@@ -8,6 +8,7 @@ import '../../repository/device_repository.dart';
 import 'devices_providers.dart';
 import '../../services/application/heart_rate_parser.dart';
 import '../../services/application/heart_rate_transport.dart';
+import '../../utils/l10n.dart';
 
 enum ScanPhase { idle, scanning, done, error }
 
@@ -125,7 +126,7 @@ class DevicesController extends Notifier<DevicesState> {
             _set(state.copyWith(found: byId.values.toList()));
           },
           onError: (Object e) {
-            _set(state.copyWith(scan: ScanPhase.error, scanError: () => 'Couldn\'t scan for sensors. Check that Bluetooth is on and try again.'));
+            _set(state.copyWith(scan: ScanPhase.error, scanError: () => 'devices_scan_error'.tr));
             if (!done.isCompleted) done.complete();
           },
           onDone: () {
@@ -189,9 +190,9 @@ class DevicesController extends Notifier<DevicesState> {
       _set(state.copyWith(connectingRemoteId: () => null, connectedDeviceId: () => saved.id, connectedRemoteId: () => remoteId));
     } on HeartRateConnectException catch (e) {
       final msg = switch (e.reason) {
-        'timeout' => 'Couldn\'t connect to $name. Make sure the sensor is worn and nearby, then try again.',
-        'noHeartRateService' => '$name doesn\'t provide the standard Bluetooth heart rate service, so STRIDE can\'t use it.',
-        _ => 'Couldn\'t connect to $name. Try again.',
+        'timeout' => 'devices_connect_timeout'.trArgs([name]),
+        'noHeartRateService' => 'devices_no_hr_service'.trArgs([name]),
+        _ => 'devices_connect_failed'.trArgs([name]),
       };
       _set(
         state.copyWith(
@@ -205,7 +206,7 @@ class DevicesController extends Notifier<DevicesState> {
       _set(
         state.copyWith(
           connectingRemoteId: () => null,
-          connectError: () => 'Couldn\'t connect to $name. Try again.',
+          connectError: () => 'devices_connect_failed'.trArgs([name]),
           connectErrorRemoteId: () => remoteId,
           connectErrorName: () => name,
         ),
