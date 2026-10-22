@@ -17,6 +17,7 @@ Cập nhật: 2026-10-22 · Nhánh: `feat/asc-base` · Nguồn đối chiếu: `
 | Backend | **Đã bỏ và đã xóa khỏi repo** (2026-10-23; quyết định 2026-10-19): dùng Firebase Auth + Cloud Firestore, không có server riêng. Mã cũ xem lịch sử git |
 | Đa ngôn ngữ | Hạ tầng XML (`AscLocale`) xong; **mới có en + vi** (1.660 key, bản vi do AI dịch, chưa có người bản ngữ rà) |
 | Thiết bị thật | Đã chạy thử trên Samsung SM-G996B (Android 15): tiếng Việt, bản đồ, ghi chạy, tạm dừng, Back, kết thúc. **Chưa** kiểm chứng nền/khóa màn hình/pin |
+| Tính năng nhóm | Đăng nhập Google, vào/rời club, bài đăng/cổ vũ/bình luận, thử thách cá nhân: **có**. Tạo/quản lý club, mời, chuỗi nhóm, đội, bảng xếp hạng, huy hiệu, trao giải, push, chạy nhóm: **chưa** — xem **mục 4B** |
 | Git | 8 commit trên `feat/asc-base` **chưa push, chưa có PR**; CI chưa chạy với cấu hình mới |
 
 ---
@@ -74,7 +75,7 @@ Mỗi mục: ghi **model máy, Android/iOS version, kết quả, ảnh/video, lo
 - [ ] **F01 · P1 · Dev** — **K04 Giáo án và lịch tập** (cờ `workout.plans` đang tắt). Cần nội dung giáo án được Product duyệt. Khi bật: danh sách giáo án, chi tiết, lịch tuần, bắt đầu từ giáo án, theo dõi tiến độ.
 - [ ] **F02 · P1 · Dev** — **Health Connect (Android) / HealthKit (iOS)** nhập bước (cờ `steps.health` tắt). Cần spike trên máy thật (F02), ưu tiên nguồn dữ liệu (đã có `step_source_priority.dart`), xử lý trùng với cảm biến.
 - [ ] **F03 · P1 · Dev** — Đăng nhập **Apple** (cờ `auth.apple` tắt, cần client ID) — bắt buộc nếu phát hành iOS có đăng nhập bên thứ ba.
-- [ ] **F04 · P1 · Dev** — UI câu lạc bộ: **duyệt yêu cầu tham gia, phân quyền (owner/admin/member), tạo sự kiện**.
+- [ ] **F04 · P1 · Dev** — UI câu lạc bộ: **duyệt yêu cầu tham gia, phân quyền (owner/admin/member), tạo sự kiện**. → Đã mở rộng chi tiết ở **mục 4B** (TM01–TM06); làm theo mục 4B, mục này chỉ để đối chiếu checklist gốc.
 - [ ] **F05 · P1 · Dev** — Màn **danh sách tuyến đã lưu** (đã có collection `users/{uid}/savedRoutes`).
 - [ ] **F06 · P1 · Dev** — **Xuất toàn bộ dữ liệu tài khoản** từ màn chi tiết (hiện chỉ xuất theo hoạt động).
 - [ ] **F07 · P1 · Dev** — Quản lý **thiết bị** nâng cao: nhớ nhiều cảm biến, ưu tiên thiết bị, ghi chú pin yếu.
@@ -83,6 +84,138 @@ Mỗi mục: ghi **model máy, Android/iOS version, kết quả, ảnh/video, lo
 - [ ] **N03 · P0 · Dev/Ops** — Sao lưu, khôi phục và **migration**: kế hoạch export Firestore định kỳ; migration schema SQLite cục bộ (`app_database.dart`) có test nâng cấp từ mọi phiên bản cũ.
 - [ ] **F09 · P1 · Dev** — Cân nhắc **lưu phiên chạy dở khi app bị thu hồi lúc đang tạm dừng** và nhắc người dùng (đã có recovery, cần kiểm chứng thật — xem mục 3).
 - [ ] **F10 · P1 · Product** — Quyết định còn mở trong `docs/scope.md`: công thức calo (`met-v1`), tiêu chí kỷ lục (1 km/5 km), danh sách thiết bị test, **nhà cung cấp tile production**.
+
+---
+
+## 4B. Chạy theo nhóm/đội: chia sẻ nhóm, chuỗi (streak), thử thách đội, trao giải
+Mục tiêu sản phẩm: **thúc đẩy mọi người chạy cùng nhau** — tạo nhóm, rủ bạn bè, duy trì chuỗi hằng ngày (cá nhân và nhóm), chạy theo đội, bảng xếp hạng, huy hiệu và trao giải.
+Mã ID của mục này: `TM` (Team). Mọi việc đều phải tuân theo quy tắc nền ở mục 0 (không chữ cứng, offline-first, quyền riêng tư mặc định "chỉ mình tôi", không đưa id/tọa độ vào analytics) và mục 6–8 (đa ngôn ngữ, animation, điểm chạm).
+
+### 4B.1 Hiện trạng (đã đối chiếu code + `firestore.rules`, 2026-10-23)
+| Khả năng | Có chưa | Chi tiết thực tế |
+|---|---|---|
+| Đăng nhập Google | **Có** (code) | Firebase Auth + Google Sign-In, cờ `auth.google`. Máy dev đã đăng nhập được. **Chưa** kiểm chứng bản release (cần SHA-1/SHA-256 khóa phát hành, mục FB08) và iOS (cần `GoogleService-Info.plist`) |
+| Câu lạc bộ: tìm, vào, rời | **Có** | `searchClubs`, `myClubs`, `requestJoin` (club công khai vào ngay, club riêng chờ duyệt), `leaveClub` |
+| Câu lạc bộ: bài đăng, cổ vũ, bình luận, báo cáo, chặn | **Có** | Bài đăng chỉ là **chữ**; cheer, comment, report, block đã có |
+| Sự kiện: xem + RSVP | **Có** | `rsvp`. Rules cho thành viên tạo sự kiện nhưng **chưa có UI tạo sự kiện** |
+| **Tạo câu lạc bộ trong app** | **Chưa** | `firestore.rules`: `clubs … allow create, delete: if false` → hiện chỉ seed bằng Admin SDK. Người dùng **không thể tự tạo nhóm** |
+| Quản lý thành viên (danh sách, duyệt yêu cầu, phân quyền, xóa/cấm) | **Chưa** | Rules: `members/{uid} allow update: if false` nên không đổi được vai trò/trạng thái; chưa có UI |
+| Mời bạn bè (link, mã, QR) | **Chưa** | Không có deep link/invite code |
+| Chia sẻ buổi chạy vào nhóm | **Chưa** | Bài đăng không đính kèm hoạt động; chưa có "thẻ buổi chạy" trong feed |
+| Mục tiêu chung của nhóm | **Chưa** | Chỉ có mục tiêu cá nhân (`goals`) |
+| Chuỗi (streak) | **Một phần** | Chỉ có "Your week streak" **cá nhân** ở Home (7 chấm ngày đạt mục tiêu **bước**, `home_logic.dart`). **Chưa có** chuỗi ngày liên tiếp (hiện tại/dài nhất), chưa có "ngày bảo lưu" (freeze), **chưa có chuỗi nhóm** |
+| Thử thách: xem, tham gia, rời, tiến độ cá nhân | **Có** | Tiến độ tính ở **client** từ hoạt động cục bộ rồi ghi `progressValue` (dễ bị gian lận) |
+| Tạo thử thách trong app | **Chưa** | Rules: `challenges … allow create, delete: if false` → chỉ Admin seed |
+| Bảng xếp hạng | **Chưa có UI** | Có cờ `leaderboardOptIn` (mặc định `false`) và rule đọc, nhưng **không có màn bảng xếp hạng** |
+| Chạy theo đội (đội A vs đội B) | **Chưa** | Không có `teamId`, không có điểm đội |
+| Huy hiệu / giải thưởng / trao giải | **Chưa** | Có trường `badgeKey` trong model và seed (`dev-badge`) nhưng **không có hệ thống huy hiệu, màn hình, logic trao**. Chỉ có kỷ lục cá nhân (`records`) |
+| Chạy cùng nhau thời gian thực | **Một phần** | Chỉ có **live sharing một chiều**: chủ buổi chạy → tối đa 20 người xem (chọn theo email), chỉ lưu điểm mới nhất, hạn 1/2/4 giờ hoặc hết buổi chạy. **Chưa có** "phiên chạy nhóm" (cùng bắt đầu, cùng thấy nhau, đếm ngược chung, tổng quãng đường nhóm) |
+| Thông báo đẩy (push) cho nhóm | **Chưa** | Chỉ có thông báo cục bộ (nhắc nhở) và hộp thư trong app. Chưa có FCM, chưa lưu token thiết bị |
+| Cloud Functions / xử lý phía server | **Chưa** | Không có. Mọi thứ chạy ở client + rules |
+
+**Kết luận:** luồng "đăng nhập → lập nhóm → rủ bạn → chạy hằng ngày giữ chuỗi → thi đội → nhận giải" mới có **đoạn đầu** (đăng nhập, vào/rời nhóm có sẵn, đăng bài, thử thách cá nhân). Phần tạo/quản lý nhóm, mời, chuỗi, đội, bảng xếp hạng, huy hiệu, trao giải, push và chạy nhóm thời gian thực **chưa được làm**.
+
+### 4B.2 Câu hỏi Product phải chốt trước khi làm (ảnh hưởng thiết kế dữ liệu)
+- [ ] **TM00 · P0 · Product** — Trả lời và ghi vào `docs/` (ADR mới) các điểm sau:
+  1. **"Nhóm" là gì?** Giữ *Club* (cộng đồng, nhiều người) và thêm *Đội* (team) nhỏ bên trong thử thách? Hay thêm khái niệm "Crew" 2–30 người rủ nhau chạy hằng ngày? Giới hạn số thành viên, số nhóm mỗi người, ai được tạo nhóm (mọi người hay cần đủ điều kiện).
+  2. **Chuỗi tính thế nào?** Ngày đạt = đạt mục tiêu **bước**, hay có **hoạt động chạy/đi bộ** tối thiểu (X km hoặc Y phút), hay một trong hai? Có "ngày bảo lưu" (freeze) không, bao nhiêu lần/tháng? Chuỗi nhóm: *tất cả* hay *≥ K%* thành viên đạt mỗi ngày? Mất chuỗi có khôi phục không?
+  3. **Điểm thi đội = gì?** Tổng km, trung bình mỗi người (công bằng khi đội khác quân số), số ngày hoạt động, tổng thời gian? Chia đội thế nào (tự chọn, ngẫu nhiên cân bằng theo năng lực)? Có cho đổi đội giữa kỳ?
+  4. **Giải thưởng gì?** Chỉ huy hiệu/danh hiệu số, hay **vật phẩm/voucher/tiền thật**? Nếu thật: ai tài trợ, quy trình nhận, điều khoản, pháp lý (khuyến mại, thuế, độ tuổi, hạn chế vùng), chính sách App Store/Google Play về giải thưởng.
+  5. **Hoạt động nào được tính vào nhóm?** Cả `run`, `walk`, `indoorRun` (indoor là ước lượng từ bước)? Hoạt động riêng tư (`onlyMe`) có được **đóng góp số liệu** vào nhóm không (đề xuất: cần bật "đóng góp cho nhóm" riêng, khác với "công khai")?
+  6. **Chống gian lận mức nào?** Chỉ hoạt động có GPS thật? Chặn tốc độ bất hợp lý (đi xe)? Chặn vị trí giả (`isMocked`)? Ai xử lý khiếu nại?
+  7. **Có chấp nhận Cloud Functions không?** Bạn đã quyết định "không cần backend". Phần lớn tính năng nhóm (tổng hợp điểm công bằng, push, chống gian lận, đếm thành viên chịu tải) làm **an toàn** cần mã phía server (Cloud Functions, gói Blaze, vẫn là serverless). Nếu không chấp nhận: chỉ làm bản "tin cậy client" (dễ gian lận, không push theo sự kiện) — ghi rõ giới hạn.
+  8. **Có cần chat nhóm không?** (Chi phí kiểm duyệt cao; đề xuất không làm chat đầy đủ ở đợt này, dùng bài đăng + bình luận có sẵn.)
+
+### 4B.3 Gói A — Tạo và quản lý nhóm (nền tảng, làm đầu tiên)
+- [ ] **TM01 · P0 · Dev** — **Tạo câu lạc bộ** trong app: form (tên 3–40 ký tự, mô tả ≤ 300, vùng, công khai/riêng tư, ảnh đại diện tùy chọn), tạo `clubs/{id}` + `members/{uid}` vai trò `owner` bằng một thao tác nguyên tử (batch/transaction), `nameLower` để tìm kiếm. **Phải sửa `firestore.rules`** (hiện `create: false`): chỉ cho tạo khi `ownerId == auth.uid`, kiểm tra độ dài/giá trị hợp lệ, giới hạn số club mỗi người (cần Functions hoặc đếm trong rules), chống spam.
+  - Nghiệm thu: tạo được club, mình là owner, hiện trong "Câu lạc bộ của tôi"; rules test chặn tạo club thay người khác/dữ liệu sai.
+- [ ] **TM02 · P0 · Dev** — **Quản lý thành viên**: danh sách thành viên (phân trang, tìm), **duyệt/từ chối yêu cầu** (club riêng), phân quyền (owner/admin/member), xóa/cấm thành viên, chuyển quyền chủ, owner muốn rời phải chuyển quyền hoặc giải tán. Sửa rules (`members update: false` hiện chặn mọi thay đổi): owner/admin được sửa `status`/`role` theo quy tắc; không tự nâng quyền; admin không xóa owner.
+- [ ] **TM03 · P0 · Dev** — **Mời bạn bè**: link mời `https://…/club/<id>?code=<mã>` (Android App Links / iOS Universal Links; không dùng Firebase Dynamic Links vì đã ngừng), mã mời + QR, nút chia sẻ (`share_plus`), mời theo email (có `userLookup`), mã có hạn/thu hồi/giới hạn lượt. **Người chưa cài app**: mở trang cầu nối → cửa hàng → sau khi cài và đăng nhập tự vào đúng club (Android Install Referrer; iOS cần giải pháp khác). Màn "Lời mời" khi mở link: xem club, nút Tham gia.
+- [ ] **TM04 · P1 · Dev** — Sửa thông tin club, **nội quy**, ghim bài, ảnh đại diện/ảnh bìa (cần Firebase Storage + rules storage — hiện chưa dùng), xóa/giải tán club (xóa dữ liệu liên quan, thông báo thành viên).
+- [ ] **TM05 · P1 · Dev** — **Sự kiện chạy chung**: tạo/sửa/hủy (thời gian + múi giờ, địa điểm, liên kết `routes`, giới hạn người), RSVP đã có; **nhắc trước 1 ngày/1 giờ** (thông báo cục bộ theo múi giờ), danh sách người tham gia, xuất lịch `.ics`, hiển thị đếm ngược trên Home khi sự kiện sắp diễn ra. (Rules đã cho thành viên tạo; thiếu UI + kiểm tra quyền admin.)
+- [ ] **TM06 · P1 · Dev** — **Chia sẻ buổi chạy vào nhóm**: sau khi lưu có nút "Đăng vào câu lạc bộ" (chọn club, hoặc tự động theo cài đặt). Thẻ hoạt động trong feed: loại, quãng đường, thời gian, pace, ảnh bản đồ **ẩn điểm đầu/cuối** theo quyền riêng tư, cheer + comment. Chỉ chia sẻ khi người dùng chủ động/đồng ý (liên quan TM60).
+- [ ] **TM07 · P2 · Dev** — Chat nhóm thời gian thực (chỉ khi Product chốt ở TM00.8): kiểm duyệt, giới hạn, chi phí đọc/ghi.
+
+### 4B.4 Gói B — Chuỗi (streak) và mục tiêu nhóm
+- [ ] **TM20 · P0 · Dev** — **Chuỗi cá nhân đầy đủ**: số ngày liên tiếp hiện tại + dài nhất, hiển thị ở Home/Profile/Progress; quy tắc "ngày đạt" theo TM00.2; múi giờ địa phương (`tzId`), qua nửa đêm, đổi múi giờ, xóa/sửa hoạt động, đổi mục tiêu giữa chừng, **dữ liệu thiếu không phá chuỗi** (không giả lập — theo nguyên tắc sản phẩm); tính được **offline**, lưu `users/{uid}/stats/streak` và tự tính lại từ dữ liệu khi lệch. Có **ngày bảo lưu** nếu Product chọn. Hiện chỉ có 7 chấm của tuần (`computeWeekStreak`).
+  - Nghiệm thu: bộ test biên (qua nửa đêm, DST, đổi múi giờ, xóa hoạt động, offline→online), UI có trạng thái rỗng/lỗi.
+- [ ] **TM21 · P1 · Dev** — **Chuỗi nhóm**: nhóm giữ chuỗi nếu mỗi ngày đạt điều kiện nhóm (theo TM00.2); hiển thị "Chuỗi X ngày của nhóm" + ai chưa hoàn thành hôm nay (tùy chọn ẩn tên để tránh áp lực); nhắc nhẹ cuối ngày; lịch sử chuỗi.
+- [ ] **TM22 · P1 · Dev** — **Mục tiêu nhóm** hằng ngày/tuần/tháng: thanh tiến độ chung (tổng km/bước/số buổi), đóng góp từng người (tùy chọn hiển thị), chu kỳ đặt lại theo `weekStart`, lịch sử các kỳ, khi đạt có chúc mừng (xem animation mục 7, **một lần**).
+- [ ] **TM23 · P0 · Dev/Kiến trúc** — **Quyết định nơi tính số liệu nhóm**: (a) client tự ghi `progressValue` (hiện tại, dễ gian lận, lệch khi offline) hay (b) **Cloud Function** trigger khi `users/{uid}/activities` đổi → cập nhật `clubs/{id}/stats/{kỳ}` và bảng xếp hạng (an toàn, idempotent, xử lý sửa/xóa qua `revision`/`deletedAt`). Ghi ADR. Nếu chọn (b) xem TM51.
+- [ ] **TM24 · P0 · Dev/Product** — **Quy tắc hoạt động hợp lệ cho nhóm/thử thách**: loại hoạt động; có GPS thật hay indoor ước lượng (nhãn *estimated*, có tính điểm không); thời gian/quãng tối thiểu; tốc độ tối đa hợp lý theo loại (chống đi xe); hoạt động `onlyMe` chỉ tính khi bật "đóng góp cho nhóm"; hoạt động đồng bộ trễ sau khi offline tính theo `startedAt`, không theo lúc upload. Viết thành hàm thuần có test (như `utils/calc/`).
+
+### 4B.5 Gói C — Thử thách, đội thi và bảng xếp hạng
+- [ ] **TM30 · P0 · Dev** — **Màn bảng xếp hạng** cho thử thách và club (tuần/tháng/toàn thời gian): top N + **vị trí của tôi**, phân trang, cập nhật gần thời gian thực, **quy tắc đồng hạng** (ai đạt mốc trước), tôn trọng `leaderboardOptIn` (hiện mặc định `false` → khi tham gia hỏi rõ có hiện tên không; cho phép biệt danh), ẩn người bị chặn/bị cấm, nút báo cáo. Cần index Firestore (`participants` sắp theo `progressValue` giảm dần) → thêm vào `firestore.indexes.json`.
+- [ ] **TM31 · P1 · Dev** — **Tạo thử thách trong app** cho owner/admin club (hiện `create: false`): chọn loại (quãng đường/số buổi/thời gian/chuỗi), mục tiêu, thời gian bắt đầu-kết thúc + múi giờ, loại hoạt động hợp lệ (TM24), huy hiệu thưởng, mô tả quy tắc; mẫu có sẵn (30 ngày chạy, 100 km trong tháng, chuỗi 7 ngày); xem trước, sửa trước khi bắt đầu, hủy.
+- [ ] **TM32 · P1 · Dev** — **Chế độ đội (đội vs đội)**: tạo đội (tên, màu/logo), chia đội (tự chọn / ngẫu nhiên cân bằng), điểm đội theo TM00.3 (chuẩn hóa khi khác quân số), xếp hạng đội, đóng băng danh sách đội trước hạn (quy tắc rời/vào giữa kỳ). Thêm `teamId` vào participant, subcollection `teams`.
+- [ ] **TM33 · P0 · Dev** — **Vòng đời thử thách**: sắp diễn ra → đang diễn ra → **thời gian chờ đồng bộ (grace period)** → kết thúc/khóa → trao giải. Ca đặc biệt cần test: hoạt động ghi **offline** đồng bộ sau hạn, múi giờ khác nhau giữa người tham gia và thử thách (`tzId`), sửa/xóa hoạt động sau khi kết thúc, người rời/bị cấm giữa kỳ, hai thiết bị cùng tài khoản.
+- [ ] **TM34 · P1 · Dev** — Thông báo thử thách: sắp bắt đầu/kết thúc, bị vượt hạng, đạt mốc 25/50/75/100%, có kết quả (cần TM50).
+
+### 4B.6 Gói D — Huy hiệu, danh hiệu, trao giải
+- [ ] **TM40 · P1 · Dev/Design** — **Hệ thống huy hiệu**: định nghĩa (key, tên/mô tả đa ngôn ngữ, icon, điều kiện, độ hiếm); loại: hoàn thành thử thách (dùng `badgeKey` có sẵn), mốc cá nhân (5K đầu, 100 km, chuỗi 7/30/100 ngày), mốc nhóm. Lưu `users/{uid}/badges/{id}` (`earnedAt`, nguồn) **idempotent** (không trao hai lần); **Tủ huy hiệu** ở Hồ sơ/Records, màn chi tiết, chia sẻ ảnh, **animation nhận huy hiệu** (xem mục 7, tắt khi giảm chuyển động) + haptic, thông báo. Cần bộ icon/illustration từ Design.
+- [ ] **TM41 · P1 · Dev** — **Trao giải thử thách**: màn *Kết quả* (podium top 3 cá nhân, đội thắng, giải hạng mục: nhiều km nhất, chuỗi dài nhất, tiến bộ nhiều nhất), thời điểm trao sau grace period, chia sẻ ảnh kết quả, **khiếu nại/phúc khảo**, thu hồi giải khi phát hiện gian lận (kèm thông báo).
+- [ ] **TM42 · P0 (nếu có giải thật) · Product/Pháp chế/Dev** — **Giải thưởng thật** (voucher, quà, tiền): quy trình nhận (thu thập địa chỉ/email = dữ liệu cá nhân, xin đồng ý, lưu tối thiểu, xóa sau khi giao), người tổ chức/tài trợ hiển thị rõ, **điều khoản** (cách chọn người thắng, hạn nhận), tuân thủ pháp luật khuyến mại/thuế/độ tuổi/vùng, **chính sách App Store/Google Play** về giải thưởng và cá cược. Chỉ làm sau khi trả lời TM00.4.
+- [ ] **TM43 · P2 · Dev/Product** — Điểm/XP và cấp bậc: giới hạn điểm mỗi ngày và nhắc nghỉ để **không khuyến khích chạy quá sức** (an toàn sức khỏe).
+- [ ] **TM44 · P2 · Dev** — Danh hiệu cho club (hoạt động nhất tháng, tiến bộ nhất).
+
+### 4B.7 Gói E — Chạy cùng nhau thời gian thực
+- [ ] **TM10 · P1 · Dev** — **Phiên chạy nhóm (group run)**: người tạo mở phiên từ club/sự kiện → mời thành viên → mỗi người vẫn ghi buổi chạy **riêng** nhưng gắn `groupRunId`; màn nhóm hiển thị vị trí/tiến độ các thành viên (mở rộng live sharing hiện có từ 1→n thành n↔n), **đếm ngược đồng bộ** (dùng giờ server), trạng thái từng người (sẵn sàng/đang chạy/xong), **tổng quãng đường nhóm**. Giới hạn số người; chỉ chia sẻ trong phiên và cần đồng ý rõ ràng; dừng chia sẻ khi kết thúc. **Chi phí/pin:** mỗi người chỉ ghi điểm mới nhất (đã có mô hình `lastPoint` ghi đè) và giãn tần suất 5–10 giây.
+- [ ] **TM11 · P1 · Dev** — **Rủ chạy**: nút "Rủ cả nhóm chạy hôm nay" gửi push (cần TM50/TM51); "X đang chạy — tham gia?" mở thẳng phiên nhóm.
+- [ ] **TM12 · P2 · Dev** — Cổ vũ thời gian thực trong lúc chạy (nhận cheer → rung/âm ngắn, tắt được); giọng đọc "Linh vừa xong 5 km" (theo ngôn ngữ app, xem L07); luôn có chữ thay thế.
+- [ ] **TM13 · P2 · Dev** — Chạy "cùng nhau từ xa": mục tiêu chung trong ngày dù ở nơi khác nhau — dùng TM22.
+
+### 4B.8 Gói F — Thông báo đẩy và nhắc (hạ tầng cho mọi tính năng nhóm)
+- [ ] **TM50 · P0 · Dev** — **FCM**: thêm `firebase_messaging` (kiểm tra khớp họ Firebase 4.x của `dsp_base`), xin quyền thông báo (Android 13+/iOS), lưu token `users/{uid}/devices/{deviceId}` và **xóa khi đăng xuất**, kênh thông báo Android theo loại (nhóm, thử thách, nhắc nhở), bấm thông báo → deep link đúng màn, tùy chọn bật/tắt từng loại ở Hồ sơ, **thông báo theo ngôn ngữ người dùng**, giới hạn tần suất (chống spam), giờ yên tĩnh, đồng bộ với hộp thư trong app (`notification_repository`).
+- [ ] **TM51 · P0 (nếu chọn kiến trúc server) · Dev/Ops** — **Cloud Functions** (`functions/`, TypeScript, gói Blaze): tổng hợp điểm khi hoạt động đổi (TM23), kết thúc thử thách + trao huy hiệu, gửi push, dọn dữ liệu, bộ đếm chịu tải (sharded counter thay cho `memberCount`/`participantCount` ghi từ client — dễ tranh chấp ở nhóm lớn). Test bằng Emulator, CI deploy, giám sát lỗi và chi phí, cảnh báo ngân sách.
+- [ ] **TM52 · P1 · Dev** — **Nhắc giữ chuỗi**: "Hôm nay bạn chưa đạt mục tiêu, còn X giờ để giữ chuỗi" (thông báo cục bộ theo múi giờ, **không nhắc nếu đã đạt**, tôn trọng giờ yên tĩnh); nhắc nhóm nhẹ nhàng, không tạo áp lực/xấu hổ.
+
+### 4B.9 Gói G — Quyền riêng tư, an toàn, chống lạm dụng (bắt buộc với tính năng xã hội)
+- [ ] **TM60 · P0 · Dev/Product** — **Quyền riêng tư nhóm**: mặc định `onlyMe`; "đóng góp cho nhóm" là lựa chọn riêng và hiển thị rõ ai thấy gì; thành viên chỉ thấy số liệu tổng hợp nếu chọn; ẩn điểm đầu/cuối trên bản đồ chia sẻ; rời nhóm → tùy chọn xóa đóng góp; **xóa tài khoản** → gỡ khỏi bảng xếp hạng/nhóm; người dưới tuổi quy định. Cập nhật chính sách quyền riêng tư và Data Safety.
+- [ ] **TM61 · P0 · Dev/Ops** — **Kiểm duyệt nội dung người dùng (UGC)** — bắt buộc để qua App Store/Google Play: báo cáo (đã có `reports`), chặn (đã có), công cụ cho admin club (ẩn bài, cấm thành viên), lọc từ cấm cơ bản, giới hạn tần suất đăng bài (cần rules/Functions vì không còn server rate limit), **quy trình xử lý báo cáo** (hàng đợi, thời hạn gỡ nội dung, người phụ trách), điều khoản sử dụng.
+- [ ] **TM62 · P1 · Dev** — **Chống gian lận bảng xếp hạng**: kiểm tra hợp lý (tốc độ, nhảy vị trí, lộ trình trùng), cờ "đã xác minh GPS", đánh dấu vị trí giả (`isMocked` của geolocator), ngưỡng loại, nhật ký và quy trình loại/khôi phục.
+- [ ] **TM63 · P1 · Dev** — **Chịu tải và chi phí**: `memberCount`/`participantCount` đang tăng bằng transaction từ client (`counterStep` trong rules) → "hot document" ~1 ghi/giây ở nhóm lớn; dùng sharded counter/Functions; phân trang mọi danh sách; kiểm tra index; ước tính chi phí đọc/ghi với 10.000 người dùng.
+
+### 4B.10 Luồng người dùng cần dựng (để người làm đối chiếu)
+1. **Lập nhóm:** đăng nhập Google → Hồ sơ → Khám phá → Câu lạc bộ → *Tạo câu lạc bộ* → đặt tên/quy tắc → *Mời bạn bè* (link/QR/email) → bạn mở link → (cài app) → đăng nhập → vào đúng nhóm → thấy feed/sự kiện/thử thách.
+2. **Thử thách tháng:** admin tạo "100 km tháng 11" (cá nhân hoặc theo đội) → thành viên nhận push → tham gia → mỗi buổi chạy lưu xong **tự cộng** vào tiến độ → xem bảng xếp hạng + tiến độ đội → đạt mốc nhận huy hiệu → hết hạn → chờ đồng bộ → màn *Kết quả* + trao giải.
+3. **Chạy chung hôm nay:** thành viên bấm *Rủ cả nhóm chạy* hoặc vào sự kiện → RSVP → nhắc trước giờ → *Phiên chạy nhóm* (đếm ngược chung) → thấy nhau trên bản đồ → kết thúc → đăng thẻ chung vào feed → cheer/comment.
+4. **Giữ chuỗi:** Home hiện chuỗi cá nhân + chuỗi nhóm → nhắc cuối ngày nếu chưa đạt → mất chuỗi thì thông báo nhẹ nhàng + cách bắt đầu lại/khôi phục.
+
+**Màn hình mới cần làm** (mỗi màn: trạng thái rỗng/tải/lỗi/offline/thiếu quyền, đa ngôn ngữ, animation, điểm chạm 48 — xem mục 6–8): Tạo/sửa club · Thành viên club · Duyệt yêu cầu · Mời (link/QR) · Lời mời · Quản lý sự kiện · Tạo thử thách · Bảng xếp hạng · Tạo/xem đội · Kết quả thử thách (podium) · Tủ huy hiệu · Chi tiết huy hiệu · Chuỗi (lịch + lịch sử) · Mục tiêu nhóm · Phòng chạy nhóm · Cài đặt thông báo · Quản trị club · Hàng đợi báo cáo (nếu có công cụ nội bộ).
+
+### 4B.11 Dữ liệu, rules, index cần bổ sung (cập nhật CÙNG LÚC ba nơi: `docs/firestore-schema.md`, `firestore.rules`, `firestore.indexes.json`)
+| Thêm | Mục đích |
+|---|---|
+| `clubs/{id}`: `inviteCode`, `inviteExpiresAt`, `rules`, `coverUrl`, `streak {current, longest, lastDay}`, `stats` | Mời, nội quy, chuỗi và thống kê nhóm |
+| `clubs/{id}/members/{uid}`: `contributesToTeam`, `teamId`, quyền sửa cho owner/admin | Phân quyền, đóng góp, đội |
+| `clubs/{id}/teams/{teamId}`, `challenges/{id}/teams/{teamId}`, participant thêm `teamId` | Đội thi |
+| `clubs/{id}/stats/{kỳ}` | Tổng hợp mục tiêu nhóm theo kỳ |
+| `users/{uid}/stats/streak`, `users/{uid}/badges/{id}`, `users/{uid}/devices/{deviceId}` | Chuỗi cá nhân, huy hiệu, token FCM |
+| `groupRuns/{id}` + `participants` | Phiên chạy nhóm |
+| `awards/{id}` (+ `claims`) | Giải thưởng, nhận giải |
+| `invites/{code}` | Mã mời có hạn/thu hồi |
+| Index: bảng xếp hạng (`participants` theo `progressValue` giảm dần), feed (`clubId` + `createdAt`), sự kiện (`clubId` + `startsAt`), thành viên theo vai trò | Truy vấn có phân trang |
+| Rules: owner/admin được sửa thành viên, tạo thử thách/sự kiện; cấm tự nâng quyền; giới hạn kích thước và tần suất; bộ đếm chỉ tăng đúng bước | Bảo mật — **mỗi quyền có test Emulator** (FB03) |
+
+### 4B.12 Kiểm thử và nghiệm thu riêng cho nhóm
+- [ ] **TM70 · P0 · QA/Dev** — Test rules bằng Emulator cho từng quyền mới (owner/admin/member/người lạ/người bị chặn): tạo club, duyệt thành viên, sửa vai trò, đăng bài, tạo thử thách, đọc bảng xếp hạng khi `leaderboardOptIn=false`, đọc live/group run.
+- [ ] **TM71 · P0 · Dev** — Test thuần (không cần Firebase) cho: tính chuỗi (biên múi giờ/nửa đêm/DST/xóa-sửa), điểm đội chuẩn hóa, xếp hạng và tie-break, quy tắc hoạt động hợp lệ, vòng đời thử thách + grace period.
+- [ ] **TM72 · P0 · QA** — Thử **3–5 máy thật cùng lúc** cho phiên chạy nhóm và live share: đồng bộ đếm ngược, độ trễ vị trí, mất mạng/khôi phục, pin, kill app giữa chừng.
+- [ ] **TM73 · P1 · QA** — Thử **offline → online**: hoạt động ghi khi mất mạng vẫn được cộng đúng vào nhóm/thử thách, không cộng trùng.
+- [ ] **TM74 · P1 · Dev** — Hiệu năng: bảng xếp hạng 1.000 người, feed club 1.000 bài, danh sách thành viên 500 người (phân trang, không giật).
+- [ ] **TM75 · P0 · QA/Product** — **UAT nhóm thật**: 10 người dùng, 7 ngày liên tiếp, một thử thách ngắn + chuỗi nhóm + một buổi chạy nhóm; biên bản có chữ ký Product.
+- [ ] **TM76 · P1 · Dev** — Analytics (không chứa id/tọa độ): `club_create`, `club_invite_share`, `club_join`, `challenge_join`, `leaderboard_view`, `badge_earned`, `streak_milestone`, `group_run_start`…; phễu *mời → cài → vào nhóm*. Tên event **không** trùng tên dành riêng của Firebase (xem `utils/analytics.dart`).
+
+### 4B.13 Thứ tự làm đề xuất
+| Giai đoạn | Việc | Mục tiêu |
+|---|---|---|
+| 0 | TM00 (chốt câu hỏi Product), TM23 (kiến trúc client hay Functions), FB01–FB04 (bật Firestore, deploy rules, test rules) | Không làm tiếp khi chưa chốt — sai nền sẽ phải làm lại dữ liệu |
+| 1 — MVP nhóm | TM01, TM02 (cơ bản), TM03 (link mời), TM20 (chuỗi cá nhân), TM30 (bảng xếp hạng), TM50 (FCM), TM60, TM61, TM70, TM71 | Lập nhóm, rủ bạn, thấy nhau, giữ chuỗi, có push; đủ điều kiện qua kiểm duyệt cửa hàng |
+| 2 — Thi đua | TM31, TM33, TM24, TM40 (huy hiệu), TM21–TM22 (chuỗi + mục tiêu nhóm), TM05, TM06, TM51 (Functions), TM52, TM34 | Thử thách có vòng đời, huy hiệu, mục tiêu và chuỗi nhóm, sự kiện, chia sẻ hoạt động |
+| 3 — Gắn kết sâu | TM10–TM11 (chạy nhóm), TM32 (đội vs đội), TM41 (trao giải), TM62–TM63, TM42 (giải thật nếu có) | Chạy cùng thời gian thực, thi đội, trao giải, chống gian lận, chịu tải |
+| 4 — Tùy chọn | TM04, TM07, TM12, TM13, TM43, TM44 | Hoàn thiện |
+
+Ước lượng rất thô (một dev đã quen codebase, chưa gồm thiết kế/QA): Giai đoạn 1 ≈ 4–6 tuần, giai đoạn 2 ≈ 5–7 tuần, giai đoạn 3 ≈ 6–8 tuần. Cần Design cung cấp icon huy hiệu, podium, màn tạo nhóm/mời trước khi dev làm UI.
 
 ---
 
@@ -279,6 +412,7 @@ Danh sách 16 ngôn ngữ app smart_drink đang hỗ trợ — đề xuất dùn
 ---
 
 ## 11. Rủi ro và quyết định còn mở (cần người có thẩm quyền chốt)
+0. **Tính năng nhóm/chuỗi/đội/giải thưởng** (mục 4B): 8 câu hỏi Product ở TM00, đặc biệt **có chấp nhận Cloud Functions hay không** và **có giải thưởng thật hay không** (kéo theo pháp lý).
 1. **Nhà cung cấp bản đồ production và ngân sách** (MAP01).
 2. **Danh sách ngôn ngữ phát hành đợt đầu** và thứ tự (L01).
 3. **Có dùng quảng cáo không** (hiện không; nếu có phải bật UMP/GDPR và AdMob ID thật, xem `docs/adr/0002-shared-base.md`).
