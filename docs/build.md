@@ -58,6 +58,18 @@ main()
 ```
 Firebase chỉ khởi tạo trên Android (có `google-services.json`); lỗi/không mạng thì app chạy offline và ẩn tính năng tài khoản/đám mây.
 
+## Bản đồ (tile)
+Một chỗ dựng lớp tile cho mọi màn: `presentation/common_components/map_tiles.dart` (`strideTileLayer`), cấu hình ở `configs/env.dart`:
+
+| `--dart-define` | Mặc định | Ghi chú |
+|---|---|---|
+| `STRIDE_TILE_URL` | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` | Không cần key, nhưng máy chủ cộng đồng: không dành cho app thương mại lưu lượng lớn |
+| `STRIDE_TILE_FALLBACK_URL` | OSM France (HOT) khi dùng nguồn mặc định, rỗng nếu đã tự chọn nguồn | Dùng khi nguồn chính lỗi (vd. mạng/ISP chặn `openstreetmap.org` — router trả `127.0.0.1`) |
+| `STRIDE_TILE_ATTRIBUTION` | `© OpenStreetMap contributors` | Bắt buộc hiển thị đúng nhà cung cấp |
+
+Đã thử: CARTO voyager nay in watermark "API KEY REQUIRED" khi không có key → không dùng làm dự phòng. Trước khi phát hành phải chuyển sang nhà cung cấp có SLA (MapTiler, Stadia, Mapbox...);
+khóa truyền qua `--dart-define`/secret CI, không commit.
+
 ## Chuỗi đa ngôn ngữ
 XML kiểu Android ở `mobile/lib/xml_strings/values*/strings.xml` (khai trong `pubspec.yaml`): `values` là tiếng Anh, `values-vi` là tiếng Việt, khoảng 1.660 key.
 Quy tắc thêm/sửa chuỗi: xem mục "Chuỗi giao diện" trong `CLAUDE.md`. Dùng trong code: `'app_tagline'.tr`, `'run_pace_value'.trArgs([pace])`

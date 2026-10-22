@@ -26,9 +26,11 @@ class EnvConfig {
     // Chỉ dự phòng khi dùng nguồn mặc định; đã tự chọn nhà cung cấp riêng thì tôn trọng lựa chọn đó (truyền STRIDE_TILE_FALLBACK_URL nếu muốn).
     const fallback = String.fromEnvironment(
       'STRIDE_TILE_FALLBACK_URL',
-      defaultValue: tiles == defaultTiles ? 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png' : '',
+      // OSM France (HOT): cùng dữ liệu OpenStreetMap, không cần API key, nhưng là máy chủ cộng đồng — chỉ để dev/dự phòng.
+      // (CARTO voyager đã thôi cho dùng không key: trả ảnh watermark "API KEY REQUIRED".)
+      defaultValue: tiles == defaultTiles ? 'https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png' : '',
     );
-    const attribution = String.fromEnvironment('STRIDE_TILE_ATTRIBUTION', defaultValue: '© OpenStreetMap contributors © CARTO');
+    const attribution = String.fromEnvironment('STRIDE_TILE_ATTRIBUTION', defaultValue: '© OpenStreetMap contributors');
     return EnvConfig(env: env, tileUrlTemplate: tiles, tileFallbackUrlTemplate: fallback, tileAttribution: attribution, flags: FeatureFlags.defaultsFor(env));
   }
 }
