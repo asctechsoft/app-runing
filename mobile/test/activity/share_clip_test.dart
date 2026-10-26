@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/domain/calc/geo.dart';
-import 'package:stride/features/activity/route_geometry.dart';
-import 'package:stride/features/activity/share_activity_screen.dart';
+import 'package:stride/utils/calc/geo.dart';
+import 'package:stride/utils/route_geometry.dart';
+import 'package:stride/presentation/screens_activity/share_activity_screen.dart';
 
 double _d(GeoPoint a, GeoPoint b) => haversineM(a.lat, a.lon, b.lat, b.lon);
 

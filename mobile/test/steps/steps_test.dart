@@ -4,16 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:stride/core/db/app_database.dart';
-import 'package:stride/core/permissions/permission_coordinator.dart';
-import 'package:stride/core/providers.dart';
-import 'package:stride/core/time/clock.dart';
-import 'package:stride/data/step_repository.dart';
-import 'package:stride/domain/calc/step_aggregate.dart';
-import 'package:stride/domain/models/steps.dart';
-import 'package:stride/features/profile/profile_logic.dart' show parseStepSourcePriority, encodeStepSourcePriority;
-import 'package:stride/features/steps/step_tracking_service.dart';
-import 'package:stride/features/steps/steps_logic.dart';
+import 'package:stride/services/storage/app_database.dart';
+import 'package:stride/services/native/permission_coordinator.dart';
+import 'package:stride/controller/providers.dart';
+import 'package:stride/utils/clock.dart';
+import 'package:stride/repository/step_repository.dart';
+import 'package:stride/utils/calc/step_aggregate.dart';
+import 'package:stride/models/data_models/steps.dart';
+import 'package:stride/controller/profile/profile_logic.dart' show parseStepSourcePriority, encodeStepSourcePriority;
+import 'package:stride/services/application/step_tracking_service.dart';
+import 'package:stride/controller/steps/steps_logic.dart';
 
 StepSample _s(int start, int end, int steps, {StepSource source = StepSource.phoneSensor}) =>
     StepSample(id: '$start-$end-${source.name}', ownerId: 'o', source: source, startAt: start, endAt: end, steps: steps, tzId: 'UTC');

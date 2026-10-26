@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/domain/models/activity.dart';
-import 'package:stride/features/activity/activity_detail_screen.dart';
+import 'package:stride/models/data_models/activity.dart';
+import 'package:stride/presentation/screens_activity/activity_detail_screen.dart';
 
 import 'fixtures.dart';
 import 'widget_harness.dart';

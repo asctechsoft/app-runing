@@ -1,12 +1,12 @@
-# Firestore schema (thay backend Next.js/Prisma)
+# Firestore schema
 
 Quyết định chủ sản phẩm 2026-10-19: bỏ backend, dùng Firebase Auth + Cloud Firestore. Đây là **hợp đồng dữ liệu**; sửa schema thì sửa luôn
-`firestore.rules` và `firestore.indexes.json`. Backend cũ ở `backend/` không còn được app gọi.
+`firestore.rules` và `firestore.indexes.json`. Backend cũ (Next.js/Prisma) đã bỏ và xóa khỏi repo; mã cũ xem lịch sử git.
 
 Quy ước chung:
 - Thời gian lưu **epoch ms (int)**, giống API cũ. Trường đồng bộ dùng thêm `serverUpdatedAt` (Firestore `Timestamp`, `FieldValue.serverTimestamp()`).
 - `uid` = Firebase Auth uid. ID bản ghi do client sinh (UUID v4) → ghi lại cùng ID là idempotent.
-- Mọi lỗi Firebase đi qua `guardFirebase` / `mapFirebaseError` (`lib/core/network/api_client.dart`) thành `ApiException`.
+- Mọi lỗi Firebase đi qua `guardFirebase` / `mapFirebaseError` (`lib/services/application/api_client.dart`) thành `ApiException`.
 - Không bao giờ ghi token/mật khẩu vào Firestore.
 
 ## Người dùng
@@ -52,7 +52,7 @@ Xóa comment cần cả `postId` (đường dẫn `posts/{postId}/comments/{id}`
 lastPoint {t, lat, lon, accuracyM?}|null, lastPointAt}` — chỉ lưu **điểm mới nhất** (ghi đè), không lưu lịch sử.
 
 ## Việc server từng làm, giờ làm ở client
-| Trước (backend) | Nay |
+| Trước (backend cũ, đã bỏ) | Nay |
 |---|---|
 | JWT/refresh/bcrypt | Firebase Auth (Google + Email/Password) |
 | Verify/reset email | Firebase gửi mail (`sendEmailVerification`, `sendPasswordResetEmail`) |

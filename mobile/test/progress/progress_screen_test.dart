@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/features/progress/progress_screen.dart';
-import 'package:stride/features/progress/records_screen.dart';
+import 'package:stride/presentation/screens_progress/progress_screen.dart';
+import 'package:stride/presentation/screens_progress/records_screen.dart';
 
 import '../activity/fixtures.dart';
 import '../activity/widget_harness.dart';

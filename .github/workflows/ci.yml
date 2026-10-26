@@ -17,10 +17,14 @@ jobs:
       run:
         working-directory: mobile
     steps:
+      # asc_common (thư mục gốc) và mobile/dsp_base là git submodule — cần cho `flutter pub get`.
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      # Dart >= 3.13.3 (asc_common yêu cầu) → Flutter 3.47.x.
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.38.9
+          flutter-version: 3.47.4
           channel: stable
           cache: true
       - name: Install (lock)
@@ -30,7 +34,7 @@ jobs:
       - name: Analyze
         run: flutter analyze
       - name: No placeholder screens
-        run: "! grep -rl TodoScreen lib/features"
+        run: "! grep -rl TodoScreen lib --exclude=todo_screen.dart"
       - name: Unit + widget tests
         run: flutter test
       - uses: actions/setup-java@v4
@@ -43,40 +47,16 @@ jobs:
         run: |
           if [ -z "$GOOGLE_SERVICES_JSON" ]; then echo "::error::Thiếu secret GOOGLE_SERVICES_JSON"; exit 1; fi
           printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build scripts compile
+        run: python -m py_compile build.py tool/build_helper.py tool/build_aab.py tool/translate.py
+      # Flavor dev: cùng applicationId nên dùng chung google-services.json; AdMob dùng app ID test (xem android/app/build.gradle.kts).
       - name: Build staging APK
-        run: flutter build apk --debug --dart-define=STRIDE_ENV=staging
+        run: flutter build apk --debug --flavor dev --dart-define=STRIDE_ENV=staging
       - uses: actions/upload-artifact@v4
         with:
           name: stride-staging-apk
-          path: mobile/build/app/outputs/flutter-apk/app-debug.apk
+          path: mobile/build/app/outputs/flutter-apk/app-dev-debug.apk
           retention-days: 14
-
-  backend:
-    name: Backend (Next.js + Prisma)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    env:
-      DATABASE_URL: file:./ci.db
-      JWT_SECRET: ci-only-secret-not-used-anywhere-else-0123456789
-      NODE_ENV: test
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
-      - name: Install (lock)
-        run: npm ci
-      - name: Prisma generate + migrate
-        run: npx prisma migrate deploy && npx prisma generate
-      - name: Lint
-        run: npm run lint
-      - name: Type-check
-        run: npx tsc --noEmit
-      - name: Test
-        run: npm test
-      - name: Build
-        run: npx next build

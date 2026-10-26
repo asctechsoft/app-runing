@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.10.8
+  sdk: ^3.13.3
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -46,7 +46,7 @@ dependencies:
   intl: ^0.20.2
   geolocator: ^14.0.1
   pedometer: ^4.2.0
-  permission_handler: 12.0.1
+  permission_handler: ^13.0.2
   flutter_map: ^8.3.2
   latlong2: ^0.10.1
   fl_chart: ^1.2.0
@@ -58,10 +58,18 @@ dependencies:
   connectivity_plus: ^7.3.2
   collection: ^1.19.1
   flutter_blue_plus: ^1.34.5
-  firebase_core: ^5.0.0
-  firebase_auth: ^7.0.0
+  # Firebase giữ cùng họ phiên bản với dsp_base (core 4.x) để hai app dùng chung một base.
+  firebase_core: ^4.0.0
+  firebase_auth: ^6.0.0
   google_sign_in: ^7.2.0
-  cloud_firestore: ^7.0.0
+  cloud_firestore: ^6.0.0
+
+  # Base dùng chung với các app ASC (submodule dsp_base, asc_common ở thư mục gốc repo).
+  get: ^4.7.2
+  dsp_base:
+    path: ./dsp_base
+  asc_common:
+    path: ../asc_common
 
 dev_dependencies:
   flutter_test:
@@ -74,6 +82,24 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   sqflite_common_ffi: ^2.4.0+3
+  flutter_launcher_icons: ^0.14.4
+  xml: ">=6.0.0 <8.0.0" # test/core/strings_xml_test.dart đọc strings.xml; cùng khoảng với asc_common
+
+# Icon launcher: nguồn ở tool/icons (nền navy phủ vuông theo Design System, KHÔNG bo góc trong ảnh; góc do hệ điều hành bo).
+# Sinh lại sau khi đổi logo: `dart run flutter_launcher_icons`. Logo trong app: assets/images/img_logo.png.
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  image_path: "tool/icons/img_logo_launcher.png"
+  adaptive_icon_background: "#0A2038"
+  adaptive_icon_foreground: "tool/icons/img_logo_launcher.png"
+  min_sdk_android: 24
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "tool/icons/img_logo_launcher.png"
+    background_color: "#0A2038"
+    theme_color: "#0A2038"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -88,6 +114,9 @@ flutter:
 
   assets:
     - assets/images/
+    # Chuỗi đa ngôn ngữ XML kiểu Android (asc_common AscLocale). Thêm thư mục mới ở đây khi thêm ngôn ngữ (xem tool/translate.py).
+    - lib/xml_strings/values/
+    - lib/xml_strings/values-vi/
 
   fonts:
     - family: Inter

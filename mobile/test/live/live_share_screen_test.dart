@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:stride/core/config/env.dart';
-import 'package:stride/core/providers.dart';
-import 'package:stride/core/time/clock.dart';
-import 'package:stride/features/live/live_share_models.dart';
-import 'package:stride/features/live/live_share_providers.dart';
-import 'package:stride/features/live/live_share_repository.dart';
-import 'package:stride/features/live/live_share_screen.dart';
+import 'package:stride/configs/env.dart';
+import 'package:stride/controller/providers.dart';
+import 'package:stride/utils/clock.dart';
+import 'package:stride/models/ui_models/live_share_models.dart';
+import 'package:stride/controller/live/live_share_providers.dart';
+import 'package:stride/repository/live_share_repository.dart';
+import 'package:stride/presentation/screen_live/live_share_screen.dart';
 
 void main() {
   Future<ProviderContainer> pumpScreen(WidgetTester tester, {required bool signedIn}) async {

@@ -3,15 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:stride/core/config/env.dart';
-import 'package:stride/core/db/app_database.dart';
-import 'package:stride/core/permissions/permission_coordinator.dart';
-import 'package:stride/core/providers.dart';
-import 'package:stride/core/time/clock.dart';
-import 'package:stride/domain/models/profile.dart';
-import 'package:stride/features/profile/data_sources_screen.dart';
-import 'package:stride/features/profile/edit_profile_screen.dart';
-import 'package:stride/features/profile/profile_screen.dart';
+import 'package:stride/configs/env.dart';
+import 'package:stride/services/storage/app_database.dart';
+import 'package:stride/services/native/permission_coordinator.dart';
+import 'package:stride/controller/providers.dart';
+import 'package:stride/utils/clock.dart';
+import 'package:stride/models/data_models/profile.dart';
+import 'package:stride/presentation/screens_profile/data_sources_screen.dart';
+import 'package:stride/presentation/screens_profile/edit_profile_screen.dart';
+import 'package:stride/presentation/screens_profile/profile_screen.dart';
 
 void main() {
   sqfliteFfiInit();

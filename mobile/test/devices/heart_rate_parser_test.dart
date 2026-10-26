@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/features/devices/heart_rate_parser.dart';
-import 'package:stride/features/devices/heart_rate_transport.dart';
+import 'package:stride/services/application/heart_rate_parser.dart';
+import 'package:stride/services/application/heart_rate_transport.dart';
 
 void main() {
   group('parseHeartRateMeasurement (0x2A37)', () {

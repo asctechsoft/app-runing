@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/core/network/api_client.dart';
-import 'package:stride/domain/models/activity.dart';
-import 'package:stride/features/live/live_share_repository.dart';
+import 'package:stride/services/application/api_client.dart';
+import 'package:stride/models/data_models/activity.dart';
+import 'package:stride/repository/live_share_repository.dart';
 
 void main() {
   test('normalizeEmail/isLookupEmail', () {

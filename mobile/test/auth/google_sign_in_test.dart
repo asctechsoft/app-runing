@@ -2,13 +2,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/core/network/api_client.dart';
-import 'package:stride/core/theme/stride_theme.dart';
-import 'package:stride/core/time/clock.dart';
-import 'package:stride/features/auth/auth_flow.dart';
-import 'package:stride/features/auth/auth_repository.dart';
-import 'package:stride/features/auth/google_sign_in_button.dart';
-import 'package:stride/features/auth/google_sign_in_service.dart';
+import 'package:stride/services/application/api_client.dart';
+import 'package:stride/values/stride_theme.dart';
+import 'package:stride/utils/clock.dart';
+import 'package:stride/controller/auth/auth_flow.dart';
+import 'package:stride/repository/auth_repository.dart';
+import 'package:stride/presentation/screens_auth/components/google_sign_in_button.dart';
+import 'package:stride/services/application/google_sign_in_service.dart';
 
 class _FakeGoogle implements GoogleCredentialSource {
   _FakeGoogle(this.result);

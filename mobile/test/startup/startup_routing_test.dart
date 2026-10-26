@@ -4,14 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:stride/app/routes.dart';
-import 'package:stride/core/db/app_database.dart';
-import 'package:stride/core/providers.dart';
-import 'package:stride/core/time/clock.dart';
-import 'package:stride/data/owner_repository.dart';
-import 'package:stride/domain/models/activity.dart';
-import 'package:stride/features/startup/startup_screen.dart';
-import 'package:stride/features/sync/sync_providers.dart';
+import 'package:stride/values/routes.dart';
+import 'package:stride/services/storage/app_database.dart';
+import 'package:stride/controller/providers.dart';
+import 'package:stride/utils/clock.dart';
+import 'package:stride/repository/owner_repository.dart';
+import 'package:stride/models/data_models/activity.dart';
+import 'package:stride/presentation/screen_startup/startup_screen.dart';
+import 'package:stride/controller/sync/sync_providers.dart';
 
 void main() {
   const guest = OwnerState(ownerId: 'guest:x', isGuest: true);

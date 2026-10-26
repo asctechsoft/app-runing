@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/domain/models/activity.dart';
-import 'package:stride/features/history/history_screen.dart';
+import 'package:stride/models/data_models/activity.dart';
+import 'package:stride/presentation/screen_history/history_screen.dart';
 
 import '../activity/fixtures.dart';
 import '../activity/widget_harness.dart';

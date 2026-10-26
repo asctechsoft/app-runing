@@ -1,0 +1,58 @@
+{
+  // Cấu hình chạy theo flavor (alpha | dev | product), giống bộ launch của các app ASC khác.
+  // Flavor bắt buộc: `flutter run` không có --flavor sẽ lỗi vì android/app/build.gradle.kts định nghĩa productFlavors.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "stride (NoAds Debug)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "mobile",
+      "program": "lib/main.dart",
+      "args": ["--flavor", "alpha"]
+    },
+    {
+      "name": "stride (NoAds Release)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "mobile",
+      "flutterMode": "release",
+      "program": "lib/main.dart",
+      "args": ["--flavor", "alpha"]
+    },
+    {
+      "name": "stride (Dev Debug)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "mobile",
+      "program": "lib/main.dart",
+      "args": ["--flavor", "dev"]
+    },
+    {
+      "name": "stride (Dev Release)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "mobile",
+      "flutterMode": "release",
+      "program": "lib/main.dart",
+      "args": ["--flavor", "dev"]
+    },
+    {
+      "name": "stride (Product Debug)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "mobile",
+      "program": "lib/main.dart",
+      "args": ["--flavor", "product"]
+    },
+    {
+      "name": "stride (Product Release)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "mobile",
+      "flutterMode": "release",
+      "program": "lib/main.dart",
+      "args": ["--flavor", "product"]
+    }
+  ]
+}

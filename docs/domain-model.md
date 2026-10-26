@@ -1,6 +1,6 @@
 # Domain model và quy ước dữ liệu (C02, C04)
 
-Dùng chung cho mobile (sqflite) và backend (Prisma). Tên field camelCase trong JSON/Dart, snake_case trong cột SQLite mobile.
+Dùng cho mobile (sqflite) và dữ liệu đám mây trên Firestore (xem `docs/firestore-schema.md`). Tên field camelCase trong JSON/Dart, snake_case trong cột SQLite mobile.
 
 ## Quy ước chung
 - ID: UUID v4 do **client** sinh (`clientId` = `id`) để idempotent.
@@ -30,7 +30,7 @@ Dùng chung cho mobile (sqflite) và backend (Prisma). Tên field camelCase tron
 | WorkoutExecution / PhaseResult | id, activityId, planSnapshot, phases[{index, kind, plannedMs, actualMs, distanceM, completed}], incomplete(bool) |
 | Device | id, ownerId, kind(`bleHeartRate`), name, remoteId, connectedAt, revokedAt |
 | HeartRateSample | activityId, t, bpm, deviceId |
-| Club / Membership / ClubPost / Comment / Cheer / Report / Block / ClubEvent / Rsvp | xem backend schema |
+| Club / Membership / ClubPost / Comment / Cheer / Report / Block / ClubEvent / Rsvp | xem `docs/firestore-schema.md` |
 | Challenge / ChallengeParticipant | ruleVersion, activityTypes[], startDate, endDate, tzId, targetType(distance/count/time), targetValue |
 | Route / SavedRoute | polyline (encoded), distanceM, surface, region, attribution |
 | LiveShare | id, activityId, ownerId, viewerIds[], startedAt, expiresAt, stoppedAt, lastPoint?, lastUpdateAt |

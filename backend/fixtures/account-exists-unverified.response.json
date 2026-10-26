@@ -1,6 +1,0 @@
-{
-  "error": {
-    "code": "account_exists_unverified",
-    "message": "An account with this email exists but its email is not verified"
-  }
-}

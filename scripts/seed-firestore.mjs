@@ -1,5 +1,5 @@
 // DEV FIXTURES ONLY — nạp dữ liệu mẫu (clubs, challenges, routes, events) vào Cloud Firestore bằng Admin SDK.
-// Port từ backend/prisma/seed.ts. Mọi document có isDevFixture: true và tên tiền tố "[DEV]". Polyline là hình học giả lập,
+// Port từ seed của backend cũ (đã xóa khỏi repo). Mọi document có isDevFixture: true và tên tiền tố "[DEV]". Polyline là hình học giả lập,
 // KHÔNG phải dữ liệu bản đồ thật. Không chạy trên project production thật của người dùng cuối.
 //
 // Chạy (Node 20+):

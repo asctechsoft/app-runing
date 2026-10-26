@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:stride/app/routes.dart';
-import 'package:stride/core/theme/stride_theme.dart';
-import 'package:stride/domain/models/activity.dart';
-import 'package:stride/domain/session/session_state.dart';
-import 'package:stride/features/run/countdown_screen.dart';
-import 'package:stride/features/run/engine/run_sources.dart';
-import 'package:stride/features/run/live_run_screen.dart';
-import 'package:stride/features/run/recovery_screen.dart';
-import 'package:stride/features/run/results_screen.dart';
-import 'package:stride/features/run/run_prepare_screen.dart';
-import 'package:stride/features/workout/interval_editor_screen.dart';
-import 'package:stride/features/workout/workout_chooser_screen.dart';
-import 'package:stride/features/run/save_activity_screen.dart';
+import 'package:stride/values/routes.dart';
+import 'package:stride/values/stride_theme.dart';
+import 'package:stride/models/data_models/activity.dart';
+import 'package:stride/models/data_models/session_state.dart';
+import 'package:stride/presentation/screens_run/countdown_screen.dart';
+import 'package:stride/controller/run/engine/run_sources.dart';
+import 'package:stride/presentation/screens_run/live_run_screen.dart';
+import 'package:stride/presentation/screens_run/recovery_screen.dart';
+import 'package:stride/presentation/screens_run/results_screen.dart';
+import 'package:stride/presentation/screens_run/run_prepare_screen.dart';
+import 'package:stride/presentation/screens_workout/interval_editor_screen.dart';
+import 'package:stride/presentation/screens_workout/workout_chooser_screen.dart';
+import 'package:stride/presentation/screens_run/save_activity_screen.dart';
 
 import 'run_harness.dart';
 
@@ -171,6 +171,45 @@ void main() {
       await tester.runAsync(() => h.ctl.lock());
       await tester.pump();
       expect(find.text('Hold to unlock'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+      await tester.runAsync(() => h.close());
+    });
+
+    testWidgets('Back khi đang ghi chỉ nhắc; khi tạm dừng mở hộp thoại kết thúc (không kẹt); Giữ tạm dừng thì ở lại', (tester) async {
+      await phone(tester);
+      final h = await harness(tester);
+      await tester.runAsync(() async {
+        await h.start();
+        await h.run(seconds: 30);
+      });
+      await tester.pumpWidget(_app(h, '/live-real'));
+      await tester.pump();
+
+      // Đang ghi: Back không kết thúc, chỉ hiện gợi ý.
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(find.text('Pause first, then press Back to finish.'), findsOneWidget);
+      expect(find.text('Finish this run?'), findsNothing);
+
+      // Tạm dừng: Back mở hộp thoại xác nhận kết thúc.
+      await tester.runAsync(() => h.ctl.pause());
+      await tester.pump(const Duration(seconds: 5));
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(find.text('Finish this run?'), findsOneWidget);
+
+      // "Keep paused": đóng hộp thoại, vẫn ở màn tạm dừng, phiên chưa kết thúc.
+      await tester.tap(find.text('Keep paused'));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Finish this run?'), findsNothing);
+      expect(find.text('Hold to finish'), findsOneWidget);
+
+      // Khóa màn hình: Back bị bỏ qua (không hộp thoại).
+      await tester.runAsync(() => h.ctl.lock());
+      await tester.pump();
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(find.text('Finish this run?'), findsNothing);
       await tester.pumpWidget(const SizedBox());
       await tester.runAsync(() => h.close());
     });

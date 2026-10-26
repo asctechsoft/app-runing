@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/features/setup/setup_logic.dart';
+import 'package:stride/controller/setup/setup_logic.dart';
 
 void main() {
   group('Hồ sơ (E04)', () {

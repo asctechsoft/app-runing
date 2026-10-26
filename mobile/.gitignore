@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Build tu dong (build.py): file cuc bo, co the chua khoa
+build_version.txt
+build_release_notes.txt
+build_auth.json
+.translate_temp/
+__pycache__/

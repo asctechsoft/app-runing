@@ -3,15 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:stride/core/db/app_database.dart';
-import 'package:stride/core/permissions/permission_coordinator.dart';
-import 'package:stride/core/providers.dart';
-import 'package:stride/core/time/clock.dart';
-import 'package:stride/domain/models/profile.dart';
-import 'package:stride/features/home/home_screen.dart';
-import 'package:stride/features/reminders/reminder_logic.dart';
-import 'package:stride/features/reminders/reminder_scheduler.dart';
-import 'package:stride/features/steps/step_tracking_service.dart';
+import 'package:stride/services/storage/app_database.dart';
+import 'package:stride/services/native/permission_coordinator.dart';
+import 'package:stride/controller/providers.dart';
+import 'package:stride/utils/clock.dart';
+import 'package:stride/models/data_models/profile.dart';
+import 'package:stride/presentation/screen_home/home_screen.dart';
+import 'package:stride/controller/reminders/reminder_logic.dart';
+import 'package:stride/services/application/reminder_scheduler.dart';
+import 'package:stride/services/application/step_tracking_service.dart';
 
 class _NoopScheduler implements ReminderScheduler {
   @override

@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
-import 'package:stride/domain/models/activity.dart';
-import 'package:stride/features/activity/activity_charts_data.dart';
-import 'package:stride/features/activity/activity_export.dart';
+import 'package:stride/models/data_models/activity.dart';
+import 'package:stride/utils/activity_charts_data.dart';
+import 'package:stride/services/application/activity_export.dart';
 
 Activity _activity({bool gps = true, String title = 'Morning run', String? notes, double? distance = 5234.56}) => Activity(
   id: 'a1',

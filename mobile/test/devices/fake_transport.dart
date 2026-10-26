@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:stride/features/devices/heart_rate_parser.dart';
-import 'package:stride/features/devices/heart_rate_transport.dart';
+import 'package:stride/services/application/heart_rate_parser.dart';
+import 'package:stride/services/application/heart_rate_transport.dart';
 
 class FakeConnection implements HeartRateConnection {
   FakeConnection(this.remoteId);

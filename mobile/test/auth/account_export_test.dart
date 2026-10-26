@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/core/network/api_client.dart';
-import 'package:stride/features/account/account_repository.dart';
+import 'package:stride/services/application/api_client.dart';
+import 'package:stride/repository/account_repository.dart';
 
 void main() {
   group('exportJsonSafe', () {
