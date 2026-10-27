@@ -83,7 +83,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   sqflite_common_ffi: ^2.4.0+3
   flutter_launcher_icons: ^0.14.4
-  xml: ">=6.0.0 <8.0.0" # test/core/strings_xml_test.dart đọc strings.xml; cùng khoảng với asc_common
+  xml: ^7.0.1 # test/core/strings_xml_test.dart đọc strings.xml; cùng khoảng với asc_common
   fake_cloud_firestore: ^4.4.0
 
 # Icon launcher: nguồn ở tool/icons (nền navy phủ vuông theo Design System, KHÔNG bo góc trong ảnh; góc do hệ điều hành bo).
