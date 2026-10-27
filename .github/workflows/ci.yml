@@ -57,7 +57,7 @@ jobs:
       # Flavor dev: cùng applicationId nên dùng chung google-services.json; AdMob dùng app ID test (xem android/app/build.gradle.kts).
       - name: Build staging APK
         run: flutter build apk --debug --flavor dev --dart-define=STRIDE_ENV=staging
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: stride-staging-apk
           path: mobile/build/app/outputs/flutter-apk/app-dev-debug.apk
