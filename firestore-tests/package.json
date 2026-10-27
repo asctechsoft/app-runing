@@ -10,6 +10,6 @@
     "test:emulator": "firebase emulators:exec --only firestore --project demo-stride --config ../firebase.json \"npm test\""
   },
   "devDependencies": {
-    "firebase-tools": "13.35.1"
+    "firebase-tools": "15.34.1"
   }
 }
