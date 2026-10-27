@@ -1,6 +1,6 @@
+import 'package:stride/models/data_models/activity.dart';
 import 'package:stride/repository/activity_repository.dart';
 import 'package:stride/utils/calc/geo.dart';
-import 'package:stride/models/data_models/activity.dart';
 import 'package:uuid/uuid.dart';
 
 /// Fixture dùng chung cho test history/activity/progress.

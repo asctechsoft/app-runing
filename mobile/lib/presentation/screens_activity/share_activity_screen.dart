@@ -5,20 +5,19 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../utils/formatters.dart';
+import '../../controller/activity/activity_providers.dart';
 import '../../controller/providers.dart';
-import '../../values/tokens.dart';
-import '../common_components/widgets.dart';
 import '../../models/data_models/activity.dart';
 import '../../services/application/activity_export.dart';
 import '../../utils/activity_format.dart';
-import '../../controller/activity/activity_providers.dart';
-import '../../utils/route_geometry.dart';
-import '../../utils/l10n.dart';
 import '../../utils/date_locale.dart';
+import '../../utils/formatters.dart';
+import '../../utils/l10n.dart';
+import '../../utils/route_geometry.dart';
+import '../../values/tokens.dart';
+import '../common_components/widgets.dart';
 
 enum ShareTemplate { map, photo, minimal }
 
@@ -344,7 +343,7 @@ class ShareCard extends StatelessWidget {
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
-        if (config.showDate) Text(DateFormat('EEEE, MMMM d, y', appDateLocale).format(activityLocalStart(a)), style: StrideText.label.copyWith(color: sub)),
+        if (config.showDate) Text(AppDates.longDate(activityLocalStart(a)), style: StrideText.label.copyWith(color: sub)),
       ],
     );
     final metricRow = Row(

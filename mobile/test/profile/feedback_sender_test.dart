@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/services/application/api_client.dart';
 import 'package:stride/presentation/screens_profile/help_screen.dart';
+import 'package:stride/services/application/api_client.dart';
 
 FeedbackSender _sender(FeedbackWriter w, {bool ready = true, String? uid = 'u1', Duration timeout = const Duration(seconds: 1)}) =>
     FeedbackSender(write: w, ready: () => ready, uid: () => uid, nowMs: () => 1760000000000, newId: () => 'f1', timeout: timeout);

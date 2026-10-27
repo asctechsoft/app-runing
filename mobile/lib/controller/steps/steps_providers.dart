@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../services/native/permission_coordinator.dart';
-import '../providers.dart';
-import '../../utils/clock.dart';
 import '../../models/data_models/profile.dart';
 import '../../models/data_models/steps.dart';
 import '../../services/application/step_source_priority.dart';
+import '../../services/native/permission_coordinator.dart';
+import '../../utils/clock.dart';
+import '../providers.dart';
 import 'steps_logic.dart';
 
 /// Quyền motion hiện tại; kiểm tra lại mỗi khi coordinator báo đổi (resume app, sau khi xin quyền).

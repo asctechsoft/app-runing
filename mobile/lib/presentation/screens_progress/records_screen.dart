@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
-import '../../values/routes.dart';
 import '../../controller/providers.dart';
+import '../../services/application/records_service.dart';
+import '../../utils/activity_format.dart';
+import '../../utils/calc/records.dart';
+import '../../utils/date_locale.dart';
+import '../../utils/l10n.dart';
+import '../../values/routes.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../utils/calc/records.dart';
-import '../../utils/activity_format.dart';
-import '../../utils/l10n.dart';
 import 'progress_screen.dart' show formatRecordValue;
-import '../../services/application/records_service.dart';
-import '../../utils/date_locale.dart';
 
 IconData _recordIcon(RecordKind k) => switch (k) {
   RecordKind.longestRun => Icons.route_outlined,
@@ -41,7 +40,10 @@ class RecordsScreen extends ConsumerWidget {
         ),
         data: (records) {
           final how = SettingsGroup(
-            children: [SettingsRow(icon: Icons.help_outline, title: 'progress_records_how_title'.tr, onTap: () => context.push(Routes.recordsHow))],
+            children: [
+              SettingsRow(icon: Icons.military_tech_outlined, title: 'badges_title'.tr, onTap: () => context.push(Routes.badges)),
+              SettingsRow(icon: Icons.help_outline, title: 'progress_records_how_title'.tr, onTap: () => context.push(Routes.recordsHow)),
+            ],
           );
           if (records.isEmpty) {
             return Column(
@@ -76,7 +78,7 @@ class RecordsScreen extends ConsumerWidget {
                         if (r == null) {
                           return SettingsRow(icon: _recordIcon(kind), title: recordTitle(kind), subtitle: recordEmptyHint(kind), showChevron: false);
                         }
-                        final date = DateFormat('MMM d, y', appDateLocale).format(DateTime.fromMillisecondsSinceEpoch(r.achievedAt));
+                        final date = AppDates.monthDayYear(DateTime.fromMillisecondsSinceEpoch(r.achievedAt));
                         return Semantics(
                           button: true,
                           label: 'progress_record_semantic'.trArgs([recordTitle(kind), formatRecordValue(r, f), date]),

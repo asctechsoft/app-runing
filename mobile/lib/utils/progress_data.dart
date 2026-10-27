@@ -1,14 +1,14 @@
-import 'clock.dart';
-import 'l10n.dart';
+import '../models/data_models/activity.dart';
+import '../models/data_models/profile.dart';
+import '../models/data_models/steps.dart';
+import '../models/ui_models/period.dart';
 import '../repository/activity_repository.dart';
 import '../repository/settings_repository.dart';
 import '../repository/step_repository.dart';
 import 'calc/run_metrics.dart';
 import 'calc/step_aggregate.dart';
-import '../models/data_models/activity.dart';
-import '../models/data_models/profile.dart';
-import '../models/data_models/steps.dart';
-import '../models/ui_models/period.dart';
+import 'clock.dart';
+import 'l10n.dart';
 
 /// Nhãn Week/Month/Year cho phân đoạn chọn kỳ.
 String periodSegmentLabel(ProgressPeriod p) => switch (p) {

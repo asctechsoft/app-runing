@@ -3,11 +3,11 @@ import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../../controller/steps/steps_logic.dart';
+import '../../../models/data_models/steps.dart';
 import '../../../utils/formatters.dart';
 import '../../../utils/l10n.dart';
 import '../../../values/tokens.dart';
-import '../../../models/data_models/steps.dart';
-import '../../../controller/steps/steps_logic.dart';
 
 /// Biểu đồ bước theo giờ (Home "Steps today" và Daily steps).
 /// - Giờ tương lai: không có bar.

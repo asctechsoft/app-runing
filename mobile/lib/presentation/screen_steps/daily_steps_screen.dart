@@ -3,21 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../values/routes.dart';
-import '../../utils/formatters.dart';
-import '../../utils/l10n.dart';
-import '../../services/native/permission_coordinator.dart';
 import '../../controller/providers.dart';
-import '../../values/tokens.dart';
-import '../../utils/clock.dart';
-import '../common_components/widgets.dart';
-import '../../models/data_models/profile.dart';
-import '../../models/data_models/steps.dart';
-import 'components/hourly_steps_chart.dart';
-import 'components/step_metrics_row.dart';
-import '../../services/application/step_source_priority.dart';
 import '../../controller/steps/steps_logic.dart';
 import '../../controller/steps/steps_providers.dart';
+import '../../models/data_models/profile.dart';
+import '../../models/data_models/steps.dart';
+import '../../services/application/step_source_priority.dart';
+import '../../services/native/permission_coordinator.dart';
+import '../../utils/clock.dart';
+import '../../utils/date_locale.dart';
+import '../../utils/formatters.dart';
+import '../../utils/l10n.dart';
+import '../../values/routes.dart';
+import '../../values/tokens.dart';
+import '../common_components/widgets.dart';
+import 'components/hourly_steps_chart.dart';
+import 'components/step_metrics_row.dart';
 
 /// Chi tiết bước theo ngày (F04): chọn ngày, biểu đồ giờ, mục tiêu theo goal history, nguồn + thời điểm cập nhật.
 class DailyStepsScreen extends ConsumerStatefulWidget {
@@ -96,7 +97,7 @@ class _DailyStepsScreenState extends ConsumerState<DailyStepsScreen> {
           padding: EdgeInsets.symmetric(horizontal: StrideScreen.gutterOf(context), vertical: StrideSpace.s8),
           children: [
             _DateBar(
-              label: isToday ? 'steps_today_label'.trArgs([DateFormat('MMM d').format(_day)]) : DateFormat('EEE, MMM d, y').format(_day),
+              label: isToday ? 'steps_today_label'.trArgs([AppDates.monthDay(_day)]) : AppDates.shortWeekdayDateYear(_day),
               onPrev: () => _shift(-1),
               onNext: isToday ? null : () => _shift(1),
               onPick: _pickDate,
@@ -238,7 +239,7 @@ class _DailyStepsScreenState extends ConsumerState<DailyStepsScreen> {
     final t = DateTime.fromMillisecondsSinceEpoch(ms);
     final now = ref.read(clockProvider).nowLocal();
     if (t.year == now.year && t.month == now.month && t.day == now.day) return DateFormat.jm().format(t);
-    return DateFormat('MMM d, ').add_jm().format(t);
+    return AppDates.monthDayTime(t);
   }
 
   Widget _enableButton(PermStatus p) {

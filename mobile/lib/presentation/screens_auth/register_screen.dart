@@ -3,13 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../controller/auth/auth_flow.dart';
+import '../../repository/auth_repository.dart';
+import '../../utils/l10n.dart';
 import '../../values/routes.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../controller/auth/auth_flow.dart';
-import '../../repository/auth_repository.dart';
 import 'components/auth_widgets.dart';
-import '../../utils/l10n.dart';
 
 /// Đăng ký email (E02). Quy tắc mật khẩu hiển thị trực tiếp, đúng quy tắc mật khẩu của app.
 class RegisterScreen extends ConsumerStatefulWidget {

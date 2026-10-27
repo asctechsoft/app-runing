@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../utils/l10n.dart';
-import '../../values/routes.dart';
-import '../../utils/formatters.dart';
-import '../../utils/logger.dart';
 import '../../controller/providers.dart';
-import '../../values/tokens.dart';
-import '../common_components/widgets.dart';
-import '../../models/data_models/activity.dart';
-import '../../models/data_models/session_state.dart';
 import '../../controller/run/engine/run_session_controller.dart';
 import '../../controller/run/engine/run_session_state.dart';
+import '../../models/data_models/activity.dart';
+import '../../models/data_models/session_state.dart';
+import '../../utils/formatters.dart';
+import '../../utils/l10n.dart';
+import '../../utils/logger.dart';
+import '../../values/routes.dart';
+import '../../values/tokens.dart';
+import '../common_components/widgets.dart';
 import 'components/run_widgets.dart';
 
 /// Khôi phục phiên chưa chốt (G08): hiển thị checkpoint cuối và khoảng thiếu; Resume / Finish & save / Discard.
@@ -119,7 +119,14 @@ class _RecoveryScreenState extends ConsumerState<RecoveryScreen> {
     if (_error != null) {
       return StrideScreen(
         showBack: false,
-        body: ErrorState(title: 'run_recovery_check_failed_title'.tr, message: 'run_recovery_check_failed_message'.tr, onRetry: _load),
+        // T07: không kẹt khi đọc phiên lỗi mãi — về Home; lần mở app sau vẫn được đưa lại đây nếu còn phiên dở.
+        body: ErrorState(
+          title: 'run_recovery_check_failed_title'.tr,
+          message: 'run_recovery_check_failed_message'.tr,
+          onRetry: _load,
+          exitLabel: 'run_back_home'.tr,
+          onExit: () => context.go(Routes.home),
+        ),
       );
     }
     final info = _info;

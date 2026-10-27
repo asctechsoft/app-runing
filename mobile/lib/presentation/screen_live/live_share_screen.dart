@@ -4,15 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../../values/routes.dart';
+import '../../controller/live/live_share_providers.dart';
 import '../../controller/providers.dart';
+import '../../models/ui_models/live_share_models.dart';
+import '../../repository/live_share_repository.dart';
+import '../../utils/l10n.dart';
+import '../../values/routes.dart';
 import '../../values/tokens.dart';
 import '../common_components/map_tiles.dart';
 import '../common_components/widgets.dart';
-import '../../models/ui_models/live_share_models.dart';
-import '../../controller/live/live_share_providers.dart';
-import '../../repository/live_share_repository.dart';
-import '../../utils/l10n.dart';
 
 /// Run → Share live location (M07). Chỉ cấu hình + đồng ý cho buổi chạy kế tiếp; share thật bắt đầu khi phiên bắt đầu.
 class LiveShareScreen extends ConsumerWidget {
@@ -222,11 +222,12 @@ class _MapPreview extends ConsumerWidget {
                     options: MapOptions(
                       initialCenter: p,
                       initialZoom: 14,
+                      maxZoom: mapMaxZoom,
                       backgroundColor: StrideColors.subtle,
                       interactionOptions: const InteractionOptions(flags: InteractiveFlag.none),
                     ),
                     children: [
-                      strideTileLayer(env),
+                      StrideTileLayer(env: env),
                       MarkerLayer(
                         markers: [
                           Marker(

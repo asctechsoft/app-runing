@@ -1,6 +1,6 @@
+import '../models/data_models/activity.dart';
 import 'calc/geo.dart';
 import 'calc/gps_filter.dart';
-import '../models/data_models/activity.dart';
 
 /// Điểm biểu đồ: x theo km (hoặc phút với nhịp tim), y theo đơn vị gốc của chuỗi.
 class ChartSample {

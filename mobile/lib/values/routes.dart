@@ -2,6 +2,7 @@
 abstract final class Routes {
   // Khởi tạo
   static const startup = '/';
+  static const language = '/language'; // chọn ngôn ngữ lần đầu (L19)
   static const onboarding = '/onboarding';
   static const welcome = '/welcome';
   static const login = '/auth/login';
@@ -27,6 +28,7 @@ abstract final class Routes {
   static const progressRuns = '/progress/runs'; // ?from=ms&to=ms
   static const records = '/progress/records';
   static const recordsHow = '/progress/records/how';
+  static const badges = '/progress/badges';
   static String progressActivity(String id) => '/progress/activity/$id';
 
   // Tab Run
@@ -49,6 +51,7 @@ abstract final class Routes {
   static const runSettings = '/profile/run-settings';
   static const reminders = '/profile/reminders';
   static const units = '/profile/units';
+  static const profileLanguage = '/profile/language';
   static const dataSources = '/profile/data-sources';
   static const devices = '/profile/data-sources/devices';
   static const privacy = '/profile/privacy';
@@ -57,8 +60,16 @@ abstract final class Routes {
   static const explore = '/profile/explore';
   static const clubs = '/profile/explore/clubs';
   static String club(String id) => '/profile/explore/clubs/$id';
+  static const clubCreate = '/profile/explore/clubs/new';
+  static String clubMembers(String id) => '/profile/explore/clubs/$id/members';
+  static String clubEdit(String id) => '/profile/explore/clubs/$id/edit';
+  static String clubChallengeCreate(String id) => '/profile/explore/clubs/$id/challenges/new';
+  static String clubEventCreate(String id) => '/profile/explore/clubs/$id/events/new';
+  static String clubEventEdit(String id, String eventId) => '/profile/explore/clubs/$id/events/$eventId/edit';
   static const challenges = '/profile/explore/challenges';
   static String challenge(String id) => '/profile/explore/challenges/$id';
+  static String challengeLeaderboard(String id) => '/profile/explore/challenges/$id/leaderboard';
+  static String challengeResults(String id) => '/profile/explore/challenges/$id/results';
   static const routesDiscover = '/profile/explore/routes';
   static String routeDetail(String id) => '/profile/explore/routes/$id';
 

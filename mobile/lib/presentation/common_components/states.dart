@@ -55,11 +55,15 @@ class EmptyState extends StatelessWidget {
 
 /// Lỗi có nguyên nhân và Retry (không "Something went wrong" chung chung khi biết nguyên nhân).
 class ErrorState extends StatelessWidget {
-  const ErrorState({super.key, required this.title, required this.message, this.onRetry, this.retryLabel});
+  const ErrorState({super.key, required this.title, required this.message, this.onRetry, this.retryLabel, this.exitLabel, this.onExit});
   final String title;
   final String message;
   final VoidCallback? onRetry;
   final String? retryLabel;
+
+  /// T07: lối ra rõ ràng trên màn khi màn chặn nút Back (ngoài Retry).
+  final String? exitLabel;
+  final VoidCallback? onExit;
 
   @override
   Widget build(BuildContext context) => EmptyState(
@@ -68,6 +72,8 @@ class ErrorState extends StatelessWidget {
     icon: Icons.error_outline,
     actionLabel: onRetry == null ? null : (retryLabel ?? 'common_try_again'.tr),
     onAction: onRetry,
+    secondaryLabel: exitLabel,
+    onSecondary: onExit,
   );
 }
 

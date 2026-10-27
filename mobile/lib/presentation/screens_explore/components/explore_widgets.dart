@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../../../controller/providers.dart';
+import '../../../repository/explore_repository.dart';
+import '../../../utils/date_locale.dart';
 import '../../../utils/l10n.dart';
 import '../../../values/routes.dart';
-import '../../../controller/providers.dart';
 import '../../../values/tokens.dart';
 import '../../common_components/widgets.dart';
-import '../../../repository/explore_repository.dart';
 
 /// Màn lỗi Explore theo nguyên nhân; hết phiên/khách → CTA đăng nhập.
 class ExploreFailureView extends StatelessWidget {
@@ -64,7 +64,7 @@ void showExploreError(BuildContext context, Object e) {
 bool _tzReady = false;
 
 /// Định dạng thời điểm theo múi giờ của sự kiện/challenge (không theo máy), kèm tên tz.
-String formatInZone(int utcMs, String tzId, {String pattern = 'EEE, MMM d · h:mm a'}) {
+String formatInZone(int utcMs, String tzId) {
   try {
     if (!_tzReady) {
       tzdata.initializeTimeZones();
@@ -72,17 +72,17 @@ String formatInZone(int utcMs, String tzId, {String pattern = 'EEE, MMM d · h:m
     }
     final loc = tz.getLocation(tzId);
     final t = tz.TZDateTime.fromMillisecondsSinceEpoch(loc, utcMs);
-    return '${DateFormat(pattern).format(DateTime(t.year, t.month, t.day, t.hour, t.minute))} ${t.timeZoneName}';
+    return '${AppDates.shortWeekdayDateTime(DateTime(t.year, t.month, t.day, t.hour, t.minute))} ${t.timeZoneName}';
   } catch (_) {
     final t = DateTime.fromMillisecondsSinceEpoch(utcMs, isUtc: true);
-    return '${DateFormat(pattern).format(t)} UTC';
+    return '${AppDates.shortWeekdayDateTime(t)} UTC';
   }
 }
 
 /// Ngày YYYY-MM-DD → "Oct 18, 2026".
 String formatLocalDate(String ymd) {
   final d = DateTime.tryParse(ymd);
-  return d == null ? ymd : DateFormat('MMM d, y').format(d);
+  return d == null ? ymd : AppDates.monthDayYear(d);
 }
 
 /// Hàng tiêu đề lớn đầu màn module.

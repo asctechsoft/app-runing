@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../values/routes.dart';
 import '../../controller/providers.dart';
+import '../../repository/auth_repository.dart';
+import '../../utils/l10n.dart';
+import '../../values/routes.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../repository/auth_repository.dart';
-import 'components/google_sign_in_button.dart';
 import 'components/auth_widgets.dart';
-import '../../utils/l10n.dart';
+import 'components/google_sign_in_button.dart';
 
 /// Chọn cách bắt đầu: email / đăng nhập / dùng thử (F02). Apple/Google chỉ hiện khi flag bật.
 class WelcomeScreen extends ConsumerWidget {

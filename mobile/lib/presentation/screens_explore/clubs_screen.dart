@@ -1,16 +1,26 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 
-import '../../utils/l10n.dart';
-import '../../values/routes.dart';
-import '../../utils/formatters.dart';
+import '../../controller/explore/explore_logic.dart';
 import '../../controller/providers.dart';
-import '../../values/tokens.dart';
-import '../common_components/widgets.dart';
 import '../../models/ui_models/explore_models.dart';
 import '../../repository/explore_repository.dart';
+import '../../services/application/reminder_scheduler.dart';
+import '../../utils/analytics.dart';
+import '../../utils/date_locale.dart';
+import '../../utils/formatters.dart';
+import '../../utils/l10n.dart';
+import '../../values/routes.dart';
+import '../../values/tokens.dart';
+import '../common_components/widgets.dart';
+import 'challenges_screen.dart';
+import 'club_group_tab.dart';
 import 'components/explore_widgets.dart';
 
 enum _ClubsTab { nearby, mine }
@@ -111,6 +121,28 @@ class _ClubsBodyState extends ConsumerState<_ClubsBody> {
     }
   }
 
+  bool _joining = false;
+
+  /// TM03: nhập mã mời → vào club (kể cả club riêng) → mở club.
+  Future<void> _joinWithCode() async {
+    if (_joining) return;
+    final code = await showDialog<String>(context: context, builder: (_) => const _InviteCodeDialog());
+    if (code == null || !mounted) return;
+    setState(() => _joining = true);
+    try {
+      final id = await ref.read(exploreRepositoryProvider).joinWithCode(code);
+      Analytics.clubJoin(via: 'invite_code');
+      if (!mounted) return;
+      showStrideSnack(context, 'explore_club_joined'.tr);
+      await context.push(Routes.club(id));
+      if (mounted) _load();
+    } catch (e) {
+      if (mounted) showExploreError(context, e);
+    } finally {
+      if (mounted) setState(() => _joining = false);
+    }
+  }
+
   void _onQueryChanged(String _) => _debounce(() {
     if (mounted) _load();
   });
@@ -121,6 +153,27 @@ class _ClubsBodyState extends ConsumerState<_ClubsBody> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         ExploreHeader(title: 'explore_clubs_title'.tr, subtitle: 'explore_clubs_subtitle'.tr),
+        Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 8,
+          children: [
+            TextButton.icon(
+              key: const Key('clubs-join-code'),
+              icon: const Icon(Icons.vpn_key_outlined),
+              label: Text('explore_club_join_code'.tr),
+              onPressed: _joinWithCode,
+            ),
+            TextButton.icon(
+              key: const Key('clubs-create'),
+              icon: const Icon(Icons.add),
+              label: Text('explore_club_create'.tr),
+              onPressed: () async {
+                await context.push(Routes.clubCreate);
+                if (mounted) _load();
+              },
+            ),
+          ],
+        ),
         TextField(
           key: const Key('clubs-search'),
           controller: _search,
@@ -207,7 +260,51 @@ class _ClubsBodyState extends ConsumerState<_ClubsBody> {
   }
 }
 
-String _membersLabel(int n) => n == 1 ? 'explore_member_one'.tr : 'explore_member_other'.trArgs([NumberFormat.decimalPattern().format(n)]);
+class _InviteCodeDialog extends StatefulWidget {
+  const _InviteCodeDialog();
+
+  @override
+  State<_InviteCodeDialog> createState() => _InviteCodeDialogState();
+}
+
+class _InviteCodeDialogState extends State<_InviteCodeDialog> {
+  final _ctl = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _ctl.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final c = normalizeInviteCode(_ctl.text);
+    if (c == null) {
+      setState(() => _error = 'explore_err_invite_invalid'.tr);
+      return;
+    }
+    Navigator.pop(context, c);
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text('explore_club_join_code'.tr),
+    content: TextField(
+      key: const Key('invite-code-input'),
+      controller: _ctl,
+      autofocus: true,
+      textCapitalization: TextCapitalization.characters,
+      onSubmitted: (_) => _submit(),
+      decoration: InputDecoration(labelText: 'explore_club_invite_code'.tr, errorText: _error),
+    ),
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context), child: Text('action_cancel'.tr)),
+      FilledButton(key: const Key('invite-code-submit'), onPressed: _submit, child: Text('explore_club_join'.tr)),
+    ],
+  );
+}
+
+String _membersLabel(int n) => 'explore_member'.trPlural(n, [NumberFormat.decimalPattern().format(n)]);
 
 class _MembershipChip extends StatelessWidget {
   const _MembershipChip(this.m);
@@ -281,7 +378,7 @@ class _ClubCard extends StatelessWidget {
 // Club detail (M02–M04)
 // =============================================================================
 
-enum _DetailTab { feed, events }
+enum _DetailTab { feed, events, challenges, group }
 
 class ClubDetailScreen extends ConsumerWidget {
   const ClubDetailScreen({super.key, required this.clubId});
@@ -334,9 +431,11 @@ class _ClubDetailBodyState extends ConsumerState<_ClubDetailBody> {
   }
 
   Future<void> _join() async {
+    if (_busy) return; // T04: hai lần chạm trong cùng frame
     setState(() => _busy = true);
     try {
       final m = await ref.read(exploreRepositoryProvider).requestJoin(widget.clubId);
+      Analytics.clubJoin(via: m?.isMember == true ? 'public' : 'request');
       if (!mounted) return;
       setState(() => _club = _club!.withMembership(m));
       showStrideSnack(context, m?.isMember == true ? 'explore_club_joined'.tr : 'explore_club_request_sent'.tr);
@@ -347,7 +446,80 @@ class _ClubDetailBodyState extends ConsumerState<_ClubDetailBody> {
     }
   }
 
+  /// TM04: owner giải tán club (lưu trữ). Một chiều — hỏi xác nhận.
+  Future<void> _archive() async {
+    if (_busy) return;
+    final ok = await confirmDialog(
+      context,
+      title: 'explore_club_archive_title'.trArgs([_club!.name]),
+      message: 'explore_club_archive_message'.tr,
+      confirmLabel: 'explore_club_archive'.tr,
+      cancelLabel: 'explore_keep'.tr,
+      destructive: true,
+    );
+    if (!ok || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(exploreRepositoryProvider).archiveClub(widget.clubId);
+      if (!mounted) return;
+      showStrideSnack(context, 'explore_club_archived'.tr);
+      _load();
+    } catch (e) {
+      if (mounted) showExploreError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// TM03: tạo mã mời rồi mở bảng chia sẻ. Club riêng: chỉ owner/admin (rules chặn thành viên thường).
+  Future<void> _invite() async {
+    if (_busy) return;
+    final c = _club!;
+    if (c.isPrivate && c.membership?.canManage != true) {
+      showStrideSnack(context, 'explore_club_invite_admin_only'.tr);
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final inv = await ref.read(exploreRepositoryProvider).createInvite(c.id);
+      if (!mounted) return;
+      final days = inviteDefaultTtl.inDays;
+      final text = 'explore_club_invite_share'.trArgs([c.name, inv.code, days]);
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text('explore_club_invite_title'.tr),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SelectableText(inv.code, key: const Key('invite-code'), style: StrideText.metricSmall.copyWith(letterSpacing: 2)),
+              const Gap(8),
+              Text('explore_club_invite_note'.trArgs([days, inviteDefaultMaxUses]), style: StrideText.caption),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('common_close'.tr)),
+            FilledButton(
+              onPressed: () async {
+                Analytics.clubInviteShare();
+                await SharePlus.instance.share(ShareParams(text: text, subject: c.name));
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+              child: Text('explore_club_invite_send'.tr),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (mounted) showExploreError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _leave({required bool pending}) async {
+    if (_busy) return;
     final ok = await confirmDialog(
       context,
       title: pending ? 'explore_club_cancel_request_title'.tr : 'explore_club_leave_title'.trArgs([_club!.name]),
@@ -400,25 +572,84 @@ class _ClubDetailBodyState extends ConsumerState<_ClubDetailBody> {
             ),
           ],
         ),
+        if (c.archived) ...[const Gap(12), StatusBanner(key: const Key('club-archived'), tone: BannerTone.warning, message: 'explore_club_archived_banner'.tr)],
         if (c.description.isNotEmpty) ...[const Gap(12), Text(c.description, style: StrideText.body)],
+        if (c.rulesText.isNotEmpty) ...[
+          const Gap(12),
+          StrideCard(
+            key: const Key('club-rules-card'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('explore_club_rules'.tr, style: StrideText.label),
+                const Gap(4),
+                Text(c.rulesText, style: StrideText.body),
+              ],
+            ),
+          ),
+        ],
         const Gap(16),
         if (member) ...[
-          Row(
+          // Wrap: chữ dài (vi) hoặc cỡ chữ lớn thì nút xuống dòng thay vì tràn.
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
             children: [
               _MembershipChip(m),
-              const Spacer(),
-              if (!m!.isOwner) TextButton(onPressed: _busy ? null : () => _leave(pending: false), child: Text('explore_club_leave'.tr)),
+              TextButton(
+                key: const Key('club-members'),
+                onPressed: () async {
+                  await context.push(Routes.clubMembers(c.id));
+                  if (mounted) _load();
+                },
+                child: Text(m!.canManage ? 'explore_club_manage_members'.tr : 'explore_club_members_title'.tr),
+              ),
+              if (!c.archived) TextButton(key: const Key('club-invite'), onPressed: _busy ? null : _invite, child: Text('explore_club_invite'.tr)),
+              if (m.canManage && !c.archived)
+                TextButton(
+                  key: const Key('club-edit'),
+                  onPressed: () async {
+                    final changed = await context.push<bool>(Routes.clubEdit(c.id));
+                    if (changed == true && mounted) _load();
+                  },
+                  child: Text('explore_club_edit'.tr),
+                ),
+              if (!m.isOwner) TextButton(onPressed: _busy ? null : () => _leave(pending: false), child: Text('explore_club_leave'.tr)),
+              if (m.isOwner && !c.archived)
+                TextButton(
+                  key: const Key('club-archive'),
+                  onPressed: _busy ? null : _archive,
+                  child: Text('explore_club_archive'.tr, style: StrideText.label.copyWith(color: StrideColors.error)),
+                ),
             ],
           ),
           const Gap(8),
           StrideSegmented<_DetailTab>(
-            values: _DetailTab.values,
+            values: [_DetailTab.feed, _DetailTab.events, if (ref.watch(flagsProvider).exploreChallenges) _DetailTab.challenges, _DetailTab.group],
             selected: _tab,
-            labelOf: (t) => t == _DetailTab.feed ? 'explore_club_tab_feed'.tr : 'explore_club_tab_events'.tr,
+            labelOf: (t) => switch (t) {
+              _DetailTab.feed => 'explore_club_tab_feed'.tr,
+              _DetailTab.events => 'explore_club_tab_events'.tr,
+              _DetailTab.challenges => 'explore_club_tab_challenges'.tr,
+              _DetailTab.group => 'explore_club_tab_group'.tr,
+            },
             onChanged: (t) => setState(() => _tab = t),
           ),
           const Gap(12),
-          if (_tab == _DetailTab.feed) _ClubFeed(key: ValueKey('feed-${c.id}'), clubId: c.id) else _ClubEvents(key: ValueKey('events-${c.id}'), clubId: c.id),
+          switch (_tab) {
+            _DetailTab.feed => _ClubFeed(
+              key: ValueKey('feed-${c.id}-${c.pinnedPostId}'),
+              clubId: c.id,
+              archived: c.archived,
+              pinnedPostId: c.pinnedPostId,
+              canManage: m.canManage && !c.archived,
+              onPinChanged: _load,
+            ),
+            _DetailTab.events => _ClubEvents(key: ValueKey('events-${c.id}'), clubId: c.id, myRole: c.archived ? 'member' : m.role),
+            _DetailTab.challenges => ChallengeList(key: ValueKey('challenges-${c.id}'), clubId: c.id, canCreate: m.canManage),
+            _DetailTab.group => ClubGroupTab(key: ValueKey('group-${c.id}-${c.groupGoal?.toMap()}'), club: c, canManage: m.canManage, onGoalChanged: _load),
+          },
         ] else if (pending) ...[
           StatusBanner(tone: BannerTone.warning, title: 'explore_club_request_pending'.tr, message: 'explore_club_request_pending_message'.tr),
           const Gap(12),
@@ -438,8 +669,16 @@ class _ClubDetailBodyState extends ConsumerState<_ClubDetailBody> {
 // ---------------------------------------------------------------------------
 
 class _ClubFeed extends ConsumerStatefulWidget {
-  const _ClubFeed({super.key, required this.clubId});
+  const _ClubFeed({super.key, required this.clubId, this.archived = false, this.pinnedPostId, this.canManage = false, this.onPinChanged});
   final String clubId;
+
+  /// TM04: bài ghim (hiện đầu feed) và quyền ghim (owner/admin).
+  final String? pinnedPostId;
+  final bool canManage;
+  final VoidCallback? onPinChanged;
+
+  /// TM04: club đã giải tán → chỉ xem, không đăng bài.
+  final bool archived;
 
   @override
   ConsumerState<_ClubFeed> createState() => _ClubFeedState();
@@ -470,9 +709,17 @@ class _ClubFeedState extends ConsumerState<_ClubFeed> {
     if (!more) setState(() => _error = null);
     try {
       final page = await ref.read(exploreRepositoryProvider).posts(widget.clubId, cursor: more ? _cursor : null);
+      // TM04: bài ghim ở đầu trang đầu; các trang sau bỏ bản trùng.
+      final items = more
+          ? [
+              ...?_posts,
+              for (final x in page.items)
+                if (x.id != widget.pinnedPostId) x,
+            ]
+          : await _withPinned(page.items);
       if (!mounted) return;
       setState(() {
-        _posts = more ? [...?_posts, ...page.items] : page.items;
+        _posts = items;
         _cursor = page.nextCursor;
       });
     } catch (e) {
@@ -485,6 +732,27 @@ class _ClubFeedState extends ConsumerState<_ClubFeed> {
     } finally {
       if (mounted) setState(() => _loadingMore = false);
     }
+  }
+
+  Future<void> _pin(String? postId) async {
+    await ref.read(exploreRepositoryProvider).setPinnedPost(widget.clubId, postId);
+    if (!mounted) return;
+    showStrideSnack(context, postId == null ? 'explore_post_unpinned'.tr : 'explore_post_pinned_snack'.tr);
+    widget.onPinChanged?.call();
+  }
+
+  /// Bài ghim lên đầu (lấy riêng nếu không có trong trang đầu; đã xóa thì bỏ qua).
+  Future<List<ClubPost>> _withPinned(List<ClubPost> page) async {
+    final id = widget.pinnedPostId;
+    if (id == null) return page;
+    final inPage = page.where((x) => x.id == id).firstOrNull;
+    final pinned = inPage ?? await ref.read(exploreRepositoryProvider).post(id).catchError((_) => null);
+    if (pinned == null) return page;
+    return [
+      pinned,
+      for (final x in page)
+        if (x.id != id) x,
+    ];
   }
 
   void _replace(ClubPost p) => setState(() => _posts = [for (final x in _posts ?? const <ClubPost>[]) x.id == p.id ? p : x]);
@@ -524,33 +792,42 @@ class _ClubFeedState extends ConsumerState<_ClubFeed> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        StrideCard(
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _composer,
-                  maxLength: 2000,
-                  minLines: 1,
-                  maxLines: 4,
-                  decoration: InputDecoration(hintText: 'explore_feed_composer_hint'.tr, counterText: ''),
+        if (!widget.archived)
+          StrideCard(
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _composer,
+                    maxLength: 2000,
+                    minLines: 1,
+                    maxLines: 4,
+                    decoration: InputDecoration(hintText: 'explore_feed_composer_hint'.tr, counterText: ''),
+                  ),
                 ),
-              ),
-              IconButton(
-                tooltip: 'explore_feed_post'.tr,
-                onPressed: _posting ? null : _post,
-                icon: _posting ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send),
-              ),
-            ],
+                IconButton(
+                  tooltip: 'explore_feed_post'.tr,
+                  onPressed: _posting ? null : _post,
+                  icon: _posting ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send),
+                ),
+              ],
+            ),
           ),
-        ),
         const Gap(12),
         if (posts == null) ...[const LoadingCard(height: 160), const Gap(12), const LoadingCard(height: 160)],
         if (posts != null && posts.isEmpty)
           EmptyState(icon: Icons.forum_outlined, title: 'explore_feed_empty_title'.tr, message: 'explore_feed_empty_message'.tr),
         if (posts != null)
           for (final p in posts) ...[
-            _PostCard(post: p, onChanged: _replace, onDeleted: () => _remove(p.id), onBlocked: () => _removeAuthor(p.authorId)),
+            _PostCard(
+              key: ValueKey('post-${p.id}'),
+              post: p,
+              pinned: p.id == widget.pinnedPostId,
+              onPin: widget.canManage ? (pin) => _pin(pin ? p.id : null) : null,
+              onChanged: _replace,
+              onDeleted: () => _remove(p.id),
+              onBlocked: () => _removeAuthor(p.authorId),
+            ),
             const Gap(12),
           ],
         if (_cursor != null) ExploreLoadMore(loading: _loadingMore, onPressed: () => _load(more: true)),
@@ -559,11 +836,15 @@ class _ClubFeedState extends ConsumerState<_ClubFeed> {
   }
 }
 
-enum _PostAction { delete, reportPost, reportUser, block }
+enum _PostAction { delete, reportPost, reportUser, block, pin, unpin }
 
 class _PostCard extends ConsumerStatefulWidget {
-  const _PostCard({required this.post, required this.onChanged, required this.onDeleted, required this.onBlocked});
+  const _PostCard({super.key, required this.post, required this.onChanged, required this.onDeleted, required this.onBlocked, this.pinned = false, this.onPin});
   final ClubPost post;
+
+  /// TM04: bài đang ghim; [onPin] khác null = tôi ghim/bỏ ghim được.
+  final bool pinned;
+  final Future<void> Function(bool pin)? onPin;
   final ValueChanged<ClubPost> onChanged;
   final VoidCallback onDeleted;
   final VoidCallback onBlocked;
@@ -594,6 +875,8 @@ class _PostCardState extends ConsumerState<_PostCard> {
     final name = p.authorName ?? 'explore_this_runner'.tr;
     try {
       switch (a) {
+        case _PostAction.pin || _PostAction.unpin:
+          await widget.onPin?.call(a == _PostAction.pin);
         case _PostAction.delete:
           final ok = await confirmDialog(
             context,
@@ -659,7 +942,7 @@ class _PostCardState extends ConsumerState<_PostCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(p.authorName ?? 'explore_runner'.tr, style: StrideText.label),
-                    if (p.createdAt > 0) Text(DateFormat('MMM d, h:mm a').format(DateTime.fromMillisecondsSinceEpoch(p.createdAt)), style: StrideText.caption),
+                    if (p.createdAt > 0) Text(AppDates.monthDayTime(DateTime.fromMillisecondsSinceEpoch(p.createdAt)), style: StrideText.caption),
                   ],
                 ),
               ),
@@ -667,6 +950,11 @@ class _PostCardState extends ConsumerState<_PostCard> {
                 tooltip: 'explore_post_options'.tr,
                 onSelected: _action,
                 itemBuilder: (_) => [
+                  if (widget.onPin != null)
+                    PopupMenuItem(
+                      value: widget.pinned ? _PostAction.unpin : _PostAction.pin,
+                      child: Text(widget.pinned ? 'explore_post_unpin'.tr : 'explore_post_pin'.tr),
+                    ),
                   if (mine) PopupMenuItem(value: _PostAction.delete, child: Text('explore_post_delete'.tr)),
                   if (!mine) ...[
                     PopupMenuItem(value: _PostAction.reportPost, child: Text('explore_report_post'.tr)),
@@ -677,6 +965,17 @@ class _PostCardState extends ConsumerState<_PostCard> {
               ),
             ],
           ),
+          if (widget.pinned) ...[
+            const Gap(6),
+            Row(
+              key: const Key('post-pinned'),
+              children: [
+                const Icon(Icons.push_pin_outlined, size: 16, color: StrideColors.primary),
+                const SizedBox(width: 4),
+                Text('explore_post_pinned'.tr, style: StrideText.caption.copyWith(color: StrideColors.primary)),
+              ],
+            ),
+          ],
           if (p.text.isNotEmpty) ...[const Gap(8), Text(p.text, style: StrideText.body)],
           if (p.activity != null) ...[const Gap(10), _ActivitySummary(a: p.activity!, fmt: fmt)],
           if (p.activityHidden) ...[const Gap(8), Text('explore_post_activity_hidden'.tr, style: StrideText.caption)],
@@ -957,8 +1256,11 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
 // ---------------------------------------------------------------------------
 
 class _ClubEvents extends ConsumerStatefulWidget {
-  const _ClubEvents({super.key, required this.clubId});
+  const _ClubEvents({super.key, required this.clubId, required this.myRole});
   final String clubId;
+
+  /// Vai trò của tôi trong club (TM05: owner/admin tạo sự kiện).
+  final String myRole;
 
   @override
   ConsumerState<_ClubEvents> createState() => _ClubEventsState();
@@ -991,12 +1293,15 @@ class _ClubEventsState extends ConsumerState<_ClubEvents> {
   }
 
   Future<void> _rsvp(ClubEvent e, bool going) async {
+    if (_busy.contains(e.id)) return; // T04
     setState(() => _busy.add(e.id));
     try {
       final updated = await ref.read(exploreRepositoryProvider).rsvp(e.id, going);
       if (!mounted) return;
       setState(() => _items = [for (final x in _items ?? const <ClubEvent>[]) x.id == e.id ? updated : x]);
       showStrideSnack(context, going ? 'explore_event_going_snack'.tr : 'explore_event_rsvp_cancelled'.tr);
+      // TM05: đặt lại nhắc 1 ngày / 1 giờ trước sự kiện đã đăng ký.
+      unawaited(ref.read(remindersSyncProvider)().catchError((_) {}));
     } catch (err) {
       if (mounted) showExploreError(context, err);
     } finally {
@@ -1004,23 +1309,120 @@ class _ClubEventsState extends ConsumerState<_ClubEvents> {
     }
   }
 
+  Future<void> _open(String route) async {
+    final changed = await context.push<bool>(route);
+    if (changed == true && mounted) _load();
+  }
+
+  Future<void> _cancel(ClubEvent e) async {
+    final ok = await confirmDialog(
+      context,
+      title: 'explore_event_cancel_title'.tr,
+      message: 'explore_event_cancel_message'.tr,
+      confirmLabel: 'explore_event_cancel'.tr,
+      cancelLabel: 'explore_keep'.tr,
+      destructive: true,
+    );
+    if (!ok || !mounted) return;
+    try {
+      await ref.read(exploreRepositoryProvider).cancelEvent(e.id);
+      if (!mounted) return;
+      showStrideSnack(context, 'explore_event_cancelled_snack'.tr);
+      _load();
+      unawaited(ref.read(remindersSyncProvider)().catchError((_) {}));
+    } catch (err) {
+      if (mounted) showExploreError(context, err);
+    }
+  }
+
+  Future<void> _attendees(ClubEvent e) => showStrideSheet<void>(
+    context,
+    title: 'explore_event_attendees_title'.tr,
+    builder: (_) => _EventAttendees(eventId: e.id),
+  );
+
+  /// TM05: thêm vào lịch qua tệp `.ics` (ứng dụng lịch của máy mở được) — không cần quyền lịch.
+  Future<void> _addToCalendar(ClubEvent e) async {
+    final ics = eventIcs(
+      id: e.id,
+      title: e.title,
+      description: e.description,
+      location: e.meetingPlace,
+      startsAt: e.startAt,
+      endsAt: e.endAt,
+      nowMs: ref.read(clockProvider).nowMs(),
+    );
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile.fromData(utf8.encode(ics), mimeType: 'text/calendar', name: 'event.ics')],
+        subject: e.title,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_error != null) return ExploreFailureView(failure: _error!, onRetry: _load);
     final items = _items;
     if (items == null) return const Column(children: [LoadingCard(), Gap(12), LoadingCard()]);
-    if (items.isEmpty) return EmptyState(icon: Icons.event_outlined, title: 'explore_events_empty_title'.tr, message: 'explore_events_empty_message'.tr);
+    final isManager = widget.myRole == 'owner' || widget.myRole == 'admin';
+    final createButton = isManager
+        ? Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: OutlineButton(
+              key: const Key('event-create'),
+              label: 'explore_event_create'.tr,
+              icon: Icons.add,
+              onPressed: () => _open(Routes.clubEventCreate(widget.clubId)),
+            ),
+          )
+        : null;
+    if (items.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ?createButton,
+          EmptyState(icon: Icons.event_outlined, title: 'explore_events_empty_title'.tr, message: 'explore_events_empty_message'.tr),
+        ],
+      );
+    }
     final now = ref.watch(clockProvider).nowMs();
+    final myUid = ref.watch(ownerProvider).ownerId;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        ?createButton,
         for (final e in items) ...[
           StrideCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(e.title, style: StrideText.subheading),
-                const Gap(4),
+                Row(
+                  children: [
+                    Expanded(child: Text(e.title, style: StrideText.subheading)),
+                    PopupMenuButton<String>(
+                      key: Key('event-menu-${e.id}'),
+                      tooltip: 'activity_more_options'.tr,
+                      icon: const Icon(Icons.more_vert),
+                      onSelected: (v) => switch (v) {
+                        'edit' => _open(Routes.clubEventEdit(widget.clubId, e.id)),
+                        'cancel' => _cancel(e),
+                        'attendees' => _attendees(e),
+                        _ => _addToCalendar(e),
+                      },
+                      itemBuilder: (_) {
+                        final manage = canManageEvent(createdBy: e.createdBy, myUid: myUid, myRole: widget.myRole);
+                        final upcoming = !e.isCancelled && e.startAt > now;
+                        return [
+                          PopupMenuItem(value: 'attendees', child: Text('explore_event_attendees_title'.tr)),
+                          if (upcoming) PopupMenuItem(value: 'calendar', child: Text('explore_event_add_calendar'.tr)),
+                          if (manage && upcoming) PopupMenuItem(value: 'edit', child: Text('explore_club_edit'.tr)),
+                          if (manage && !e.isCancelled) PopupMenuItem(value: 'cancel', child: Text('explore_event_cancel'.tr)),
+                        ];
+                      },
+                    ),
+                  ],
+                ),
                 Row(
                   children: [
                     const Icon(Icons.schedule, size: 16, color: StrideColors.textSecondary),
@@ -1040,7 +1442,10 @@ class _ClubEventsState extends ConsumerState<_ClubEvents> {
                 const Gap(8),
                 Row(
                   children: [
-                    Text(e.goingCount == 1 ? 'explore_going_one'.tr : 'explore_going_other'.trArgs([e.goingCount]), style: StrideText.caption),
+                    Text(
+                      e.maxGoing == null ? 'explore_going'.trPlural(e.goingCount, [e.goingCount]) : 'explore_event_going_of'.trArgs([e.goingCount, e.maxGoing]),
+                      style: StrideText.caption,
+                    ),
                     const Spacer(),
                     if (e.isCancelled)
                       Text('explore_event_cancelled'.tr, style: StrideText.label.copyWith(color: StrideColors.error))
@@ -1048,6 +1453,8 @@ class _ClubEventsState extends ConsumerState<_ClubEvents> {
                       Text('explore_event_ended'.tr, style: StrideText.label.copyWith(color: StrideColors.textMuted))
                     else if (e.going)
                       TextButton(onPressed: _busy.contains(e.id) ? null : () => _rsvp(e, false), child: Text('explore_event_cancel_rsvp'.tr))
+                    else if (eventFull(goingCount: e.goingCount, maxGoing: e.maxGoing))
+                      Text('explore_err_event_full'.tr, style: StrideText.label.copyWith(color: StrideColors.textMuted))
                     else
                       PrimaryButton(
                         label: 'explore_event_rsvp'.tr,
@@ -1063,6 +1470,57 @@ class _ClubEventsState extends ConsumerState<_ClubEvents> {
           const Gap(12),
         ],
         if (_cursor != null) ExploreLoadMore(loading: false, onPressed: () => _load(more: true)),
+      ],
+    );
+  }
+}
+
+/// TM05: danh sách người đã đăng ký (tên hiển thị lúc đăng ký; người tôi chặn bị ẩn).
+class _EventAttendees extends ConsumerStatefulWidget {
+  const _EventAttendees({required this.eventId});
+  final String eventId;
+
+  @override
+  ConsumerState<_EventAttendees> createState() => _EventAttendeesState();
+}
+
+class _EventAttendeesState extends ConsumerState<_EventAttendees> {
+  List<EventAttendee>? _items;
+  ExploreFailure? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _error = null);
+    try {
+      final list = await ref.read(exploreRepositoryProvider).eventAttendees(widget.eventId);
+      if (mounted) setState(() => _items = list);
+    } catch (e) {
+      if (mounted) setState(() => _error = mapExploreError(e));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_error != null) return ExploreFailureView(failure: _error!, onRetry: _load);
+    final items = _items;
+    if (items == null) return const LoadingCard(height: 120);
+    if (items.isEmpty) {
+      return EmptyState(icon: Icons.people_outline, title: 'explore_event_attendees_empty'.tr, message: 'explore_event_attendees_empty_message'.tr);
+    }
+    return Column(
+      children: [
+        for (final a in items)
+          ListTile(
+            key: Key('attendee-${a.userId}'),
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.person_outline),
+            title: Text(a.displayName.trim().isEmpty ? 'explore_event_attendee_unnamed'.tr : a.displayName, style: StrideText.body),
+          ),
       ],
     );
   }

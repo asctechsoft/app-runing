@@ -7,19 +7,24 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'values/router.dart';
 import 'configs/locale_config.dart';
-import 'services/application/stride_base.dart';
-import 'services/storage/app_database.dart';
-import 'services/application/firebase_providers.dart';
-import 'services/application/app_lifecycle.dart';
-import 'utils/date_locale.dart';
-import 'utils/logger.dart';
+import 'configs/pref_const.dart';
+import 'controller/devices/devices_providers.dart';
+import 'controller/language/language_controller.dart';
+import 'controller/live/live_share_providers.dart';
 import 'controller/providers.dart';
 import 'controller/run_plugins.dart';
+import 'services/application/app_lifecycle.dart';
+import 'services/application/firebase_providers.dart';
 import 'services/application/google_sign_in_service.dart';
-import 'controller/devices/devices_providers.dart';
-import 'controller/live/live_share_providers.dart';
+import 'services/application/licenses.dart';
+import 'services/application/stride_base.dart';
+import 'services/storage/app_database.dart';
+import 'utils/analytics.dart';
+import 'utils/date_locale.dart';
+import 'utils/haptics.dart';
+import 'utils/logger.dart';
+import 'values/router.dart';
 import 'values/stride_theme.dart';
 
 /// Luồng khởi động (offline-first: chỉ chạm tài nguyên cục bộ trước khi vào app, không chờ mạng — F01):
@@ -28,8 +33,10 @@ import 'values/stride_theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AppLocaleConfig.configure();
+  registerExtraLicenses();
 
   final prefs = await SharedPreferences.getInstance();
+  StrideHaptics.enabled = prefs.getBool(PrefConst.hapticsEnabled) ?? true;
   final db = await AppDatabase.open();
 
   // Trước base để lỗi trong lúc khởi động vẫn được ghi; Crashlytics (nếu lên) sẽ ghi đè rồi ta bọc lại ở dưới.
@@ -38,7 +45,9 @@ Future<void> main() async {
     StrideLog.e('platform', error, stack);
     return true;
   };
-  final googleReady = await StrideBase.start();
+  final diagnostics = prefs.getBool(PrefConst.diagnosticsConsent) ?? true;
+  Analytics.collectionEnabled = diagnostics;
+  final googleReady = await StrideBase.start(diagnostics: diagnostics);
   _chainErrorLogging();
 
   await AppLocaleConfig.ensureConfigured();
@@ -104,15 +113,30 @@ class _StrideAppState extends ConsumerState<StrideApp> {
     super.dispose();
   }
 
+  /// L06: chuỗi `.tr` không phụ thuộc InheritedWidget nào nên đổi `locale` không tự dựng lại chúng. Đánh dấu dựng lại mọi
+  /// element (giữ nguyên state và route stack — khác `reassembleApplication`/remount cây).
+  void _rebuildAll() {
+    void visit(Element e) {
+      e.markNeedsBuild();
+      e.visitChildren(visit);
+    }
+
+    (context as Element).visitChildren(visit);
+  }
+
   @override
   Widget build(BuildContext context) {
     final env = ref.watch(envProvider);
+    final locale = ref.watch(languageProvider.select((s) => s.locale));
+    ref.listen(languageProvider.select((s) => s.locale), (prev, next) {
+      if (prev != next) _rebuildAll();
+    });
     return MaterialApp.router(
       title: 'STRIDE',
       debugShowCheckedModeBanner: false,
       theme: buildStrideTheme(),
       routerConfig: ref.watch(routerProvider),
-      locale: AscLocale.getAppLocale(),
+      locale: locale,
       localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
       supportedLocales: AppLocaleConfig.supportedLocales,
       // Chỉ báo môi trường không phải production (B03).

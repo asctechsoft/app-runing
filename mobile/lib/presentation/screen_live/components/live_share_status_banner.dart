@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../common_components/widgets.dart';
+import '../../../controller/live/live_share_providers.dart';
 import '../../../models/ui_models/live_share_models.dart';
 import '../../../services/application/live_share_plugin.dart';
-import '../../../controller/live/live_share_providers.dart';
 import '../../../utils/l10n.dart';
+import '../../common_components/widgets.dart';
 
 /// Banner trạng thái chia sẻ trực tiếp để đặt trong màn đang chạy (integrator chèn). Ẩn khi không chia sẻ.
 class LiveShareStatusBanner extends ConsumerWidget {

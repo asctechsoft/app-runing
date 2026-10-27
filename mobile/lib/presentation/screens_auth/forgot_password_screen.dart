@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../repository/auth_repository.dart';
+import '../../utils/l10n.dart';
 import '../../values/routes.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../repository/auth_repository.dart';
 import 'components/auth_widgets.dart';
-import '../../utils/l10n.dart';
 
 /// Quên mật khẩu: luôn hiển thị kết quả chung để không lộ email có tài khoản hay không (F02).
 class ForgotPasswordScreen extends ConsumerStatefulWidget {

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
-import '../../values/routes.dart';
 import '../../controller/providers.dart';
+import '../../repository/notification_repository.dart';
+import '../../utils/date_locale.dart';
+import '../../utils/l10n.dart';
+import '../../values/routes.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../repository/notification_repository.dart';
-import '../../utils/l10n.dart';
 
 /// Inbox thông báo (J02). Chạm → đánh dấu đã đọc và mở deep link (router áp auth guard).
 class NotificationsScreen extends ConsumerWidget {
@@ -81,7 +81,7 @@ class _NotificationTile extends StatelessWidget {
     final t = DateTime.fromMillisecondsSinceEpoch(item.createdAt);
     final now = DateTime.now();
     final sameDay = t.year == now.year && t.month == now.month && t.day == now.day;
-    final when = sameDay ? DateFormat.jm().format(t) : DateFormat('MMM d').format(t);
+    final when = sameDay ? AppDates.time(t) : AppDates.monthDay(t);
     return StrideCard(
       onTap: onTap,
       semanticLabel: '${item.isRead ? '' : 'notifications_unread_prefix'.tr}${item.title}. ${item.body}. $when',

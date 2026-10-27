@@ -1,14 +1,14 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:stride/services/storage/app_database.dart';
-import 'package:stride/services/application/api_client.dart';
-import 'package:stride/utils/clock.dart';
+import 'package:stride/models/data_models/activity.dart';
 import 'package:stride/repository/activity_repository.dart';
 import 'package:stride/repository/owner_repository.dart';
 import 'package:stride/repository/settings_repository.dart';
-import 'package:stride/models/data_models/activity.dart';
+import 'package:stride/services/application/api_client.dart';
 import 'package:stride/services/application/sync_remote.dart';
 import 'package:stride/services/application/sync_service.dart';
+import 'package:stride/services/storage/app_database.dart';
+import 'package:stride/utils/clock.dart';
 
 const userId = '11111111-1111-4111-8111-111111111111';
 

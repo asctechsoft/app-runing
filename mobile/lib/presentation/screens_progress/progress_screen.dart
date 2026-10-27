@@ -1,27 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
-import '../../values/routes.dart';
-import '../../utils/formatters.dart';
-import '../../utils/l10n.dart';
-import '../../services/native/permission_coordinator.dart';
+import '../../controller/badges/badges_providers.dart';
+import '../../controller/home/home_providers.dart';
 import '../../controller/providers.dart';
-import '../../values/tokens.dart';
-import '../../utils/clock.dart';
-import '../common_components/widgets.dart';
+import '../../models/data_models/steps.dart';
+import '../../models/ui_models/period.dart';
+import '../../services/application/records_service.dart';
+import '../../services/native/permission_coordinator.dart';
+import '../../utils/activity_format.dart';
+import '../../utils/calc/badges.dart';
 import '../../utils/calc/calories.dart';
 import '../../utils/calc/records.dart';
-import '../../models/data_models/steps.dart';
-import '../screens_activity/components/activity_card.dart';
-import '../../utils/activity_format.dart';
-import 'components/choose_period_sheet.dart';
-import '../../models/ui_models/period.dart';
-import 'components/progress_chart.dart';
-import '../../utils/progress_data.dart';
-import '../../services/application/records_service.dart';
+import '../../utils/clock.dart';
 import '../../utils/date_locale.dart';
+import '../../utils/formatters.dart';
+import '../../utils/l10n.dart';
+import '../../utils/progress_data.dart';
+import '../../values/routes.dart';
+import '../../values/tokens.dart';
+import '../common_components/streak_summary.dart';
+import '../common_components/widgets.dart';
+import '../screens_activity/components/activity_card.dart';
+import 'components/choose_period_sheet.dart';
+import 'components/progress_chart.dart';
 
 typedef ProgressKey = ({ProgressPeriod period, String anchor});
 
@@ -135,6 +138,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
               children: [
                 Text('progress_title'.tr, style: StrideText.title),
                 const SizedBox(height: 12),
+                const _Streak(),
                 StrideSegmented<ProgressPeriod>(
                   values: ProgressPeriod.values,
                   selected: _period,
@@ -183,7 +187,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
                       periodTr(_period, 'progress_this_through_week', 'progress_this_through_month', 'progress_this_through_year', [
-                        DateFormat('EEE, MMM d', appDateLocale).format(now),
+                        AppDates.shortWeekdayDate(now),
                       ]),
                       style: StrideText.caption,
                     ),
@@ -195,6 +199,21 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// TM20: chuỗi cá nhân ở đầu Progress; chưa có dữ liệu thì ẩn.
+class _Streak extends ConsumerWidget {
+  const _Streak();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(personalStreakProvider).value;
+    if (s == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: StreakSummaryView(summary: s, card: true),
     );
   }
 }
@@ -238,11 +257,7 @@ class _RunningSection extends ConsumerWidget {
                         ),
                       ),
                       Expanded(
-                        child: MetricTile(
-                          icon: Icons.directions_run,
-                          value: '${t.count}',
-                          label: t.count == 1 ? 'progress_run_one'.tr : 'progress_run_other'.tr,
-                        ),
+                        child: MetricTile(icon: Icons.directions_run, value: '${t.count}', label: 'progress_run'.trPlural(t.count)),
                       ),
                       Expanded(
                         child: MetricTile(icon: Icons.timer_outlined, value: formatDurationShort(t.movingMs), label: 'progress_moving_time'.tr),
@@ -324,6 +339,7 @@ class _RunningSection extends ConsumerWidget {
                   child: ActivityCard(activity: a, compact: true),
                 ),
             const _RecordsPreview(),
+            const _BadgesEntry(),
           ],
         );
       },
@@ -412,7 +428,7 @@ class _ComparisonCard extends ConsumerWidget {
     }
     final delta = c.deltaDistanceM;
     final sign = delta > 0 ? '+' : (delta < 0 ? '−' : '');
-    final through = c.coverage.ongoing ? 'progress_through_day'.trArgs([DateFormat('EEEE', appDateLocale).format(now)]) : 'progress_full_period'.trArgs([noun]);
+    final through = c.coverage.ongoing ? 'progress_through_day'.trArgs([AppDates.weekday(now)]) : 'progress_full_period'.trArgs([noun]);
     final text = c.previous.count == 0 && c.current.count == 0 ? missingValue : '$sign${f.distance(delta.abs())}';
     return StrideCard(
       semanticLabel: 'progress_compare_semantic'.trArgs([noun, text, through]),
@@ -433,6 +449,31 @@ class _ComparisonCard extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// TM40: lối vào tủ huy hiệu ("X of Y badges").
+class _BadgesEntry extends ConsumerWidget {
+  const _BadgesEntry();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cab = ref.watch(badgesProvider).value;
+    final count = cab?.earned.where((b) => b.kind != BadgeKind.challenge).length;
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: SettingsGroup(
+        children: [
+          SettingsRow(
+            key: const Key('progress-badges'),
+            icon: Icons.military_tech_outlined,
+            title: 'badges_title'.tr,
+            subtitle: count == null ? null : 'badges_count'.trArgs([count, personalBadges.length]),
+            onTap: () => context.push(Routes.badges),
+          ),
+        ],
       ),
     );
   }

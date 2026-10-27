@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:stride/values/routes.dart';
-import 'package:stride/values/stride_theme.dart';
+import 'package:stride/controller/run/engine/run_sources.dart';
 import 'package:stride/models/data_models/activity.dart';
 import 'package:stride/models/data_models/session_state.dart';
 import 'package:stride/presentation/screens_run/countdown_screen.dart';
-import 'package:stride/controller/run/engine/run_sources.dart';
 import 'package:stride/presentation/screens_run/live_run_screen.dart';
 import 'package:stride/presentation/screens_run/recovery_screen.dart';
 import 'package:stride/presentation/screens_run/results_screen.dart';
 import 'package:stride/presentation/screens_run/run_prepare_screen.dart';
+import 'package:stride/presentation/screens_run/save_activity_screen.dart';
 import 'package:stride/presentation/screens_workout/interval_editor_screen.dart';
 import 'package:stride/presentation/screens_workout/workout_chooser_screen.dart';
-import 'package:stride/presentation/screens_run/save_activity_screen.dart';
+import 'package:stride/values/routes.dart';
+import 'package:stride/values/stride_theme.dart';
 
 import 'run_harness.dart';
 
@@ -162,12 +162,16 @@ void main() {
       expect(find.text('Pause'), findsNothing); // nút tròn chỉ có Semantics label
       expect(find.bySemanticsLabel('Pause'), findsOneWidget);
       expect(find.text('Lock'), findsOneWidget);
+      // T01: vùng chạm màn ghi chạy (Pause ≥ 64, mọi nút ≥ 48) và nhãn truy cập (T08).
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
       await tester.tap(find.text('Map'));
       await tester.pump(const Duration(seconds: 1));
       await tester.runAsync(() => h.ctl.pause());
       await tester.pump();
       expect(find.text('Paused'), findsOneWidget);
       expect(find.text('Hold to finish'), findsOneWidget);
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
       await tester.runAsync(() => h.ctl.lock());
       await tester.pump();
       expect(find.text('Hold to unlock'), findsOneWidget);
@@ -223,6 +227,8 @@ void main() {
       await _drain(tester);
       expect(find.text('Ready for a run?'), findsOneWidget);
       expect(find.text('Start a run'), findsOneWidget);
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
       await tester.pumpWidget(const SizedBox());
 
       await tester.pumpWidget(_app(h, Routes.runIntervals));

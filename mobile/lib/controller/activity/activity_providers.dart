@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers.dart';
 import '../../models/data_models/activity.dart';
+import '../providers.dart';
 
 /// Ảnh đính kèm còn hiệu lực của hoạt động.
 class ActivityPhoto {

@@ -3,13 +3,12 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../../../utils/l10n.dart';
-import '../../../utils/logger.dart';
 import '../../../controller/providers.dart';
-import '../../../values/tokens.dart';
-import '../../../utils/calc/geo.dart';
-import '../../../models/data_models/activity.dart';
 import '../../../controller/run/engine/run_sources.dart';
+import '../../../models/data_models/activity.dart';
+import '../../../utils/calc/geo.dart';
+import '../../../utils/l10n.dart';
+import '../../../values/tokens.dart';
 import '../../common_components/map_tiles.dart';
 
 /// Vị trí hiện tại để vẽ chấm xanh + quầng sai số.
@@ -109,7 +108,7 @@ class _RunMapState extends ConsumerState<RunMap> {
     if (!widget.fitRoute) return null;
     final pts = _allPoints;
     if (pts.length < 2) return null;
-    return CameraFit.coordinates(coordinates: pts, padding: const EdgeInsets.all(40), maxZoom: 17);
+    return CameraFit.coordinates(coordinates: pts, padding: const EdgeInsets.all(40), maxZoom: routeFitMaxZoom);
   }
 
   void _recenter() {
@@ -154,6 +153,7 @@ class _RunMapState extends ConsumerState<RunMap> {
               initialCenter: center,
               initialZoom: widget.initialZoom,
               initialCameraFit: _initialFit,
+              maxZoom: mapMaxZoom,
               onMapReady: _onReady,
               interactionOptions: InteractionOptions(flags: widget.interactive ? InteractiveFlag.all & ~InteractiveFlag.rotate : InteractiveFlag.none),
               onPositionChanged: (camera, hasGesture) {
@@ -163,8 +163,8 @@ class _RunMapState extends ConsumerState<RunMap> {
             ),
             children: [
               if (tiles)
-                // Ghi log khi nền bản đồ không tải được (mất mạng, bị chặn) để dễ chẩn đoán thay vì chỉ thấy khung trống.
-                strideTileLayer(env, errorTileCallback: (tile, error, stackTrace) => StrideLog.d('map', 'tile ${tile.coordinates} failed: $error')),
+                // Ghi log + banner khi nền bản đồ không tải được (MAP03).
+                StrideTileLayer(env: env),
               PolylineLayer(
                 polylines: [
                   for (final s in widget.segments)

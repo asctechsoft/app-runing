@@ -3,15 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../values/routes.dart';
+import '../../controller/auth/auth_flow.dart';
 import '../../controller/providers.dart';
+import '../../repository/auth_repository.dart';
+import '../../utils/l10n.dart';
+import '../../values/routes.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../controller/auth/auth_flow.dart';
-import '../../repository/auth_repository.dart';
-import 'components/google_sign_in_button.dart';
 import 'components/auth_widgets.dart';
-import '../../utils/l10n.dart';
+import 'components/google_sign_in_button.dart';
 
 /// Đăng nhập email (E02). Lỗi cụ thể; offline báo rõ; hủy quay lại màn trước.
 class LoginScreen extends ConsumerStatefulWidget {

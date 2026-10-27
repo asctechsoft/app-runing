@@ -3,26 +3,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../values/routes.dart';
-import '../../utils/formatters.dart';
-import '../../services/native/permission_coordinator.dart';
+import '../../controller/badges/badges_providers.dart';
+import '../../controller/explore/group_sharing.dart';
+import '../../controller/home/home_logic.dart';
+import '../../controller/home/home_providers.dart';
 import '../../controller/providers.dart';
-import '../../values/tokens.dart';
-import '../../utils/clock.dart';
-import '../common_components/widgets.dart';
+import '../../controller/steps/steps_logic.dart';
+import '../../controller/steps/steps_providers.dart';
 import '../../models/data_models/activity.dart';
 import '../../models/data_models/profile.dart';
 import '../../repository/notification_repository.dart';
 import '../../services/application/reminder_scheduler.dart';
-import '../screen_steps/components/hourly_steps_chart.dart';
-import '../screen_steps/components/step_metrics_row.dart';
 import '../../services/application/step_source_priority.dart';
 import '../../services/application/step_tracking_service.dart';
-import '../../controller/steps/steps_logic.dart';
-import '../../controller/steps/steps_providers.dart';
-import '../../controller/home/home_logic.dart';
-import '../../controller/home/home_providers.dart';
+import '../../services/native/permission_coordinator.dart';
+import '../../utils/analytics.dart';
+import '../../utils/clock.dart';
+import '../../utils/date_locale.dart';
+import '../../utils/formatters.dart';
 import '../../utils/l10n.dart';
+import '../../values/routes.dart';
+import '../../values/tokens.dart';
+import '../common_components/streak_summary.dart';
+import '../common_components/widgets.dart';
+import '../screen_steps/components/hourly_steps_chart.dart';
+import '../screen_steps/components/step_metrics_row.dart';
+import '../screens_progress/badges_screen.dart';
 
 /// Home (E06): bước hôm nay theo trạng thái DS §06, biểu đồ giờ, buổi gần nhất, chuỗi tuần.
 class HomeScreen extends ConsumerStatefulWidget {
@@ -62,6 +68,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     try {
       await ref.read(remindersSyncProvider)();
     } catch (_) {}
+    // TM21/TM22: cập nhật số liệu nhóm ở các club tôi đang chia sẻ.
+    try {
+      await ref.read(groupSharingProvider).publishAll();
+    } catch (_) {}
   }
 
   Future<void> _refresh(String todayKey) async {
@@ -70,6 +80,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     ref.invalidate(stepsDayProvider(todayKey));
     ref.invalidate(homeLatestActivityProvider);
     ref.invalidate(homeWeekStreakProvider);
+    ref.invalidate(personalStreakProvider);
     try {
       await ref.read(stepsDayProvider(todayKey).future);
     } catch (_) {}
@@ -91,6 +102,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     ref.listen(stepsMotionPermissionProvider, (prev, next) {
       final v = next.value;
       if (v != null && isMotionGranted(v)) ref.read(stepTrackingServiceProvider).start();
+    });
+    // TM52: hôm nay vừa đạt (hoặc chuỗi đổi) → đặt lại nhắc giữ chuỗi để không nhắc khi đã đạt.
+    ref.listen(personalStreakProvider, (prev, next) {
+      final a = prev?.value;
+      final b = next.value;
+      if (b != null && a != null && (a.todayAchieved != b.todayAchieved || (a.current > 0) != (b.current > 0))) {
+        ref.read(remindersSyncProvider)().catchError((_) {});
+      }
+      // TM76: chỉ ghi khi chuỗi tăng qua mốc trong phiên này (không ghi lại mỗi lần mở app).
+      final m = (a != null && b != null) ? Analytics.crossedStreakMilestone(a.current, b.current) : null;
+      if (m != null) Analytics.streakMilestone(days: m);
+    });
+    // TM40: huy hiệu mới → báo một lần (đánh dấu đã thấy trước khi mở hộp thoại để không lặp khi dựng lại).
+    ref.listen(badgesProvider, (prev, next) async {
+      final fresh = next.value?.fresh ?? const [];
+      if (fresh.isEmpty) return;
+      await ref.read(markBadgesSeenProvider)(fresh.map((b) => b.id));
+      for (final b in fresh) {
+        Analytics.badgeEarned(kind: b.kind.name);
+      }
+      ref.invalidate(badgesProvider);
+      if (context.mounted) await showBadgeEarnedDialog(context, fresh);
     });
     // Bấm thông báo nhắc → điều hướng qua router (auth guard của router vẫn áp dụng).
     ref.listen(remindersPendingLinkProvider, (prev, next) {
@@ -242,7 +275,7 @@ class _Greeting extends StatelessWidget {
             achieved ? (first.isEmpty ? 'home_achieved_title'.tr : 'home_achieved_title_name'.trArgs([first])) : greetingFor(now, name),
             style: StrideText.title,
           ),
-          Text(achieved ? 'home_goal_achieved'.tr : DateFormat('EEEE, MMMM d, y').format(now), style: StrideText.bodySecondary),
+          Text(achieved ? 'home_goal_achieved'.tr : AppDates.longDate(now), style: StrideText.bodySecondary),
         ],
       ),
     );
@@ -457,7 +490,7 @@ class _ActivityCard extends StatelessWidget {
     final estimated = a.distanceSource == DistanceSource.steps;
     return StrideCard(
       onTap: onTap,
-      semanticLabel: '$title, ${DateFormat('EEEE, MMMM d').format(start)}',
+      semanticLabel: '$title, ${AppDates.weekdayMonthDay(start)}',
       child: Row(
         children: [
           IconBadge(icon: a.type == ActivityType.walk ? Icons.directions_walk : Icons.directions_run, size: 48),
@@ -472,7 +505,7 @@ class _ActivityCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                Text('${DateFormat('EEE, MMM d').format(start)} · ${DateFormat.jm().format(start)}', style: StrideText.caption),
+                Text(AppDates.shortWeekdayDateTime(start), style: StrideText.caption),
                 const Gap(StrideSpace.s8),
                 Row(
                   children: [
@@ -541,6 +574,7 @@ class _WeekStreakSection extends ConsumerWidget {
                 Row(
                   children: [for (final d in w.days) Expanded(child: _StreakDot(day: d))],
                 ),
+                const _CurrentStreak(),
               ],
             ),
           ),
@@ -550,13 +584,24 @@ class _WeekStreakSection extends ConsumerWidget {
   }
 }
 
+/// TM20: lỗi hoặc đang tải → ẩn (khối tuần phía trên vẫn hiển thị).
+class _CurrentStreak extends ConsumerWidget {
+  const _CurrentStreak();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(personalStreakProvider).value;
+    return s == null ? const SizedBox.shrink() : StreakSummaryView(summary: s);
+  }
+}
+
 class _StreakDot extends StatelessWidget {
   const _StreakDot({required this.day});
   final StreakDay day;
 
   @override
   Widget build(BuildContext context) {
-    final label = DateFormat('E').format(day.date);
+    final label = AppDates.weekdayShort(day.date);
     final (Color bg, Color border, Widget inner, String status) = switch (day.status) {
       StreakDayStatus.achieved => (
         StrideColors.lime,
@@ -569,7 +614,7 @@ class _StreakDot extends StatelessWidget {
       StreakDayStatus.future => (StrideColors.subtle, StrideColors.subtle, const SizedBox.shrink(), 'home_day_upcoming'.tr),
     };
     return Semantics(
-      label: 'home_day_semantic'.trArgs([DateFormat('EEEE').format(day.date), status]),
+      label: 'home_day_semantic'.trArgs([AppDates.weekday(day.date), status]),
       excludeSemantics: true,
       child: Column(
         children: [

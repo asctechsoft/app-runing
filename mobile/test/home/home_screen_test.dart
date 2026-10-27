@@ -3,19 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:stride/services/storage/app_database.dart';
-import 'package:stride/services/native/permission_coordinator.dart';
 import 'package:stride/controller/providers.dart';
-import 'package:stride/utils/clock.dart';
+import 'package:stride/controller/reminders/reminder_logic.dart';
 import 'package:stride/models/data_models/profile.dart';
 import 'package:stride/presentation/screen_home/home_screen.dart';
-import 'package:stride/controller/reminders/reminder_logic.dart';
 import 'package:stride/services/application/reminder_scheduler.dart';
 import 'package:stride/services/application/step_tracking_service.dart';
+import 'package:stride/services/native/permission_coordinator.dart';
+import 'package:stride/services/storage/app_database.dart';
+import 'package:stride/utils/clock.dart';
 
 class _NoopScheduler implements ReminderScheduler {
   @override
   Future<void> apply(Reminder r, List<ReminderSlot> slots) async {}
+  @override
+  Future<void> applyEvents(List<EventReminderSlot> slots) async {}
 }
 
 void main() {
@@ -65,6 +67,10 @@ void main() {
     expect(find.text('0'), findsNothing);
     expect(find.textContaining('0 steps'), findsNothing);
     expect(find.text('No runs yet'), findsOneWidget);
+    // T01: vùng chạm ≥ 48 (Android) / 44 (iOS); T08: mọi vùng chạm có nhãn.
+    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
+    await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     await tester.runAsync(db.close);
   });
 

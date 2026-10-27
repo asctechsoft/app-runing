@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../utils/formatters.dart';
+import '../../controller/activity/activity_providers.dart';
 import '../../controller/providers.dart';
+import '../../utils/activity_format.dart';
+import '../../utils/formatters.dart';
+import '../../utils/l10n.dart';
+import '../../utils/route_geometry.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../utils/activity_format.dart';
 import 'components/activity_map_view.dart';
-import '../../controller/activity/activity_providers.dart';
-import '../../utils/route_geometry.dart';
-import '../../utils/l10n.dart';
 
 /// Bản đồ toàn màn hình (I02): kéo/zoom, nút về toàn tuyến, chỉ số tóm tắt.
 class ActivityMapScreen extends ConsumerStatefulWidget {

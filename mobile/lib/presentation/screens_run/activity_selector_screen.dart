@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../controller/providers.dart';
-import '../../values/tokens.dart';
-import '../common_components/widgets.dart';
-import '../../models/data_models/activity.dart';
-import '../../utils/l10n.dart';
 import '../../controller/run/engine/run_session_controller.dart';
 import '../../controller/run/engine/run_session_state.dart';
+import '../../models/data_models/activity.dart';
+import '../../utils/l10n.dart';
+import '../../values/tokens.dart';
+import '../common_components/widgets.dart';
 
 /// Chọn loại hoạt động → Confirm → về prepare. Indoor chỉ hiện khi flag run.indoor bật (L04).
 class ActivitySelectorScreen extends ConsumerStatefulWidget {

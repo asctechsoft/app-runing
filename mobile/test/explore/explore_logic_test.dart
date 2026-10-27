@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/services/application/api_client.dart';
-import 'package:stride/models/data_models/activity.dart';
 import 'package:stride/controller/explore/explore_logic.dart';
+import 'package:stride/models/data_models/activity.dart';
 import 'package:stride/models/ui_models/explore_models.dart';
 import 'package:stride/repository/explore_repository.dart';
+import 'package:stride/services/application/api_client.dart';
 
 Activity _act(
   String id, {
@@ -15,7 +15,21 @@ Activity _act(
   double? distanceM,
   int movingMs = 0,
   ActivityStatus status = ActivityStatus.saved,
-}) => Activity(id: id, ownerId: 'u', type: type, status: status, startedAt: startedAt, tzId: 'UTC', tzOffsetMin: 0, distanceM: distanceM, movingMs: movingMs);
+  Privacy privacy = Privacy.public,
+}) => Activity(
+  id: id,
+  ownerId: 'u',
+  type: type,
+  status: status,
+  startedAt: startedAt,
+  tzId: 'UTC',
+  tzOffsetMin: 0,
+  distanceM: distanceM,
+  movingMs: movingMs,
+  hasGps: type != ActivityType.indoorRun,
+  distanceSource: type == ActivityType.indoorRun ? DistanceSource.steps : DistanceSource.gps,
+  privacy: privacy,
+);
 
 void main() {
   group('cursor', () {
@@ -80,23 +94,24 @@ void main() {
     });
   });
 
-  group('tiến độ thử thách', () {
+  group('tiến độ thử thách (chỉ hoạt động hợp lệ — TM24, ADR 0003)', () {
     final acts = [
       _act('a', startedAt: 1000, distanceM: 5000, movingMs: 1800000),
-      _act('b', startedAt: 2000, distanceM: null, movingMs: 600000, type: ActivityType.walk),
-      _act('c', startedAt: 3000, distanceM: 2000, movingMs: 900000, type: ActivityType.indoorRun),
-      _act('out', startedAt: 9999, distanceM: 100000),
-      _act('draft', startedAt: 1500, distanceM: 7000, status: ActivityStatus.awaitingSave),
+      _act('b', startedAt: 2000, distanceM: 2000, movingMs: 1500000, type: ActivityType.walk, privacy: Privacy.followers),
+      _act('indoor', startedAt: 3000, distanceM: 2000, movingMs: 900000, type: ActivityType.indoorRun),
+      _act('private', startedAt: 2500, distanceM: 5000, movingMs: 1800000, privacy: Privacy.onlyMe),
+      _act('out', startedAt: 9999, distanceM: 100000, movingMs: 36000000),
+      _act('draft', startedAt: 1500, distanceM: 7000, movingMs: 2400000, status: ActivityStatus.awaitingSave),
     ];
 
-    test('distance: chỉ loại hợp lệ, trong khoảng, đã lưu; thiếu distance tính 0', () {
-      final v = computeChallengeProgress(acts, metric: ChallengeTarget.distance, activityTypes: ['run', 'indoorRun'], fromMs: 1000, toMs: 5000);
+    test('distance: loại trong thử thách, trong khoảng, đã lưu; indoor và riêng tư không tính', () {
+      final v = computeChallengeProgress(acts, metric: ChallengeTarget.distance, activityTypes: ['run', 'walk', 'indoorRun'], fromMs: 1000, toMs: 5000);
       expect(v, 7000);
     });
 
     test('count và time', () {
-      expect(computeChallengeProgress(acts, metric: ChallengeTarget.count, activityTypes: ['run', 'walk', 'indoorRun'], fromMs: 1000, toMs: 5000), 3);
-      expect(computeChallengeProgress(acts, metric: ChallengeTarget.time, activityTypes: ['run', 'walk'], fromMs: 1000, toMs: 5000), 2400000);
+      expect(computeChallengeProgress(acts, metric: ChallengeTarget.count, activityTypes: ['run', 'walk', 'indoorRun'], fromMs: 1000, toMs: 5000), 2);
+      expect(computeChallengeProgress(acts, metric: ChallengeTarget.time, activityTypes: ['run'], fromMs: 1000, toMs: 5000), 1800000);
     });
 
     test('biên khoảng thời gian bao gồm cả hai đầu', () {

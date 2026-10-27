@@ -7,13 +7,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
-import '../services/application/firebase_providers.dart';
-import '../services/application/api_client.dart';
 import '../controller/providers.dart';
+import '../services/application/api_client.dart';
+import '../services/application/firebase_providers.dart';
 import '../utils/clock.dart';
 import '../utils/l10n.dart';
-import 'settings_repository.dart';
 import 'auth_repository.dart';
+import 'settings_repository.dart';
 
 /// Job export / xóa tài khoản: queued | running | succeeded | failed (H06). Nay chạy ở client nên thường đi thẳng tới
 /// succeeded/failed, nhưng giữ dạng cũ để UI không đổi.
@@ -107,14 +107,12 @@ final accountRepositoryProvider = Provider<AccountRepository>(
 class AccountRepository {
   AccountRepository({
     required this.auth,
-    required SettingsRepository settings,
+    required this._settings,
     required FirebaseFirestore Function() firestore,
     required FirebaseAuth Function() firebaseAuth,
-    required Clock clock,
-  }) : _settings = settings,
-       _fsFn = firestore,
-       _authFn = firebaseAuth,
-       _clock = clock;
+    required this._clock,
+  }) : _fsFn = firestore,
+       _authFn = firebaseAuth;
 
   final AuthRepository auth;
   final SettingsRepository _settings;

@@ -1,8 +1,8 @@
-import '../../services/native/permission_coordinator.dart';
-import '../../utils/clock.dart';
 import '../../models/data_models/profile.dart';
 import '../../models/data_models/steps.dart';
 import '../../services/application/step_tracking_service.dart';
+import '../../services/native/permission_coordinator.dart';
+import '../../utils/clock.dart';
 import '../../utils/l10n.dart';
 
 /// Trạng thái khối bước trên Home (Design System §06).
@@ -62,9 +62,15 @@ class WeekStreak {
   int get achievedCount => days.where((d) => d.status == StreakDayStatus.achieved).length;
 }
 
-/// Tuần hiện tại (theo [weekStart]) — ngày đạt khi steps ≥ mục tiêu áp dụng cho chính ngày đó.
-/// Ngày không có dữ liệu hoặc không có mục tiêu KHÔNG được tính là đạt.
-WeekStreak computeWeekStreak({required DateTime today, required int weekStart, required Map<String, StepDay> days, required List<GoalVersion> goals}) {
+/// Tuần hiện tại (theo [weekStart]) — ngày đạt khi steps ≥ mục tiêu áp dụng cho chính ngày đó, hoặc có buổi run/walk hợp lệ
+/// trong ngày ([activityDays], TM20). Ngày không có dữ liệu hoặc không có mục tiêu KHÔNG được tính là đạt.
+WeekStreak computeWeekStreak({
+  required DateTime today,
+  required int weekStart,
+  required Map<String, StepDay> days,
+  required List<GoalVersion> goals,
+  Set<String> activityDays = const {},
+}) {
   final start = startOfWeek(today, weekStart);
   final t = DateTime(today.year, today.month, today.day);
   final out = <StreakDay>[];
@@ -77,7 +83,9 @@ WeekStreak computeWeekStreak({required DateTime today, required int weekStart, r
     final key = localDateKey(d);
     final day = days[key];
     final goal = goalForDate(goals, GoalType.dailySteps, key)?.value;
-    if (day == null || !day.hasValue) {
+    if (activityDays.contains(key)) {
+      out.add(StreakDay(date: d, status: StreakDayStatus.achieved));
+    } else if (day == null || !day.hasValue) {
       out.add(StreakDay(date: d, status: StreakDayStatus.noData));
     } else if (goal != null && goal > 0 && (day.steps ?? 0) >= goal) {
       out.add(StreakDay(date: d, status: StreakDayStatus.achieved));

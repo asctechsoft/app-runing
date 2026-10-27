@@ -2,10 +2,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../models/data_models/activity.dart';
 import '../values/tokens.dart';
 import 'calc/geo.dart';
 import 'calc/gps_filter.dart';
-import '../models/data_models/activity.dart';
 
 /// Toạ độ thuần (không phụ thuộc thư viện bản đồ) để cắt/vẽ tuyến.
 class GeoPoint {

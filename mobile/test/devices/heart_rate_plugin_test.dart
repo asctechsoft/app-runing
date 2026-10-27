@@ -1,13 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:stride/services/storage/app_database.dart';
-import 'package:stride/utils/clock.dart';
-import 'package:stride/repository/activity_repository.dart';
 import 'package:stride/models/data_models/activity.dart';
+import 'package:stride/repository/activity_repository.dart';
 import 'package:stride/repository/device_repository.dart';
 import 'package:stride/services/application/heart_rate_parser.dart';
 import 'package:stride/services/application/heart_rate_plugin.dart';
 import 'package:stride/services/application/heart_rate_transport.dart';
+import 'package:stride/services/storage/app_database.dart';
+import 'package:stride/utils/clock.dart';
 
 import 'fake_transport.dart';
 
@@ -155,6 +155,17 @@ void main() {
     expect(plugin.status.phase, HeartRatePhase.lost);
     expect(plugin.status.lastBpm, isNull);
     await plugin.onSessionEnd(a, discarded: false);
+  });
+
+  test('X40: kết thúc phiên không treo khi cancel() stream đo của cảm biến không bao giờ trả lời', () async {
+    await devices.savePaired(ownerId: 'o', name: 'Strap', remoteId: 'R1');
+    transport.hangOnCancel = true;
+    final a = await session('o');
+    await plugin.onSessionStart(a);
+    expect(plugin.status.phase, HeartRatePhase.connected);
+    await plugin.onSessionEnd(a, discarded: false).timeout(const Duration(seconds: 10));
+    expect(plugin.status.phase, HeartRatePhase.unavailable);
+    expect(transport.connections.single.disconnected, isTrue);
   });
 
   test('ghép lại cùng remoteId dùng lại bản ghi và bỏ revoke', () async {

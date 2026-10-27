@@ -3,24 +3,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
-import '../../values/routes.dart';
-import '../../utils/logger.dart';
-import '../native/permission_coordinator.dart';
+import '../../controller/explore/explore_logic.dart';
+import '../../controller/home/home_providers.dart';
 import '../../controller/providers.dart';
 import '../../controller/reminders/reminder_logic.dart';
+import '../../models/ui_models/explore_models.dart';
+import '../../repository/explore_repository.dart';
 import '../../repository/reminder_repository.dart';
+import '../../utils/date_locale.dart';
 import '../../utils/l10n.dart';
+import '../../utils/logger.dart';
+import '../../values/routes.dart';
+import '../native/permission_coordinator.dart';
 
 /// Đăng ký/hủy lịch nhắc với OS. Bản giả dùng trong test.
 abstract class ReminderScheduler {
   /// Hủy toàn bộ slot của [r.kind] rồi đặt lại theo [slots] (rỗng = chỉ hủy).
   Future<void> apply(Reminder r, List<ReminderSlot> slots);
+
+  /// TM05: hủy mọi nhắc sự kiện rồi đặt lại theo [slots] (rỗng = chỉ hủy).
+  Future<void> applyEvents(List<EventReminderSlot> slots);
 }
 
 /// Deep link của nhắc khi người dùng bấm thông báo.
 String reminderDeepLink(ReminderKind k) => switch (k) {
   ReminderKind.dailySteps => Routes.home,
   ReminderKind.run => Routes.run,
+  ReminderKind.streak => Routes.home,
 };
 
 /// Chọn Location cho tz.local. Flutter không cung cấp IANA id; thử timeZoneName trước (một số máy trả IANA),
@@ -84,9 +93,15 @@ class LocalReminderScheduler implements ReminderScheduler {
     for (var d = 1; d <= 7; d++) {
       await _plugin.cancel(id: reminderNotificationId(r.kind, d));
     }
-    final (title, body) = switch (r.kind) {
-      ReminderKind.dailySteps => ('notif_steps_title'.tr, 'notif_steps_body'.tr),
-      ReminderKind.run => ('notif_run_title'.tr, 'notif_run_body'.tr),
+    String title(ReminderSlot s) => switch (r.kind) {
+      ReminderKind.dailySteps => 'notif_steps_title'.tr,
+      ReminderKind.run => 'notif_run_title'.tr,
+      ReminderKind.streak => 'notif_streak_title'.tr,
+    };
+    String body(ReminderSlot s) => switch (r.kind) {
+      ReminderKind.dailySteps => 'notif_steps_body'.tr,
+      ReminderKind.run => 'notif_run_body'.tr,
+      ReminderKind.streak => 'notif_streak_body'.trPlural(hoursLeftInDay(s.at!), [hoursLeftInDay(s.at!)]),
     };
     final details = NotificationDetails(
       android: AndroidNotificationDetails('stride_reminders', 'notif_channel_name'.tr, channelDescription: 'notif_channel_desc'.tr),
@@ -94,16 +109,41 @@ class LocalReminderScheduler implements ReminderScheduler {
     );
     final now = DateTime.now();
     for (final s in slots) {
-      final next = nextSlotTime(s, now);
+      final next = s.at ?? nextSlotTime(s, now);
       await _plugin.zonedSchedule(
         id: s.notificationId,
         scheduledDate: tz.TZDateTime(tz.local, next.year, next.month, next.day, next.hour, next.minute),
         notificationDetails: details,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        title: title,
-        body: body,
+        title: title(s),
+        body: body(s),
         payload: reminderDeepLink(r.kind),
-        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        // Nhắc một lần (TM52) không lặp; nhắc thường lặp theo thứ + giờ.
+        matchDateTimeComponents: s.at == null ? DateTimeComponents.dayOfWeekAndTime : null,
+      );
+    }
+  }
+
+  @override
+  Future<void> applyEvents(List<EventReminderSlot> slots) async {
+    await _ensureInit();
+    tz.setLocalLocation(resolveLocalLocation());
+    for (var i = 0; i < maxEventReminders; i++) {
+      await _plugin.cancel(id: eventReminderIdBase + i);
+    }
+    final details = NotificationDetails(
+      android: AndroidNotificationDetails('stride_events', 'notif_event_channel_name'.tr, channelDescription: 'notif_event_channel_desc'.tr),
+      iOS: const DarwinNotificationDetails(),
+    );
+    for (final s in slots) {
+      await _plugin.zonedSchedule(
+        id: s.notificationId,
+        scheduledDate: tz.TZDateTime.from(s.at, tz.local),
+        notificationDetails: details,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        title: s.title,
+        body: s.body,
+        payload: s.link,
       );
     }
   }
@@ -134,12 +174,84 @@ Future<void> remindersSyncSchedules(Ref ref) async {
   final quiet = await repo.loadQuietHours(owner);
   final scheduler = ref.read(remindersSchedulerProvider);
   for (final r in reminders.values) {
-    final slots = isNotificationGranted(perm) ? reminderSlots(r, quiet) : const <ReminderSlot>[];
+    var slots = isNotificationGranted(perm) ? reminderSlots(r, quiet) : const <ReminderSlot>[];
+    if (r.kind == ReminderKind.streak && slots.isNotEmpty) slots = await _streakSlots(ref, r, quiet);
     try {
       await scheduler.apply(r, slots);
     } catch (e, st) {
       StrideLog.e('reminders', e, st);
     }
+  }
+  try {
+    await _syncEventReminders(ref, isNotificationGranted(perm), quiet);
+  } catch (e, st) {
+    StrideLog.e('reminders', e, st);
+  }
+}
+
+/// TM05 + TM34: nhắc cục bộ cho sự kiện đã đăng ký (1 ngày / 1 giờ trước) và thử thách đang tham gia (1 ngày trước khi bắt
+/// đầu, 1 ngày trước khi kết thúc, lúc chốt kết quả) — gần nhất trước, bỏ mốc rơi vào giờ yên lặng. Chỉ khi có quyền
+/// thông báo và đã đăng nhập. Lỗi đọc (offline) → giữ nguyên lịch cũ thay vì hủy.
+Future<void> _syncEventReminders(Ref ref, bool granted, QuietHours quiet) async {
+  final scheduler = ref.read(remindersSchedulerProvider);
+  final flags = ref.read(flagsProvider);
+  if (!granted || ref.read(ownerProvider).isGuest || !(flags.exploreClubs || flags.exploreChallenges)) {
+    await scheduler.applyEvents(const []);
+    return;
+  }
+  final repo = ref.read(exploreRepositoryProvider);
+  final List<ClubEvent> events;
+  final List<Challenge> challenges;
+  try {
+    events = flags.exploreClubs ? await repo.myUpcomingEvents() : const [];
+    challenges = flags.exploreChallenges ? await repo.myOpenChallenges() : const [];
+  } catch (e) {
+    StrideLog.d('reminders', 'group reminders kept: $e');
+    return;
+  }
+  final now = ref.read(clockProvider).nowLocal();
+  final pending = <(DateTime, String, String, String)>[]; // (lúc, tiêu đề, nội dung, link)
+  for (final e in events) {
+    final start = DateTime.fromMillisecondsSinceEpoch(e.startAt);
+    for (final at in eventReminderTimes(e.startAt, now)) {
+      final dayBefore = start.difference(at) >= const Duration(days: 1);
+      pending.add((
+        at,
+        e.title,
+        dayBefore ? 'notif_event_tomorrow'.trArgs([AppDates.time(start)]) : 'notif_event_soon'.trArgs([AppDates.time(start)]),
+        Routes.club(e.clubId),
+      ));
+    }
+  }
+  for (final c in challenges) {
+    for (final (at, kind) in challengeReminderTimes(startsAt: c.startsAt, endsAt: c.endsAt, now: now)) {
+      final body = switch (kind) {
+        ChallengeReminderKind.startsSoon => 'notif_challenge_starts'.tr,
+        ChallengeReminderKind.endsSoon => 'notif_challenge_ends'.tr,
+        ChallengeReminderKind.results => 'notif_challenge_results'.tr,
+      };
+      pending.add((at, c.title, body, kind == ChallengeReminderKind.results ? Routes.challengeResults(c.id) : Routes.challenge(c.id)));
+    }
+  }
+  pending.sort((a, b) => a.$1.compareTo(b.$1));
+  final slots = <EventReminderSlot>[];
+  for (final (at, title, body, link) in pending) {
+    if (slots.length >= maxEventReminders || isInQuietHours(at.hour * 60 + at.minute, quiet)) continue;
+    slots.add(EventReminderSlot(notificationId: eventReminderIdBase + slots.length, at: at, title: title, body: body, link: link));
+  }
+  await scheduler.applyEvents(slots);
+}
+
+/// TM52: một slot duy nhất theo tình trạng chuỗi hiện tại; lỗi tính chuỗi → không nhắc (không đoán).
+Future<List<ReminderSlot>> _streakSlots(Ref ref, Reminder r, QuietHours quiet) async {
+  try {
+    final s = await ref.read(personalStreakProvider.future);
+    final at = nextStreakReminder(r, quiet, ref.read(clockProvider).nowLocal(), hasStreak: s.current > 0, todayDone: s.todayAchieved);
+    if (at == null) return const [];
+    return [ReminderSlot(notificationId: reminderNotificationId(r.kind, at.weekday), weekday: at.weekday, hour: at.hour, minute: at.minute, at: at)];
+  } catch (e, st) {
+    StrideLog.e('reminders', e, st);
+    return const [];
   }
 }
 

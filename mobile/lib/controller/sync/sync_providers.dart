@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers.dart';
 import '../../services/application/firebase_providers.dart';
 import '../../services/application/sync_remote.dart';
 import '../../services/application/sync_service.dart';
+import '../providers.dart';
 
 /// Kênh Firestore của engine sync. Lazy: chỉ chạm `FirebaseFirestore` khi thật sự đồng bộ. Override trong test bằng bản in-memory.
 final syncRemoteProvider = Provider<SyncRemote>((ref) => FirestoreSyncRemote(() => ref.read(firestoreProvider)));

@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
-import '../../repository/activity_repository.dart';
 import '../../models/data_models/activity.dart';
+import '../../repository/activity_repository.dart';
 
 /// Bộ lọc danh sách hoạt động (owner + loại + khoảng [from, to)).
 class ActivityFilter {

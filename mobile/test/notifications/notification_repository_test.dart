@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:stride/repository/notification_repository.dart';
 import 'package:stride/services/storage/app_database.dart';
 import 'package:stride/utils/clock.dart';
-import 'package:stride/repository/notification_repository.dart';
 
 void main() {
   sqfliteFfiInit();

@@ -2,8 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
-import 'heart_rate_parser.dart';
 import '../../utils/l10n.dart';
+import '../../utils/stream_utils.dart';
+import 'heart_rate_parser.dart';
 
 /// Trạng thái adapter Bluetooth đã chuẩn hóa.
 enum BleAdapter { unknown, on, off, unauthorized, unsupported }
@@ -116,8 +117,8 @@ class FlutterBluePlusTransport implements HeartRateTransport {
         if (!FlutterBluePlus.isScanningNow && !c.isClosed) await c.close();
       },
       onCancel: () async {
-        await sub?.cancel();
-        await scanning?.cancel();
+        await cancelBounded(sub, tag: 'ble.scan');
+        await cancelBounded(scanning, tag: 'ble.scanning');
         await FlutterBluePlus.stopScan();
       },
     );
@@ -195,8 +196,8 @@ class _FbpConnection implements HeartRateConnection {
   @override
   Future<void> disconnect() async {
     _manual = true;
-    await _valueSub.cancel();
-    await _stateSub.cancel();
+    await cancelBounded(_valueSub, tag: 'ble.value');
+    await cancelBounded(_stateSub, tag: 'ble.state');
     await _measurements.close();
     try {
       await _device.disconnect();

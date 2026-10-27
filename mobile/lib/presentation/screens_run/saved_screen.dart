@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../controller/providers.dart';
+import '../../controller/run/engine/run_session_controller.dart';
+import '../../models/data_models/activity.dart';
+import '../../utils/formatters.dart';
 import '../../utils/l10n.dart';
 import '../../values/routes.dart';
-import '../../utils/formatters.dart';
-import '../../controller/providers.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../models/data_models/activity.dart';
-import '../../controller/run/engine/run_session_controller.dart';
 import 'components/run_widgets.dart';
 
 final _savedActivityProvider = FutureProvider.autoDispose.family<Activity?, String>((ref, id) {

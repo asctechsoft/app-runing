@@ -4,10 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pedometer/pedometer.dart';
 
+import '../../controller/providers.dart';
 import '../../utils/logger.dart';
 import '../../utils/stream_utils.dart';
 import '../native/permission_coordinator.dart';
-import '../../controller/providers.dart';
 
 /// Trạng thái adapter cảm biến bước (F01).
 enum StepTrackingStatus {

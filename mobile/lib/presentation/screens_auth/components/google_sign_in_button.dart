@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../common_components/widgets.dart';
 import '../../../controller/auth/auth_flow.dart';
 import '../../../utils/l10n.dart';
+import '../../common_components/widgets.dart';
 
 /// "Continue with Google": chỉ hiển thị khi Firebase sẵn sàng (flags.authGoogle). Hủy chọn tài khoản → im lặng.
 class GoogleSignInButton extends ConsumerStatefulWidget {

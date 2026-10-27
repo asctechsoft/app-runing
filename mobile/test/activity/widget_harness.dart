@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:stride/services/storage/app_database.dart';
-import 'package:stride/services/native/permission_coordinator.dart';
-import 'package:stride/controller/providers.dart';
-import 'package:stride/values/stride_theme.dart';
-import 'package:stride/utils/clock.dart';
-import 'package:stride/repository/activity_repository.dart';
 import 'package:stride/controller/activity/activity_providers.dart';
+import 'package:stride/controller/providers.dart';
+import 'package:stride/repository/activity_repository.dart';
+import 'package:stride/services/native/permission_coordinator.dart';
+import 'package:stride/services/storage/app_database.dart';
+import 'package:stride/utils/clock.dart';
+import 'package:stride/values/stride_theme.dart';
 
 const testOwner = 'user-1';
 

@@ -4,8 +4,8 @@ import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../utils/calc/gps_filter.dart';
 import '../../models/data_models/activity.dart';
+import '../../utils/calc/gps_filter.dart';
 
 /// Xuất dữ liệu một hoạt động (I07, F18). Chỉ dữ liệu của chính hoạt động đó, không thêm điểm giả.
 

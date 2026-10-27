@@ -14,6 +14,10 @@ void main() {
     expect(find.text('Start a run'), findsOneWidget);
     expect(find.text('Daily steps are available on Home'), findsOneWidget);
     expect(find.text('Clear filters'), findsNothing);
+    // T01: vùng chạm ≥ 48 (Android) / 44 (iOS); T08: mọi vùng chạm có nhãn.
+    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
+    await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     await h.dispose(tester);
   });
 

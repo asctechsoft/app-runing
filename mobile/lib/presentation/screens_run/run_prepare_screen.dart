@@ -4,18 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../utils/l10n.dart';
-import '../../values/routes.dart';
-import '../../services/native/permission_coordinator.dart';
+import '../../controller/live/live_share_providers.dart';
 import '../../controller/providers.dart';
-import '../../values/tokens.dart';
-import '../common_components/widgets.dart';
-import '../../models/data_models/activity.dart';
-import '../../models/data_models/session_state.dart';
 import '../../controller/run/engine/run_session_controller.dart';
 import '../../controller/run/engine/run_session_state.dart' show activityTypeLabel;
-import '../../controller/live/live_share_providers.dart';
 import '../../controller/run/engine/run_sources.dart';
+import '../../models/data_models/activity.dart';
+import '../../models/data_models/session_state.dart';
+import '../../services/native/permission_coordinator.dart';
+import '../../utils/l10n.dart';
+import '../../values/routes.dart';
+import '../../values/tokens.dart';
+import '../common_components/widgets.dart';
 import 'components/run_map.dart';
 import 'components/run_widgets.dart';
 
@@ -54,7 +54,7 @@ class _RunPrepareScreenState extends ConsumerState<RunPrepareScreen> with Widget
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Chỉ xem trước vị trí khi tab Run đang hiển thị — không theo dõi vị trí khi ở tab khác.
-    final visible = TickerMode.of(context);
+    final visible = TickerMode.valuesOf(context).enabled;
     if (visible != _visible) {
       _visible = visible;
       _syncPreview();

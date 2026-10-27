@@ -4,27 +4,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../values/routes.dart';
-import '../../utils/formatters.dart';
+import '../../controller/activity/activity_actions.dart';
+import '../../controller/activity/activity_providers.dart';
 import '../../controller/providers.dart';
-import '../../values/tokens.dart';
-import '../common_components/widgets.dart';
-import '../../utils/calc/run_metrics.dart';
 import '../../models/data_models/activity.dart';
 import '../../models/data_models/profile.dart';
-import '../../controller/activity/activity_actions.dart';
-import 'components/activity_charts.dart';
-import '../../utils/activity_charts_data.dart';
 import '../../services/application/activity_export.dart';
+import '../../utils/activity_charts_data.dart';
 import '../../utils/activity_format.dart';
-import 'components/activity_map_view.dart';
-import '../../controller/activity/activity_providers.dart';
-import '../../utils/route_geometry.dart';
+import '../../utils/calc/run_metrics.dart';
+import '../../utils/formatters.dart';
 import '../../utils/l10n.dart';
+import '../../utils/route_geometry.dart';
+import '../../values/routes.dart';
+import '../../values/tokens.dart';
+import '../common_components/widgets.dart';
+import '../screens_explore/post_to_club_sheet.dart';
+import 'components/activity_charts.dart';
+import 'components/activity_map_view.dart';
 
 enum _DetailTab { overview, splits, charts }
 
-enum _MenuAction { edit, share, gpx, csv, delete }
+enum _MenuAction { edit, share, club, gpx, csv, delete }
 
 /// Chi tiết hoạt động (I02, F15). Dùng chung dưới /home, /progress, /history — luôn đọc theo ID từ DB local.
 class ActivityDetailScreen extends ConsumerStatefulWidget {
@@ -58,6 +59,8 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
         await _edit();
       case _MenuAction.share:
         await context.push(Routes.activityShare(widget.activityId));
+      case _MenuAction.club:
+        await showPostToClubSheet(context, d.activity);
       case _MenuAction.gpx:
         await _guard.run(() => exportGpx(context, d.activity, d.points));
       case _MenuAction.csv:
@@ -108,6 +111,8 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
   Widget _buildDetail(ActivityDetailData d) {
     final a = d.activity;
     final canGpx = canExportGpx(a, d.points);
+    // TM06: cần tài khoản (Explore yêu cầu đăng nhập) và cờ clubs.
+    final canPostToClub = ref.watch(flagsProvider).exploreClubs && !ref.watch(ownerProvider).isGuest;
     return StrideScreen(
       onBack: _back,
       title: activityDisplayTitle(a),
@@ -119,6 +124,7 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
           itemBuilder: (_) => [
             PopupMenuItem(value: _MenuAction.edit, child: Text('activity_edit'.tr)),
             PopupMenuItem(value: _MenuAction.share, child: Text('activity_share_image'.tr)),
+            if (canPostToClub) PopupMenuItem(value: _MenuAction.club, child: Text('explore_post_to_club_title'.tr)),
             if (canGpx) PopupMenuItem(value: _MenuAction.gpx, child: Text('activity_export_gpx'.tr)),
             PopupMenuItem(value: _MenuAction.csv, child: Text('activity_export_csv'.tr)),
             PopupMenuItem(

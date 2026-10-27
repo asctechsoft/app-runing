@@ -4,16 +4,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
+import '../../controller/profile/profile_logic.dart';
+import '../../controller/providers.dart';
+import '../../models/data_models/steps.dart';
+import '../../services/native/permission_coordinator.dart';
+import '../../utils/date_locale.dart';
 import '../../utils/l10n.dart';
 import '../../values/routes.dart';
-import '../../services/native/permission_coordinator.dart';
-import '../../controller/providers.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../models/data_models/steps.dart';
-import '../../controller/profile/profile_logic.dart';
 import 'components/profile_widgets.dart';
 
 /// Trạng thái cảm biến bước của điện thoại.
@@ -150,7 +150,7 @@ class _PhoneRow extends ConsumerWidget {
       subtitle = 'profile_ds_connected_none'.tr;
     } else {
       final age = nowMs - status.lastReceivedAt!;
-      final when = DateFormat('MMM d, h:mm a').format(DateTime.fromMillisecondsSinceEpoch(status.lastReceivedAt!));
+      final when = AppDates.monthDayTime(DateTime.fromMillisecondsSinceEpoch(status.lastReceivedAt!));
       subtitle = age < const Duration(hours: 6).inMilliseconds ? 'profile_ds_connected_recent'.trArgs([when]) : 'profile_ds_connected_last'.trArgs([when]);
     }
     return SettingsRow(
@@ -214,9 +214,9 @@ class _PriorityCardState extends ConsumerState<_PriorityCard> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             buildDefaultDragHandles: false,
-            onReorder: (oldIndex, newIndex) {
+            // onReorderItem: newIndex đã tính sau khi gỡ phần tử ở oldIndex.
+            onReorderItem: (oldIndex, newIndex) {
               final list = [...visible];
-              if (newIndex > oldIndex) newIndex -= 1;
               list.insert(newIndex, list.removeAt(oldIndex));
               _persist(list);
             },

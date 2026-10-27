@@ -1,0 +1,35 @@
+# Gốc monorepo STRIDE (X43). App Flutter có .gitignore riêng ở mobile/.
+
+# Hệ điều hành / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.idea/
+*.iml
+
+# Log và file tạm
+*.log
+*.tmp
+
+# Node (scripts/ seed Firestore)
+node_modules/
+
+# Firebase CLI / Emulator
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+
+# Secret: khóa service account, biến môi trường (không bao giờ commit)
+*serviceAccount*.json
+*service-account*.json
+.env
+.env.*
+
+# Phần sót lại của backend Next.js/Prisma đã bỏ (xem CLAUDE.md)
+/backend/
+
+# Cấu hình Claude Code cục bộ
+.claude/settings.local.json
+

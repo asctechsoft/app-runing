@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:stride/services/application/heart_rate_parser.dart';
 import 'package:stride/services/application/heart_rate_transport.dart';
 
+import '../run/run_harness.dart' show hangingOnCancel;
+
 class FakeConnection implements HeartRateConnection {
-  FakeConnection(this.remoteId);
+  FakeConnection(this.remoteId, {this.hangOnCancel = false});
 
   @override
   final String remoteId;
@@ -12,8 +14,11 @@ class FakeConnection implements HeartRateConnection {
   final _lost = Completer<void>();
   bool disconnected = false;
 
+  /// true → `cancel()` của stream đo không bao giờ hoàn thành (kênh BLE không trả lời).
+  final bool hangOnCancel;
+
   @override
-  Stream<HeartRateMeasurement> get measurements => _m.stream;
+  Stream<HeartRateMeasurement> get measurements => hangOnCancel ? hangingOnCancel(_m.stream) : _m.stream;
   @override
   Future<void> get lost => _lost.future;
 
@@ -39,6 +44,9 @@ class FakeTransport implements HeartRateTransport {
   /// Nếu đặt, connect ném lỗi này.
   HeartRateConnectException? failWith;
 
+  /// Kết nối mới tạo có stream đo bị treo khi hủy.
+  bool hangOnCancel = false;
+
   @override
   Stream<BleAdapter> adapterState() => Stream.value(adapter);
 
@@ -53,7 +61,7 @@ class FakeTransport implements HeartRateTransport {
     connectCalls.add(remoteId);
     final f = failWith;
     if (f != null) throw f;
-    final c = FakeConnection(remoteId);
+    final c = FakeConnection(remoteId, hangOnCancel: hangOnCancel);
     connections.add(c);
     return c;
   }

@@ -2,21 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../values/routes.dart';
-import '../../utils/analytics.dart';
-import '../../utils/logger.dart';
+import '../../controller/language/language_controller.dart';
 import '../../controller/providers.dart';
+import '../../controller/sync/sync_providers.dart';
+import '../../models/data_models/activity.dart';
+import '../../repository/owner_repository.dart';
+import '../../utils/analytics.dart';
+import '../../utils/l10n.dart';
+import '../../utils/logger.dart';
+import '../../values/routes.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../repository/owner_repository.dart';
-import '../../models/data_models/activity.dart';
-import '../../controller/sync/sync_providers.dart';
-import '../../utils/l10n.dart';
 
-/// Quyết định màn đầu tiên (E01). Thuần, không I/O — để test.
-/// Thứ tự: phiên chưa đóng → intro → thiết lập hồ sơ → Home.
-String decideStartRoute({required OwnerState owner, Activity? unclosedSession}) {
+/// Quyết định màn đầu tiên (E01, L19). Thuần, không I/O — để test.
+/// Thứ tự: phiên chưa đóng (không bao giờ bị chặn) → chọn ngôn ngữ lần đầu → intro → thiết lập hồ sơ → Home.
+String decideStartRoute({required OwnerState owner, required bool languageChosen, Activity? unclosedSession}) {
   if (unclosedSession != null) return Routes.recovery;
+  if (!languageChosen) return Routes.language;
   if (!owner.introSeen) return Routes.onboarding;
   if (!owner.profileSetupDone) return owner.isGuest ? Routes.welcome : Routes.setupProfile;
   return Routes.home;
@@ -52,7 +54,8 @@ class _StartupScreenState extends ConsumerState<StartupScreen> {
         StrideLog.e('startup', e, st);
       }
       if (!mounted) return;
-      context.go(decideStartRoute(owner: owner, unclosedSession: session));
+      final chosen = languageChosen(ref.read(sharedPrefsProvider), introSeen: owner.introSeen);
+      context.go(decideStartRoute(owner: owner, languageChosen: chosen, unclosedSession: session));
       // Sync bắt đầu sau khi đã điều hướng — không ảnh hưởng thời gian vào app.
       ref.read(syncServiceProvider).start();
     } catch (e, st) {

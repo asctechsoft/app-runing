@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../values/tokens.dart';
+import '../../utils/haptics.dart';
 import '../../utils/l10n.dart';
+import '../../values/tokens.dart';
 
 /// App shell 5 tab: Home → Progress → Run → History → Profile (D03).
 /// Nút Run nổi bật 64 nhưng chỉ selected khi thực sự ở tab Run.
@@ -19,7 +20,10 @@ class AppShell extends StatelessWidget {
     (Icons.person_outline, Icons.person, 'shell_tab_profile'),
   ];
 
-  void _go(int i) => shell.goBranch(i, initialLocation: i == shell.currentIndex);
+  void _go(int i) {
+    StrideHaptics.selection();
+    shell.goBranch(i, initialLocation: i == shell.currentIndex);
+  }
 
   @override
   Widget build(BuildContext context) {

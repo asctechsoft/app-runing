@@ -1,9 +1,10 @@
 import 'dart:async';
 
 import '../../controller/run_plugins.dart';
-import '../../utils/clock.dart';
 import '../../models/data_models/activity.dart';
 import '../../repository/device_repository.dart';
+import '../../utils/clock.dart';
+import '../../utils/stream_utils.dart';
 import 'heart_rate_parser.dart';
 import 'heart_rate_transport.dart';
 
@@ -140,7 +141,7 @@ class HeartRatePlugin extends RunPlugin {
 
   Future<void> _onLost(HeartRateConnection conn) async {
     if (!_active || !identical(conn, _conn)) return;
-    await _sub?.cancel();
+    await cancelBounded(_sub, tag: 'hr.measure');
     _sub = null;
     _conn = null;
     _emit(_status.copyWith(phase: HeartRatePhase.lost));
@@ -154,7 +155,7 @@ class HeartRatePlugin extends RunPlugin {
   }
 
   Future<void> _closeConnection() async {
-    await _sub?.cancel();
+    await cancelBounded(_sub, tag: 'hr.measure');
     _sub = null;
     final c = _conn;
     _conn = null;
@@ -169,7 +170,7 @@ class HeartRatePlugin extends RunPlugin {
     _active = false;
     _reconnect?.cancel();
     _reconnect = null;
-    await _devicesSub?.cancel();
+    await cancelBounded(_devicesSub, tag: 'hr.devices');
     _devicesSub = null;
     await _closeConnection();
     _activityId = null;

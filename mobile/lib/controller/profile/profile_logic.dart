@@ -1,18 +1,20 @@
+import 'package:asc_common/asc_common.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 import '../../configs/env.dart';
-import '../../utils/l10n.dart';
-import '../../services/application/firebase_providers.dart';
-import '../../utils/formatters.dart';
-import '../../services/native/permission_coordinator.dart';
-import '../providers.dart';
-import '../../repository/activity_repository.dart';
-import '../../repository/settings_repository.dart';
-import '../../utils/calc/step_aggregate.dart';
 import '../../models/data_models/activity.dart';
 import '../../models/data_models/profile.dart';
 import '../../models/data_models/steps.dart';
+import '../../repository/activity_repository.dart';
+import '../../repository/settings_repository.dart';
+import '../../services/application/firebase_providers.dart';
+import '../../services/native/permission_coordinator.dart';
+import '../../utils/calc/step_aggregate.dart';
+import '../../utils/formatters.dart';
+import '../../utils/l10n.dart';
+import '../providers.dart';
+import '../run/engine/run_audio.dart';
 
 /// Phiên bản app — khớp `version: 1.0.0+1` trong pubspec (không thêm package đọc version).
 const String profileAppVersion = '1.0.0';
@@ -282,20 +284,28 @@ final profileOpenSessionProvider = FutureProvider.autoDispose<bool>((ref) async 
 // Giọng đọc thử (flutter_tts thật); override trong test.
 // ---------------------------------------------------------------------------
 
+enum VoiceTestResult {
+  spoken,
+
+  /// Đọc được nhưng máy không có giọng cho ngôn ngữ app → đã lùi về tiếng Anh (báo người dùng, L07).
+  spokenFallback,
+  failed,
+}
+
 abstract class ProfileVoice {
-  /// true khi engine nhận lệnh đọc.
-  Future<bool> speak(String text);
+  Future<VoiceTestResult> speak(String text);
 }
 
 class FlutterTtsProfileVoice implements ProfileVoice {
   FlutterTts? _tts;
   @override
-  Future<bool> speak(String text) async {
+  Future<VoiceTestResult> speak(String text) async {
     final tts = _tts ??= FlutterTts();
-    await tts.setLanguage('en-US');
+    final used = await applyTtsLanguage(tts);
     await tts.awaitSpeakCompletion(false);
     final r = await tts.speak(text);
-    return r == 1 || r == true;
+    if (!(r == 1 || r == true)) return VoiceTestResult.failed;
+    return used == ttsLanguageTag(AscLocale.getAppLocale()) ? VoiceTestResult.spoken : VoiceTestResult.spokenFallback;
   }
 }
 

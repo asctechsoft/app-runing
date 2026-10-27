@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../controller/profile/profile_logic.dart';
+import '../../controller/providers.dart';
+import '../../models/data_models/profile.dart';
+import '../../utils/date_locale.dart';
 import '../../utils/formatters.dart';
 import '../../utils/l10n.dart';
-import '../../controller/providers.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../models/data_models/profile.dart';
-import '../../controller/profile/profile_logic.dart';
 
 /// Pace mẫu dùng để xem trước định dạng (6:12 /km) — chỉ là ví dụ định dạng, không phải dữ liệu người dùng.
 const double unitsPacePreviewSecPerKm = 372;
@@ -57,7 +58,14 @@ class _UnitsFormState extends ConsumerState<_UnitsForm> {
       final repo = ref.read(settingsRepositoryProvider);
       final latest = await repo.load(widget.initial.ownerId);
       await repo.save(
-        applyUnitPreferences(latest, distanceUnit: _distance, weightUnit: _weight, heightUnit: _height, weekStart: _weekStart, localeTag: 'en-US'),
+        applyUnitPreferences(
+          latest,
+          distanceUnit: _distance,
+          weightUnit: _weight,
+          heightUnit: _height,
+          weekStart: _weekStart,
+          localeTag: appDateLocale.replaceAll('_', '-'),
+        ),
       );
       if (!mounted) return;
       showStrideSnack(context, 'profile_units_saved'.tr);

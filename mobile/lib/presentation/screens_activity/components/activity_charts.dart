@@ -3,10 +3,10 @@ import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
-import '../../../values/tokens.dart';
-import '../../common_components/widgets.dart';
 import '../../../utils/activity_charts_data.dart';
 import '../../../utils/l10n.dart';
+import '../../../values/tokens.dart';
+import '../../common_components/widgets.dart';
 
 /// Thẻ biểu đồ đường; khi chuỗi không có dữ liệu thì hiện lý do thay vì biểu đồ rỗng.
 class SeriesChartCard extends StatelessWidget {

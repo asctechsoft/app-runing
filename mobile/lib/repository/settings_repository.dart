@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
+import '../models/data_models/profile.dart';
 import '../services/storage/app_database.dart';
 import '../utils/clock.dart';
-import '../models/data_models/profile.dart';
 
 /// Cài đặt + mục tiêu theo owner (E04, F06, J01).
 class SettingsRepository {

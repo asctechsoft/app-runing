@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../utils/l10n.dart';
-import '../../values/routes.dart';
-import '../../utils/formatters.dart';
+import '../../controller/explore/explore_logic.dart';
 import '../../controller/providers.dart';
-import '../../values/tokens.dart';
-import '../common_components/widgets.dart';
 import '../../models/ui_models/explore_models.dart';
 import '../../repository/explore_repository.dart';
+import '../../utils/analytics.dart';
+import '../../utils/date_locale.dart';
+import '../../utils/formatters.dart';
+import '../../utils/l10n.dart';
+import '../../values/routes.dart';
+import '../../values/tokens.dart';
+import '../common_components/widgets.dart';
+import 'challenge_teams.dart';
 import 'components/explore_widgets.dart';
 
 String challengeTypeLabel(String t) => switch (t) {
@@ -23,7 +27,7 @@ String challengeTypeLabel(String t) => switch (t) {
 String challengeValue(ChallengeTarget t, double v, StrideFormat fmt) => switch (t) {
   ChallengeTarget.distance => fmt.distance(v),
   ChallengeTarget.time => formatDurationShort(v.round()),
-  ChallengeTarget.count => v.round() == 1 ? 'explore_activity_one'.tr : 'explore_activity_other'.trArgs([v.round()]),
+  ChallengeTarget.count => 'explore_activity'.trPlural(v.round(), [v.round()]),
 };
 
 /// Challenges catalog (M05).
@@ -45,20 +49,23 @@ class ChallengesScreen extends ConsumerWidget {
               icon: Icons.emoji_events_outlined,
               title: 'explore_challenges_guest_title'.tr,
               message: 'explore_challenges_guest_message'.tr,
-              child: const _ChallengesBody(),
+              child: const ChallengeList(),
             ),
     );
   }
 }
 
-class _ChallengesBody extends ConsumerStatefulWidget {
-  const _ChallengesBody();
+/// Danh sách thử thách chung, hoặc của một club ([clubId], TM31) kèm nút tạo khi [canCreate] (owner/admin).
+class ChallengeList extends ConsumerStatefulWidget {
+  const ChallengeList({super.key, this.clubId, this.canCreate = false});
+  final String? clubId;
+  final bool canCreate;
 
   @override
-  ConsumerState<_ChallengesBody> createState() => _ChallengesBodyState();
+  ConsumerState<ChallengeList> createState() => _ChallengeListState();
 }
 
-class _ChallengesBodyState extends ConsumerState<_ChallengesBody> {
+class _ChallengeListState extends ConsumerState<ChallengeList> {
   List<Challenge>? _items;
   ExploreFailure? _error;
 
@@ -71,7 +78,7 @@ class _ChallengesBodyState extends ConsumerState<_ChallengesBody> {
   Future<void> _load() async {
     setState(() => _error = null);
     try {
-      final list = await ref.read(exploreRepositoryProvider).challenges();
+      final list = await ref.read(exploreRepositoryProvider).challenges(clubId: widget.clubId);
       if (mounted) setState(() => _items = list);
     } catch (e) {
       if (mounted) setState(() => _error = mapExploreError(e));
@@ -87,7 +94,19 @@ class _ChallengesBodyState extends ConsumerState<_ChallengesBody> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        ExploreHeader(title: 'explore_challenges_title'.tr, subtitle: 'explore_challenges_subtitle'.tr),
+        if (widget.clubId == null) ExploreHeader(title: 'explore_challenges_title'.tr, subtitle: 'explore_challenges_subtitle'.tr),
+        if (widget.canCreate && widget.clubId != null) ...[
+          OutlineButton(
+            key: const Key('challenge-create'),
+            label: 'explore_challenge_create'.tr,
+            icon: Icons.add,
+            onPressed: () async {
+              final id = await context.push<String>(Routes.clubChallengeCreate(widget.clubId!));
+              if (id != null && mounted) _load();
+            },
+          ),
+          const Gap(12),
+        ],
         if (items.isEmpty)
           EmptyState(icon: Icons.emoji_events_outlined, title: 'explore_challenges_empty_title'.tr, message: 'explore_challenges_empty_message'.tr),
         for (final c in items) ...[
@@ -186,6 +205,9 @@ class _ChallengeDetailBodyState extends ConsumerState<_ChallengeDetailBody> {
   ExploreFailure? _error;
   bool _busy = false;
 
+  /// TM31: người xem là owner/admin của club tổ chức (được hủy trước khi bắt đầu).
+  bool _canManage = false;
+
   @override
   void initState() {
     super.initState();
@@ -203,16 +225,53 @@ class _ChallengeDetailBodyState extends ConsumerState<_ChallengeDetailBody> {
           c = c.withParticipation(await repo.challengeProgress(widget.id));
         } catch (_) {}
       }
-      if (mounted) setState(() => _c = c);
+      var manage = false;
+      if (c.clubId != null) {
+        try {
+          manage = (await repo.club(c.clubId!)).membership?.canManage ?? false;
+        } catch (_) {}
+      }
+      if (mounted) {
+        setState(() {
+          _c = c;
+          _canManage = manage;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = mapExploreError(e));
     }
   }
 
+  Future<void> _cancel() async {
+    if (_busy) return;
+    final ok = await confirmDialog(
+      context,
+      title: 'explore_challenge_cancel_title'.tr,
+      message: 'explore_challenge_cancel_message'.tr,
+      confirmLabel: 'explore_challenge_cancel'.tr,
+      cancelLabel: 'explore_keep'.tr,
+      destructive: true,
+    );
+    if (!ok || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(exploreRepositoryProvider).cancelChallenge(widget.id);
+      if (!mounted) return;
+      showStrideSnack(context, 'explore_challenge_cancelled'.tr);
+      if (context.canPop()) context.pop();
+    } catch (e) {
+      if (mounted) showExploreError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _join() async {
+    if (_busy) return; // T04: hai lần chạm trong cùng frame
     setState(() => _busy = true);
     try {
       final c = await ref.read(exploreRepositoryProvider).joinChallenge(widget.id);
+      Analytics.challengeJoin(metric: c.targetType.name);
       if (!mounted) return;
       setState(() => _c = c);
       showStrideSnack(context, 'explore_challenge_joined'.trArgs([c.title]));
@@ -224,6 +283,7 @@ class _ChallengeDetailBodyState extends ConsumerState<_ChallengeDetailBody> {
   }
 
   Future<void> _leave() async {
+    if (_busy) return;
     final ok = await confirmDialog(
       context,
       title: 'explore_challenge_leave_title'.tr,
@@ -253,12 +313,16 @@ class _ChallengeDetailBodyState extends ConsumerState<_ChallengeDetailBody> {
     if (c == null) return const Column(children: [Gap(8), LoadingCard(height: 160), Gap(12), LoadingCard()]);
     final fmt = ref.watch(formatProvider);
     final p = c.participation;
+    final now = ref.watch(clockProvider).nowMs();
+    final phase = challengePhase(startsAt: c.startsAt, endsAt: c.endsAt, cancelled: c.cancelled, nowMs: now);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Gap(8),
         Text(c.title, style: StrideText.title),
         if (c.description.isNotEmpty) ...[const Gap(4), Text(c.description, style: StrideText.bodySecondary)],
+        const Gap(12),
+        ChallengePhaseBanner(c: c, phase: phase),
         const Gap(16),
         if (p != null) ...[
           StrideCard(
@@ -285,19 +349,69 @@ class _ChallengeDetailBodyState extends ConsumerState<_ChallengeDetailBody> {
                 _ProgressBar(p: p),
                 const Gap(8),
                 Text('explore_progress_note'.tr, style: StrideText.caption),
+                Text('explore_progress_eligible_note'.tr, style: StrideText.caption),
               ],
             ),
           ),
+          const Gap(12),
+          OutlineButton(
+            key: const Key('challenge-leaderboard'),
+            label: 'explore_leaderboard'.tr,
+            icon: Icons.leaderboard_outlined,
+            onPressed: () => context.push(Routes.challengeLeaderboard(c.id)),
+          ),
+          const Gap(16),
+        ],
+        // TM41: kết quả (tạm thời trong thời gian chờ đồng bộ, chính thức sau khi khóa).
+        if (phase == ChallengePhase.grace || phase == ChallengePhase.finished) ...[
+          PrimaryButton(
+            key: const Key('challenge-results'),
+            label: 'explore_results_title'.tr,
+            icon: Icons.emoji_events_outlined,
+            onPressed: () => context.push(Routes.challengeResults(c.id)),
+          ),
+          const Gap(16),
+        ],
+        if (c.clubId != null && (p != null || _canManage)) ...[
+          ChallengeTeams(key: ValueKey('teams-${c.id}-${p?.teamId}'), challenge: c, canManage: _canManage, onChanged: _load),
           const Gap(16),
         ],
         ChallengeRules(c: c, fmt: fmt),
         const Gap(16),
-        if (p == null)
+        if (p == null && canJoinChallenge(phase))
           PrimaryButton(label: 'explore_challenge_join'.tr, loading: _busy, onPressed: _busy ? null : _join)
-        else
+        else if (p != null && canLeaveChallenge(phase) && phase != ChallengePhase.cancelled)
           SecondaryButton(label: 'explore_challenge_leave'.tr, onPressed: _busy ? null : _leave),
+        if (_canManage && phase == ChallengePhase.upcoming) ...[
+          const Gap(8),
+          TextButton(
+            key: const Key('challenge-cancel'),
+            onPressed: _busy ? null : _cancel,
+            child: Text('explore_challenge_cancel'.tr, style: StrideText.label.copyWith(color: StrideColors.error)),
+          ),
+        ],
       ],
     );
+  }
+}
+
+/// TM33: pha hiện tại của thử thách — luôn có chữ (không chỉ màu).
+class ChallengePhaseBanner extends StatelessWidget {
+  const ChallengePhaseBanner({super.key, required this.c, required this.phase});
+  final Challenge c;
+  final ChallengePhase phase;
+
+  @override
+  Widget build(BuildContext context) {
+    final graceEnd = DateTime.fromMillisecondsSinceEpoch(c.endsAt + challengeGrace.inMilliseconds);
+    final (tone, message) = switch (phase) {
+      ChallengePhase.upcoming => (BannerTone.info, 'explore_phase_upcoming'.trArgs([AppDates.monthDay(DateTime.fromMillisecondsSinceEpoch(c.startsAt))])),
+      ChallengePhase.active => (BannerTone.info, 'explore_phase_active'.trArgs([AppDates.monthDay(DateTime.fromMillisecondsSinceEpoch(c.endsAt))])),
+      ChallengePhase.grace => (BannerTone.warning, 'explore_phase_grace'.trArgs([AppDates.monthDayTime(graceEnd)])),
+      ChallengePhase.finished => (BannerTone.info, 'explore_phase_finished'.tr),
+      ChallengePhase.cancelled => (BannerTone.warning, 'explore_err_challenge_cancelled'.tr),
+    };
+    return StatusBanner(key: Key('phase-${phase.name}'), tone: tone, message: message);
   }
 }
 

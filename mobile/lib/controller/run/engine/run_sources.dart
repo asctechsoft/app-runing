@@ -8,15 +8,15 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../models/data_models/activity.dart';
+import '../../../services/application/step_tracking_service.dart';
 import '../../../utils/l10n.dart';
 import '../../../utils/logger.dart';
 import '../../providers.dart';
-import '../../../models/data_models/activity.dart';
-import '../../../services/application/step_tracking_service.dart';
 
 /// Một fix vị trí thô từ OS. [t] là UTC ms của fix.
 class RawFix {
-  const RawFix({required this.t, required this.lat, required this.lon, this.accuracyM, this.altitudeM, this.speedMps});
+  const RawFix({required this.t, required this.lat, required this.lon, this.accuracyM, this.altitudeM, this.speedMps, this.mocked = false});
 
   final int t;
   final double lat;
@@ -24,6 +24,9 @@ class RawFix {
   final double? accuracyM;
   final double? altitudeM;
   final double? speedMps;
+
+  /// Android: vị trí từ ứng dụng giả lập (`Position.isMocked`).
+  final bool mocked;
 }
 
 /// Chất lượng GPS hiển thị ở prepare/live (G01, G09).
@@ -86,6 +89,7 @@ class GeolocatorRunLocationSource implements RunLocationSource {
     accuracyM: p.accuracy <= 0 ? null : p.accuracy,
     altitudeM: p.altitude == 0 ? null : p.altitude,
     speedMps: p.speed < 0 ? null : p.speed,
+    mocked: p.isMocked,
   );
 
   @override

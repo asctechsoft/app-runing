@@ -9,14 +9,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../services/application/firebase_providers.dart';
-import '../../utils/l10n.dart';
-import '../../services/application/api_client.dart';
-import '../../services/native/permission_coordinator.dart';
+import '../../controller/profile/profile_logic.dart';
 import '../../controller/providers.dart';
+import '../../services/application/api_client.dart';
+import '../../services/application/firebase_providers.dart';
+import '../../services/native/permission_coordinator.dart';
+import '../../utils/l10n.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../controller/profile/profile_logic.dart';
 import 'components/profile_widgets.dart';
 
 /// Chia sẻ văn bản qua share sheet hệ thống; override trong test. Trả true khi người dùng chọn app.
@@ -43,16 +43,13 @@ typedef FeedbackWriter = Future<void> Function(String id, Map<String, Object?> d
 /// hoặc mất mạng (quá [timeout]) → UI chuyển sang share sheet. Lỗi khác (quyền, quá tải...) ném ApiException.
 class FeedbackSender {
   FeedbackSender({
-    required FeedbackWriter write,
-    required bool Function() ready,
-    required String? Function() uid,
+    required this._write,
+    required this._ready,
+    required this._uid,
     int Function()? nowMs,
     String Function()? newId,
     this.timeout = const Duration(seconds: 10),
-  }) : _write = write,
-       _ready = ready,
-       _uid = uid,
-       _nowMs = nowMs ?? (() => DateTime.now().millisecondsSinceEpoch),
+  }) : _nowMs = nowMs ?? (() => DateTime.now().millisecondsSinceEpoch),
        _newId = newId ?? (() => const Uuid().v4());
 
   final FeedbackWriter _write;
@@ -246,10 +243,25 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
                 icon: Icons.battery_alert_outlined,
                 title: 'profile_help_battery_title'.tr,
                 subtitle: 'profile_help_battery_subtitle'.tr,
-                onTap: () => _guide('profile_help_battery_title'.tr, [
-                  if (isAndroid) ...['profile_help_battery_android_p1'.tr, 'profile_help_battery_android_p2'.tr] else 'profile_help_battery_ios'.tr,
-                  'profile_help_battery_common'.tr,
-                ], action: openSettings),
+                onTap: () async {
+                  // X20: trạng thái thật trước, rồi hướng dẫn theo hãng (tên mục cài đặt khác nhau giữa các hãng).
+                  final status = isAndroid ? await ref.read(permissionsProvider).status(PermKind.batteryUnrestricted) : null;
+                  if (!mounted) return;
+                  _guide('profile_help_battery_title'.tr, [
+                    if (status != null) status == PermStatus.granted ? 'profile_help_battery_status_ok'.tr : 'profile_help_battery_status_restricted'.tr,
+                    if (isAndroid) ...[
+                      'profile_help_battery_android_p1'.tr,
+                      'profile_help_battery_android_p2'.tr,
+                      'profile_help_battery_samsung'.tr,
+                      'profile_help_battery_xiaomi'.tr,
+                      'profile_help_battery_oppo'.tr,
+                      'profile_help_battery_vivo'.tr,
+                      'profile_help_battery_huawei'.tr,
+                    ] else
+                      'profile_help_battery_ios'.tr,
+                    'profile_help_battery_common'.tr,
+                  ], action: openSettings);
+                },
               ),
             ],
           ),
@@ -292,6 +304,12 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
                 onTap: _copyDiagnostics,
               ),
               SettingsRow(icon: Icons.info_outline, title: 'profile_help_app_version'.tr, subtitle: profileVersionLabel, showChevron: false),
+              SettingsRow(
+                icon: Icons.description_outlined,
+                title: 'profile_help_licenses'.tr,
+                subtitle: 'profile_help_licenses_subtitle'.tr,
+                onTap: () => showLicensePage(context: context, applicationName: 'STRIDE', applicationVersion: profileVersionLabel),
+              ),
             ],
           ),
         ],

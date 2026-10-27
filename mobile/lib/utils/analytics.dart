@@ -45,6 +45,9 @@ class Analytics {
 
   static AnalyticsEventSink _sink = _sendToFirebase;
 
+  /// X11: người dùng tắt "chia sẻ dữ liệu sử dụng" → không gửi event nào (đặt lúc khởi động và khi đổi trong Quyền riêng tư).
+  static bool collectionEnabled = true;
+
   @visibleForTesting
   static set sink(AnalyticsEventSink sink) => _sink = sink;
 
@@ -56,7 +59,7 @@ class Analytics {
   static void _log(String name, [Map<String, Object>? params]) {
     assert(isValidEventName(name), 'Invalid Firebase Analytics event name: $name');
     assert(params == null || params.values.every((v) => v is String), 'Analytics params must be String: $name -> $params');
-    if (!isValidEventName(name)) return;
+    if (!isValidEventName(name) || !collectionEnabled) return;
     _sink(name, params);
   }
 
@@ -83,4 +86,42 @@ class Analytics {
 
   /// Xem màn hình. [screen] là mẫu đường dẫn (`/home/activity/:id`), không bao giờ là đường dẫn có id thật.
   static void screenView(String screen) => _log('screen_view', {'firebase_screen': screen});
+
+  /// Đã gọi popup đánh giá của hệ điều hành (X23) — không biết popup có thực sự hiện hay không.
+  static void reviewPrompt() => _log('review_prompt');
+
+  /// Màn chọn ngôn ngữ (L23). [source]: `first_run` | `settings`.
+  static void languageScreenView({required String source}) => _log('language_screen_view', {'source': source});
+
+  /// Chọn ngôn ngữ (L23): [code] dạng `vi_VN` hoặc `system`; [source]: `first_run` | `settings` | `system_default`. Không có id/PII.
+  static void languageSelect({required String code, required String source}) => _log('language_select', {'code': code, 'source': source});
+
+  // ---- Tính năng nhóm (TM76). Không có id club/thử thách/người dùng — chỉ loại và nguồn.
+
+  /// Tạo club thành công. [visibility]: `public` | `private`.
+  static void clubCreate({required String visibility}) => _log('club_create', {'visibility': visibility});
+
+  /// Mở bảng chia sẻ mã mời club (TM03).
+  static void clubInviteShare() => _log('club_invite_share');
+
+  /// Vào club. [via]: `public` (vào ngay) | `request` (gửi yêu cầu, chờ duyệt) | `invite_code`.
+  static void clubJoin({required String via}) => _log('club_join', {'via': via});
+
+  /// Tham gia thử thách. [metric]: `distance` | `count` | `time`.
+  static void challengeJoin({required String metric}) => _log('challenge_join', {'metric': metric});
+
+  /// Mở bảng xếp hạng thử thách (TM30).
+  static void leaderboardView() => _log('leaderboard_view');
+
+  /// Nhận huy hiệu (TM40). [kind]: tên loại (`first5k`, `streak7`, `challenge`…) — không id thử thách.
+  static void badgeEarned({required String kind}) => _log('badge_earned', {'kind': kind});
+
+  /// Đạt mốc chuỗi cá nhân (TM20). [days]: một trong [streakMilestones].
+  static void streakMilestone({required int days}) => _log('streak_milestone', {'days': '$days'});
+
+  /// Mốc chuỗi được ghi analytics (ít mốc để không thành event theo ngày).
+  static const List<int> streakMilestones = [3, 7, 14, 30, 60, 100, 365];
+
+  /// Mốc vừa vượt qua khi chuỗi tăng từ [from] lên [to] (null nếu không có).
+  static int? crossedStreakMilestone(int from, int to) => streakMilestones.where((m) => from < m && to >= m).lastOrNull;
 }
