@@ -18,7 +18,7 @@ jobs:
         working-directory: mobile
     steps:
       # asc_common (thư mục gốc) và mobile/dsp_base là git submodule — cần cho `flutter pub get`.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       # Dart >= 3.13.3 (asc_common yêu cầu) → Flutter 3.47.x.
@@ -70,7 +70,7 @@ jobs:
       run:
         working-directory: firestore-tests
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 22
