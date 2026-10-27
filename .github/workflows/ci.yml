@@ -39,7 +39,7 @@ jobs:
         run: flutter test --coverage
       - name: Coverage thresholds (Q09)
         run: python3 tool/check_coverage.py
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 17
@@ -77,7 +77,7 @@ jobs:
           cache: npm
           cache-dependency-path: firestore-tests/package-lock.json
       # firebase-tools 13 (ghim) cần Java 11+.
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 17
