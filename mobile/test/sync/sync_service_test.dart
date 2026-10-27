@@ -2,11 +2,11 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/services/application/api_client.dart';
-import 'package:stride/repository/owner_repository.dart';
 import 'package:stride/models/data_models/activity.dart';
 import 'package:stride/models/data_models/profile.dart';
 import 'package:stride/models/data_models/sync.dart';
+import 'package:stride/repository/owner_repository.dart';
+import 'package:stride/services/application/api_client.dart';
 import 'package:stride/services/application/sha256.dart';
 import 'package:stride/services/application/sync_remote.dart';
 import 'package:stride/services/application/sync_service.dart';

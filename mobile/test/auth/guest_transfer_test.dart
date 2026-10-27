@@ -1,13 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:stride/services/storage/app_database.dart';
-import 'package:stride/utils/clock.dart';
+import 'package:stride/controller/auth/auth_flow.dart';
+import 'package:stride/models/data_models/activity.dart';
 import 'package:stride/repository/activity_repository.dart';
 import 'package:stride/repository/owner_repository.dart';
 import 'package:stride/repository/settings_repository.dart';
-import 'package:stride/models/data_models/activity.dart';
-import 'package:stride/controller/auth/auth_flow.dart';
+import 'package:stride/services/storage/app_database.dart';
+import 'package:stride/utils/clock.dart';
 
 void main() {
   sqfliteFfiInit();

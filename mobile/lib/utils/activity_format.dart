@@ -1,11 +1,10 @@
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
-import '../values/routes.dart';
 import '../models/data_models/activity.dart';
-import 'l10n.dart';
+import '../values/routes.dart';
 import 'date_locale.dart';
+import 'l10n.dart';
 
 /// Nhãn hiển thị dùng chung cho History / Detail / Progress.
 String activityTypeLabel(ActivityType t) => switch (t) {
@@ -60,9 +59,9 @@ String activityDisplayTitle(Activity a) {
 /// "Thursday, October 15 · 7:20 AM" (+ "UTC+07:00" nếu múi giờ ghi khác múi giờ máy hiện tại).
 String activityDateTimeLabel(Activity a, {bool withTime = true, int? deviceOffsetMin}) {
   final local = activityLocalStart(a);
-  final date = DateFormat('EEEE, MMMM d', appDateLocale).format(local);
+  final date = AppDates.weekdayMonthDay(local);
   if (!withTime) return date;
-  final time = DateFormat('h:mm a', appDateLocale).format(local);
+  final time = AppDates.time(local);
   final dev = deviceOffsetMin ?? DateTime.now().timeZoneOffset.inMinutes;
   final tz = dev == a.tzOffsetMin ? '' : ' (${utcOffsetLabel(a.tzOffsetMin)})';
   return '$date · $time$tz';

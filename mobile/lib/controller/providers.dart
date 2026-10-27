@@ -1,16 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../configs/env.dart';
+import '../models/data_models/profile.dart';
 import '../repository/activity_repository.dart';
 import '../repository/owner_repository.dart';
 import '../repository/settings_repository.dart';
 import '../repository/step_repository.dart';
-import '../models/data_models/profile.dart';
-import '../configs/env.dart';
-import '../services/storage/app_database.dart';
-import '../utils/formatters.dart';
 import '../services/native/permission_coordinator.dart';
+import '../services/storage/app_database.dart';
 import '../utils/clock.dart';
+import '../utils/formatters.dart';
+import 'language/language_controller.dart';
 
 // Các provider gốc được override trong main()/test (C01: UI chỉ gọi repository/use case).
 final envProvider = Provider<EnvConfig>((ref) => EnvConfig.fromEnvironment());
@@ -46,9 +47,13 @@ final settingsProvider = StreamProvider<UserSettings>((ref) async* {
 });
 
 /// Formatter theo đơn vị người dùng; mặc định km khi settings chưa tải xong.
+/// L09: số theo ngôn ngữ app (dấu thập phân/phân tách hàng nghìn), không theo `localeTag` đã lưu; đổi ngôn ngữ → tính lại.
 final formatProvider = Provider<StrideFormat>((ref) {
+  final locale = ref.watch(languageProvider.select((l) => l.locale)).toString();
   final s = ref.watch(settingsProvider).value;
-  return s == null ? const StrideFormat() : StrideFormat.fromSettings(s);
+  return s == null
+      ? StrideFormat(locale: locale)
+      : StrideFormat(distanceUnit: s.distanceUnit, weightUnit: s.weightUnit, heightUnit: s.heightUnit, locale: locale);
 });
 
 /// Phiên bản dữ liệu hoạt động của owner — tăng mỗi khi có thay đổi, để các màn list/stat tự refresh.

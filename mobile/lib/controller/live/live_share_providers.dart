@@ -1,14 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 
+import '../../models/ui_models/live_share_models.dart';
+import '../../repository/live_share_repository.dart';
 import '../../services/application/firebase_providers.dart';
+import '../../services/application/live_share_plugin.dart';
 import '../../services/native/permission_coordinator.dart';
 import '../providers.dart';
 import '../run_plugins.dart';
-import '../../models/ui_models/live_share_models.dart';
-import '../../services/application/live_share_plugin.dart';
-import '../../repository/live_share_repository.dart';
 
 final liveShareRepositoryProvider = Provider<LiveShareRepository>((ref) {
   bool ready() => ref.read(firebaseReadyProvider);

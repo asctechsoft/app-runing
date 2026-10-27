@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:dsp_base/dsp_base.dart';
 import 'package:flutter/foundation.dart';
 
-import '../../utils/logger.dart';
 import '../../configs/app_figs.dart';
+import '../../utils/logger.dart';
 
 /// Khởi động phần dùng chung từ `dsp_base` theo đúng thứ tự: đăng ký service GetX → Firebase (core, App Check, Crashlytics)
 /// → Remote Config (chạy nền). Không bao giờ ném lỗi; bước nào hỏng thì ghi log và bỏ qua để app vẫn chạy offline.
@@ -20,7 +20,8 @@ class StrideBase {
   /// true khi Firebase core đã sẵn sàng (có `google-services.json` đúng package, đang chạy Android).
   static bool get firebaseReady => DspFirebaseService.isCoreReady;
 
-  static Future<bool> start() async {
+  /// [diagnostics]: người dùng đồng ý báo lỗi (X11) — false thì không cài Crashlytics.
+  static Future<bool> start({bool diagnostics = true}) async {
     DspBase.register();
     // iOS chưa có GoogleService-Info.plist, web không dùng Firebase: bỏ qua thay vì để initializeApp báo lỗi mỗi lần mở app.
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return false;
@@ -30,6 +31,7 @@ class StrideBase {
             // App Check dùng provider debug ở bản debug — đăng ký token log ra trong Firebase console trước khi bật enforce.
             enableAppCheck: true,
             appCheckDebugProvider: kDebugMode || AppFigs.isShowTestOption,
+            enableCrashlytics: diagnostics,
           )
           .timeout(const Duration(seconds: 8), onTimeout: () => false);
       if (up) {

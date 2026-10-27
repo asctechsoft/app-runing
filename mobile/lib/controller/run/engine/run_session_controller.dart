@@ -1,27 +1,27 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../models/data_models/activity.dart';
+import '../../../models/data_models/profile.dart';
+import '../../../models/data_models/session_state.dart';
+import '../../../models/ui_models/workout_models.dart';
+import '../../../presentation/common_components/buttons.dart' show OnceGuard;
+import '../../../repository/activity_repository.dart';
+import '../../../repository/workout_repository.dart';
+import '../../../utils/calc/calories.dart';
+import '../../../utils/calc/geo.dart';
+import '../../../utils/calc/gps_filter.dart';
+import '../../../utils/calc/run_metrics.dart';
+import '../../../utils/clock.dart';
+import '../../../utils/haptics.dart';
 import '../../../utils/l10n.dart';
 import '../../../utils/logger.dart';
 import '../../../utils/stream_utils.dart';
 import '../../providers.dart';
 import '../../run_plugins.dart';
-import '../../../utils/clock.dart';
-import '../../../presentation/common_components/buttons.dart' show OnceGuard;
-import '../../../repository/activity_repository.dart';
-import '../../../utils/calc/calories.dart';
-import '../../../utils/calc/geo.dart';
-import '../../../utils/calc/gps_filter.dart';
-import '../../../utils/calc/run_metrics.dart';
-import '../../../models/data_models/activity.dart';
-import '../../../models/data_models/profile.dart';
-import '../../../models/data_models/session_state.dart';
-import '../../../models/ui_models/workout_models.dart';
-import '../../../repository/workout_repository.dart';
 import 'auto_pause.dart';
 import 'run_audio.dart';
 import 'run_session_state.dart';
@@ -341,6 +341,7 @@ class RunSessionController extends Notifier<RunSessionState> {
     _lastRawFix = f;
     final a = state.activity;
     if (a == null || !state.isActive) return;
+    if (f.mocked && !_events.any((e) => e.type == SessionEventType.mockLocation)) await _appendEvent(SessionEventType.mockLocation);
     final cfg = _filter;
     var gps = state.gps;
     final shown = TrackPoint(activityId: a.id, segmentId: _segment?.id ?? '', seq: -1, t: f.t, lat: f.lat, lon: f.lon, accuracyM: f.accuracyM);
@@ -480,6 +481,8 @@ class RunSessionController extends Notifier<RunSessionState> {
         await _appendEvent(SessionEventType.gpsLost, data: last == null ? null : {'lat': last.lat, 'lon': last.lon, 't': last.t});
         _gpsLost = true;
         state = state.copyWith(gps: GpsQuality.lost);
+        // T05: cảnh báo mất GPS — rung ngắn, banner chữ trên màn ghi chạy là kênh chính.
+        StrideHaptics.medium();
         await _checkpoint();
       }
     }
@@ -495,11 +498,8 @@ class RunSessionController extends Notifier<RunSessionState> {
     }
   }
 
-  void _haptic() {
-    try {
-      unawaited(HapticFeedback.heavyImpact().catchError((Object _) {}));
-    } catch (_) {}
-  }
+  /// Đạt mục tiêu / chuyển phase interval (T05: mediumImpact, luôn kèm giọng đọc/chữ).
+  void _haptic() => StrideHaptics.medium();
 
   Future<void> _evaluateProgress() async {
     if (state.phase != SessionPhase.recording) return;
@@ -634,7 +634,10 @@ class RunSessionController extends Notifier<RunSessionState> {
 
   // ================= Pause / resume / lock =================
 
-  Future<void> pause() => _serial(() => _doPause(manual: true));
+  Future<void> pause() {
+    StrideHaptics.medium();
+    return _serial(() => _doPause(manual: true));
+  }
 
   Future<void> _doPause({required bool manual}) async {
     if (state.phase == SessionPhase.recording) {
@@ -654,7 +657,10 @@ class RunSessionController extends Notifier<RunSessionState> {
     }
   }
 
-  Future<void> resume() => _serial(() => _doResume(auto: false));
+  Future<void> resume() {
+    StrideHaptics.light();
+    return _serial(() => _doResume(auto: false));
+  }
 
   Future<void> _doResume({required bool auto}) async {
     if (state.phase != SessionPhase.paused) return;
@@ -775,6 +781,7 @@ class RunSessionController extends Notifier<RunSessionState> {
       hasGps: hasGps,
       distanceSource: indoor ? DistanceSource.steps : DistanceSource.gps,
       workoutExecutionId: executionId,
+      locationMocked: _events.any((e) => e.type == SessionEventType.mockLocation),
       syncState: a.syncState,
       revision: a.revision,
       createdAt: a.createdAt,

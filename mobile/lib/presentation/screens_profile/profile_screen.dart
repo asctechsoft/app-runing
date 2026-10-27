@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../controller/home/home_providers.dart';
+import '../../controller/profile/profile_logic.dart';
+import '../../controller/providers.dart';
+import '../../utils/date_locale.dart';
 import '../../utils/l10n.dart';
 import '../../values/routes.dart';
-import '../../controller/providers.dart';
 import '../../values/tokens.dart';
+import '../common_components/streak_summary.dart';
 import '../common_components/widgets.dart';
-import '../../controller/profile/profile_logic.dart';
 import 'components/profile_widgets.dart';
 
 /// Tab Profile (J01): header, thống kê trọn đời và lối vào mọi màn cài đặt.
@@ -27,7 +30,8 @@ class ProfileScreen extends ConsumerWidget {
       (Icons.track_changes, 'profile_goals_title'.tr, 'profile_row_goals_subtitle'.tr, Routes.profileGoals),
       (Icons.settings_outlined, 'profile_run_settings_title'.tr, 'profile_row_run_subtitle'.tr, Routes.runSettings),
       (Icons.notifications_none, 'profile_reminders_title'.tr, 'profile_row_reminders_subtitle'.tr, Routes.reminders),
-      (Icons.language, 'profile_units_title'.tr, 'profile_row_units_subtitle'.tr, Routes.units),
+      (Icons.straighten, 'profile_units_title'.tr, 'profile_row_units_subtitle'.tr, Routes.units),
+      (Icons.language, 'lang_settings_title'.tr, 'lang_row_subtitle'.tr, Routes.profileLanguage),
       (Icons.link, 'profile_data_sources_title'.tr, 'profile_row_ds_subtitle'.tr, Routes.dataSources),
       if (flags.exploreAny)
         (Icons.map_outlined, 'profile_explore_title'.tr, _exploreSubtitle(flags.exploreClubs, flags.exploreChallenges, flags.exploreRoutes), Routes.explore),
@@ -51,6 +55,7 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 const _StatsCard(),
+                const _Streak(),
                 const SizedBox(height: 16),
                 SettingsGroup(
                   children: [for (final r in rows) SettingsRow(icon: r.$1, title: r.$2, subtitle: r.$3, onTap: () => context.push(r.$4))],
@@ -84,7 +89,7 @@ class _Header extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final joined = isGuest ? null : ref.watch(profileJoinedProvider).value;
-    final subtitle = isGuest ? 'profile_guest'.tr : (joined == null ? null : 'profile_joined'.trArgs([DateFormat('MMMM y').format(joined)]));
+    final subtitle = isGuest ? 'profile_guest'.tr : (joined == null ? null : 'profile_joined'.trArgs([AppDates.monthYear(joined)]));
     return Row(
       children: [
         ProfileAvatar(name: name, path: avatarPath),
@@ -99,6 +104,21 @@ class _Header extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// TM20: chuỗi cá nhân; chưa có dữ liệu thì ẩn.
+class _Streak extends ConsumerWidget {
+  const _Streak();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(personalStreakProvider).value;
+    if (s == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: StreakSummaryView(summary: s, card: true),
     );
   }
 }

@@ -35,18 +35,120 @@ service cloud.firestore {
       allow delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
 
-    // ---- Câu lạc bộ
+    // ---- Câu lạc bộ (TM01 tạo, TM02 quản lý thành viên; ADR 0003)
+    function clubPath(clubId) { return /databases/$(database)/documents/clubs/$(clubId); }
+    function memberPath(clubId, uid) { return /databases/$(database)/documents/clubs/$(clubId)/members/$(uid); }
+    // Vai trò đang hoạt động của người gọi trong club ('none' nếu không phải thành viên active).
+    function myRole(clubId) {
+      return signedIn() && exists(memberPath(clubId, request.auth.uid)) &&
+        get(memberPath(clubId, request.auth.uid)).data.status == 'active'
+        ? get(memberPath(clubId, request.auth.uid)).data.role : 'none';
+    }
+    function isManager(clubId) { return myRole(clubId) in ['owner', 'admin']; }
+    // TM04: club đã giải tán (lưu trữ) — không nhận thành viên, bài, sự kiện, mã mời mới. Club chưa tồn tại (đang tạo) coi như mở.
+    function clubOpen(clubId) { return !exists(clubPath(clubId)) || get(clubPath(clubId)).data.get('archivedAt', null) == null; }
+    function invitePath(code) { return /databases/$(database)/documents/clubInvites/$(code); }
+    // Dùng mã mời [code] cho club [clubId] trong request này: còn hạn, còn lượt và lượt dùng tăng đúng 1 (TM03).
+    function inviteUse(clubId, code) {
+      let inv = get(invitePath(code)).data;
+      return inv.clubId == clubId && inv.expiresAt > request.time.toMillis() && inv.uses < inv.maxUses &&
+        getAfter(invitePath(code)).data.uses == inv.uses + 1;
+    }
+    function validClub(d) {
+      return d.keys().hasOnly(['name', 'nameLower', 'description', 'region', 'visibility', 'memberCount', 'ownerId', 'createdAt', 'rulesText', 'groupGoal', 'archivedAt', 'pinnedPostId']) &&
+        d.name is string && d.name.size() >= 3 && d.name.size() <= 40 && d.nameLower == d.name.lower() &&
+        d.description is string && d.description.size() <= 300 &&
+        d.region is string && d.region.size() <= 60 &&
+        d.visibility in ['public', 'private'] && d.createdAt is int &&
+        (!('rulesText' in d) || (d.rulesText is string && d.rulesText.size() <= 1000));
+    }
+    // TM22: mục tiêu nhóm tuần/tháng.
+    function validGroupGoal(g) {
+      return g is map && g.keys().hasOnly(['period', 'metric', 'target', 'weekStart']) &&
+        g.period in ['week', 'month'] && g.metric in ['distance', 'count', 'time'] &&
+        (g.target is int || g.target is float) && g.target > 0 && g.weekStart is int && g.weekStart >= 1 && g.weekStart <= 7;
+    }
+
     match /clubs/{clubId} {
       allow read: if signedIn();
-      allow create, delete: if false;
-      // Người dùng chỉ được tăng/giảm memberCount đúng 1 đơn vị khi vào/rời.
-      allow update: if signedIn() && onlyChanges(['memberCount']) && counterStep('memberCount');
+      // Tạo cùng transaction với members/{uid} (owner) và clubQuota/{uid} (hạn mức).
+      allow create: if signedIn() && validClub(request.resource.data) &&
+        request.resource.data.ownerId == request.auth.uid && request.resource.data.memberCount == 1 &&
+        getAfter(memberPath(clubId, request.auth.uid)).data.role == 'owner' &&
+        getAfter(/databases/$(database)/documents/clubQuota/$(request.auth.uid)).data.lastCreatedAt == request.time;
+      allow delete: if false;
+      allow update: if signedIn() && (
+        // Người dùng chỉ được tăng/giảm memberCount đúng 1 đơn vị khi vào/rời/được duyệt.
+        (onlyChanges(['memberCount']) && counterStep('memberCount')) ||
+        // TM04: owner/admin sửa thông tin + nội quy (không đụng owner, bộ đếm, ngày tạo).
+        (isManager(clubId) && onlyChanges(['name', 'nameLower', 'description', 'region', 'visibility', 'rulesText']) &&
+          validClub(request.resource.data)) ||
+        // TM04: owner giải tán (lưu trữ) club — một chiều, không mở lại.
+        (myRole(clubId) == 'owner' && onlyChanges(['archivedAt']) && request.resource.data.archivedAt is int &&
+          resource.data.get('archivedAt', null) == null) ||
+        // TM04: owner/admin ghim/bỏ ghim một bài.
+        (isManager(clubId) && onlyChanges(['pinnedPostId']) &&
+          (request.resource.data.get('pinnedPostId', null) == null || request.resource.data.pinnedPostId is string)) ||
+        // TM22: owner/admin đặt/gỡ mục tiêu nhóm.
+        (isManager(clubId) && onlyChanges(['groupGoal']) &&
+          (!('groupGoal' in request.resource.data) || validGroupGoal(request.resource.data.groupGoal))) ||
+        // Chuyển quyền chủ: người mới đã là owner sau khi ghi.
+        (resource.data.ownerId == request.auth.uid && onlyChanges(['ownerId']) &&
+          getAfter(memberPath(clubId, request.resource.data.ownerId)).data.role == 'owner')
+      );
 
       match /members/{uid} {
         allow read: if signedIn();
-        allow create: if isOwner(uid) && request.resource.data.userId == uid && request.resource.data.role == 'member';
-        allow update: if false;
-        allow delete: if isOwner(uid);
+        allow create: if isOwner(uid) && request.resource.data.userId == uid && clubOpen(clubId) && (
+          // Tự vào: club công khai → active, riêng tư → pending; người bị cấm không vào lại.
+          (request.resource.data.role == 'member' && !exists(/databases/$(database)/documents/clubs/$(clubId)/bans/$(uid)) &&
+            request.resource.data.status == (get(clubPath(clubId)).data.visibility == 'public' ? 'active' : 'pending')) ||
+          // Vào bằng mã mời: active ngay kể cả club riêng.
+          (request.resource.data.role == 'member' && request.resource.data.status == 'active' &&
+            !exists(/databases/$(database)/documents/clubs/$(clubId)/bans/$(uid)) &&
+            request.resource.data.inviteCode is string && inviteUse(clubId, request.resource.data.inviteCode)) ||
+          // Người tạo club (cùng transaction tạo club).
+          (request.resource.data.role == 'owner' && request.resource.data.status == 'active' &&
+            !exists(clubPath(clubId)) && getAfter(clubPath(clubId)).data.ownerId == uid)
+        );
+        allow update: if signedIn() && uid != request.auth.uid && (
+          // Duyệt yêu cầu vào club riêng.
+          (isManager(clubId) && resource.data.status == 'pending' && request.resource.data.status == 'active' && onlyChanges(['status'])) ||
+          // Owner đổi vai trò admin ↔ member (không đụng owner).
+          (myRole(clubId) == 'owner' && resource.data.status == 'active' && resource.data.role in ['admin', 'member'] &&
+            request.resource.data.role in ['admin', 'member'] && onlyChanges(['role'])) ||
+          // Owner chuyển quyền chủ: chính mình phải hạ xuống admin trong cùng transaction.
+          (myRole(clubId) == 'owner' && resource.data.status == 'active' && request.resource.data.role == 'owner' && onlyChanges(['role']) &&
+            getAfter(memberPath(clubId, request.auth.uid)).data.role == 'admin')
+        ) || (
+          // Đang chờ duyệt nhưng có mã mời → tự chuyển sang active.
+          isOwner(uid) && resource.data.status == 'pending' && request.resource.data.status == 'active' &&
+          onlyChanges(['status', 'inviteCode']) && inviteUse(clubId, request.resource.data.inviteCode)
+        ) || (
+          // Owner cũ tự hạ xuống admin khi chuyển quyền (club đã trỏ sang owner mới sau khi ghi).
+          isOwner(uid) && resource.data.role == 'owner' && request.resource.data.role == 'admin' && onlyChanges(['role']) &&
+          getAfter(clubPath(clubId)).data.ownerId != uid
+        );
+        // Tự rời (owner phải chuyển quyền trước); owner xóa bất kỳ ai trừ mình; admin chỉ xóa member (từ chối/đuổi).
+        allow delete: if (isOwner(uid) && resource.data.role != 'owner') ||
+          (uid != request.auth.uid && resource.data.role != 'owner' &&
+            (myRole(clubId) == 'owner' || (myRole(clubId) == 'admin' && resource.data.role == 'member')));
+      }
+
+      // TM21/TM22: số liệu theo ngày mỗi thành viên TỰ chia sẻ (tắt = xóa). Chỉ thành viên active đọc/ghi; tối đa 62 ngày.
+      match /memberStats/{uid} {
+        allow read: if isMember(clubId);
+        allow create, update: if isOwner(uid) && isMember(clubId) && request.resource.data.userId == uid &&
+          request.resource.data.keys().hasOnly(['userId', 'displayName', 'days', 'updatedAt']) &&
+          request.resource.data.days is map && request.resource.data.days.size() <= 62;
+        allow delete: if isOwner(uid) || isManager(clubId);
+      }
+
+      // Danh sách cấm: owner/admin ghi, chỉ người quản lý đọc.
+      match /bans/{uid} {
+        allow read: if isManager(clubId);
+        allow create: if isManager(clubId) && uid != request.auth.uid && request.resource.data.bannedBy == request.auth.uid;
+        allow delete: if isManager(clubId);
       }
     }
     // collection group `members` để liệt kê CLB của tôi (cần fieldOverride trong firestore.indexes.json).
@@ -54,9 +156,45 @@ service cloud.firestore {
       allow read: if signedIn() && resource.data.userId == request.auth.uid;
     }
 
+    // Mã mời club (TM03): get theo mã (không liệt kê). Club công khai: thành viên nào cũng tạo; club riêng: owner/admin.
+    // Tối đa 30 ngày, 100 lượt. Lượt dùng chỉ tăng 1 khi chính người gọi vừa vào club bằng mã này.
+    match /clubInvites/{code} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn() && code.size() == 8 && clubOpen(request.resource.data.clubId) &&
+        request.resource.data.keys().hasOnly(['clubId', 'createdBy', 'createdAt', 'expiresAt', 'maxUses', 'uses']) &&
+        request.resource.data.createdBy == request.auth.uid && request.resource.data.uses == 0 &&
+        request.resource.data.maxUses is int && request.resource.data.maxUses >= 1 && request.resource.data.maxUses <= 100 &&
+        request.resource.data.expiresAt is int && request.resource.data.expiresAt <= request.time.toMillis() + 30 * 24 * 3600 * 1000 &&
+        (isManager(request.resource.data.clubId) ||
+          (myRole(request.resource.data.clubId) == 'member' && get(clubPath(request.resource.data.clubId)).data.visibility == 'public'));
+      allow update: if signedIn() && onlyChanges(['uses']) && request.resource.data.uses == resource.data.uses + 1 &&
+        getAfter(memberPath(resource.data.clubId, request.auth.uid)).data.inviteCode == code &&
+        getAfter(memberPath(resource.data.clubId, request.auth.uid)).data.status == 'active' &&
+        (!exists(memberPath(resource.data.clubId, request.auth.uid)) ||
+          get(memberPath(resource.data.clubId, request.auth.uid)).data.status == 'pending');
+      allow delete: if signedIn() && (resource.data.createdBy == request.auth.uid || isManager(resource.data.clubId));
+    }
+
+    // Hạn mức tạo club (TM01): tối đa 5 club, cách nhau ≥ 1 giờ. Chỉ chủ đọc/ghi; không xóa để không reset được.
+    match /clubQuota/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && request.resource.data.keys().hasOnly(['count', 'lastCreatedAt']) &&
+        request.resource.data.count == 1 && request.resource.data.lastCreatedAt == request.time;
+      allow update: if isOwner(uid) && request.resource.data.keys().hasOnly(['count', 'lastCreatedAt']) &&
+        request.resource.data.count == resource.data.count + 1 && request.resource.data.count <= 5 &&
+        request.resource.data.lastCreatedAt == request.time &&
+        request.time > resource.data.lastCreatedAt + duration.value(1, 'h');
+      allow delete: if false;
+    }
+
     match /posts/{postId} {
       allow read: if isMember(resource.data.clubId);
-      allow create: if isMember(request.resource.data.clubId) && request.resource.data.authorId == request.auth.uid;
+      // TM06: `activity` chỉ là số liệu tóm tắt (không tọa độ/bản đồ/ghi chú) — khớp postActivityKeys trong app.
+      allow create: if isMember(request.resource.data.clubId) && request.resource.data.authorId == request.auth.uid &&
+        clubOpen(request.resource.data.clubId) &&
+        (!('activity' in request.resource.data) || (request.resource.data.activity is map &&
+          request.resource.data.activity.keys().hasOnly(['id', 'type', 'title', 'startedAt', 'distanceM', 'distanceEstimated', 'movingMs', 'avgPaceSecPerKm', 'steps'])));
       allow update: if signedIn() && (
         (resource.data.authorId == request.auth.uid && onlyChanges(['deletedAt'])) ||
         (isMember(resource.data.clubId) && onlyChanges(['cheerCount', 'commentCount']))
@@ -75,30 +213,108 @@ service cloud.firestore {
       }
     }
 
+    // TM05: sự kiện — owner/admin tạo; người tạo hoặc owner/admin sửa (trước giờ bắt đầu) và hủy; đủ chỗ thì không RSVP thêm.
+    function validEvent(d) {
+      return d.keys().hasOnly(['clubId', 'title', 'description', 'location', 'startsAt', 'endsAt', 'tzId', 'maxGoing', 'createdBy',
+          'goingCount', 'cancelledAt', 'createdAt', 'updatedAt']) &&
+        d.title is string && d.title.size() >= 3 && d.title.size() <= 80 &&
+        d.description is string && d.description.size() <= 1000 &&
+        d.location is string && d.location.size() <= 120 &&
+        d.startsAt is int && d.tzId is string &&
+        (d.get('endsAt', null) == null || (d.endsAt is int && d.endsAt > d.startsAt)) &&
+        (d.get('maxGoing', null) == null || (d.maxGoing is int && d.maxGoing >= 2 && d.maxGoing <= 1000));
+    }
+    function canManageEvent() { return resource.data.createdBy == request.auth.uid || isManager(resource.data.clubId); }
+
     match /events/{eventId} {
       allow read: if isMember(resource.data.clubId);
-      allow create: if isMember(request.resource.data.clubId) && request.resource.data.createdBy == request.auth.uid;
+      allow create: if isManager(request.resource.data.clubId) && request.resource.data.createdBy == request.auth.uid &&
+        clubOpen(request.resource.data.clubId) && validEvent(request.resource.data) && request.resource.data.goingCount == 0 &&
+        request.resource.data.cancelledAt == null && request.resource.data.startsAt > request.time.toMillis();
       allow update: if signedIn() && (
-        (resource.data.createdBy == request.auth.uid && onlyChanges(['cancelledAt'])) ||
-        (isMember(resource.data.clubId) && onlyChanges(['goingCount']))
+        (canManageEvent() && resource.data.cancelledAt == null && resource.data.startsAt > request.time.toMillis() &&
+          onlyChanges(['title', 'description', 'location', 'startsAt', 'endsAt', 'tzId', 'maxGoing', 'updatedAt']) &&
+          validEvent(request.resource.data) && request.resource.data.startsAt > request.time.toMillis() &&
+          (request.resource.data.get('maxGoing', null) == null || request.resource.data.maxGoing >= resource.data.goingCount)) ||
+        (canManageEvent() && onlyChanges(['cancelledAt']) && request.resource.data.cancelledAt is int) ||
+        (isMember(resource.data.clubId) && onlyChanges(['goingCount']) && counterStep('goingCount') &&
+          (resource.data.get('maxGoing', null) == null || request.resource.data.goingCount <= resource.data.maxGoing))
       );
       allow delete: if false;
       match /rsvps/{uid} {
         allow read: if signedIn();
-        allow create, delete: if isOwner(uid);
+        allow create: if isOwner(uid) && request.resource.data.keys().hasOnly(['createdAt', 'displayName', 'going']);
+        allow delete: if isOwner(uid);
       }
     }
 
     // ---- Thử thách & tuyến: nội dung do Admin SDK nạp; người dùng chỉ đọc + tham gia.
+    // TM31: thử thách của club — owner/admin tạo; kỳ ≤ 93 ngày; chỉ run/walk (ADR 0003); hủy được trước khi bắt đầu.
+    function validChallenge(d) {
+      return d.keys().hasOnly(['clubId', 'createdBy', 'title', 'description', 'metric', 'target', 'startsAt', 'endsAt',
+          'startDate', 'endDate', 'tzId', 'activityTypes', 'participantCount', 'createdAt']) &&
+        d.title is string && d.title.size() >= 3 && d.title.size() <= 60 &&
+        d.description is string && d.description.size() <= 300 &&
+        d.metric in ['distance', 'count', 'time'] && (d.target is int || d.target is float) && d.target > 0 &&
+        d.startsAt is int && d.endsAt is int && d.endsAt > d.startsAt && d.endsAt - d.startsAt <= 93 * 24 * 3600 * 1000 &&
+        d.startDate is string && d.endDate is string && d.tzId is string &&
+        d.activityTypes == ['run', 'walk'] && d.participantCount == 0 && d.createdAt is int;
+    }
+    function challengeClub(id) { return get(/databases/$(database)/documents/challenges/$(id)).data.get('clubId', null); }
+    // TM32: đổi đội đóng 48 giờ trước khi kết thúc (khớp `teamChangeLock` trong explore_logic.dart).
+    function teamsOpen(id) {
+      return request.time.toMillis() < get(/databases/$(database)/documents/challenges/$(id)).data.get('endsAt', 0) - 48 * 3600 * 1000;
+    }
+    // Khớp `challengeGrace` (48 giờ) trong explore_logic.dart.
+    function challengeOpen(id) {
+      return request.time.toMillis() <= get(/databases/$(database)/documents/challenges/$(id)).data.get('endsAt', 0) + 48 * 3600 * 1000;
+    }
+
     match /challenges/{id} {
       allow read: if signedIn();
-      allow create, delete: if false;
-      allow update: if signedIn() && onlyChanges(['participantCount']) && counterStep('participantCount');
+      allow create: if signedIn() && validChallenge(request.resource.data) &&
+        request.resource.data.createdBy == request.auth.uid && isManager(request.resource.data.clubId) &&
+        request.resource.data.endsAt > request.time.toMillis();
+      allow delete: if false;
+      allow update: if signedIn() && (
+        (onlyChanges(['participantCount']) && counterStep('participantCount')) ||
+        (resource.data.get('clubId', null) != null && isManager(resource.data.clubId) && onlyChanges(['cancelledAt']) &&
+          request.resource.data.cancelledAt is int && resource.data.startsAt > request.time.toMillis())
+      );
+      // TM32: đội trong thử thách của club — owner/admin tạo trước hạn đổi đội.
+      match /teams/{teamId} {
+        allow read: if signedIn();
+        allow create: if challengeClub(id) != null && isManager(challengeClub(id)) && teamsOpen(id) &&
+          request.resource.data.keys().hasOnly(['name', 'color', 'createdBy', 'createdAt']) &&
+          request.resource.data.name is string && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 30 &&
+          request.resource.data.color is int && request.resource.data.color >= 0 && request.resource.data.color <= 7 &&
+          request.resource.data.createdBy == request.auth.uid;
+        allow update, delete: if false;
+      }
+
       match /participants/{uid} {
-        allow read: if signedIn() && (isOwner(uid) || resource.data.leaderboardOptIn == true);
-        allow create: if isOwner(uid) && request.resource.data.userId == uid;
-        allow update: if isOwner(uid);
-        allow delete: if isOwner(uid);
+        // Vào một đội = đồng ý cho thành viên club xem tiến độ (cần để tính điểm đội).
+        allow read: if signedIn() && (isOwner(uid) || resource.data.leaderboardOptIn == true ||
+          (resource.data.get('teamId', null) != null && challengeClub(id) != null && isMember(challengeClub(id))));
+        // Thử thách của club: chỉ thành viên active tham gia. Chọn đội là bước riêng (không gửi kèm khi tham gia).
+        allow create: if isOwner(uid) && request.resource.data.userId == uid && !('teamId' in request.resource.data) &&
+          (challengeClub(id) == null || isMember(challengeClub(id)));
+        // TM33: tiến độ chỉ đổi tới hết thời gian chờ đồng bộ (48 giờ sau endsAt); sau đó kết quả khóa. Người bị cấm/rời
+        // club giữa kỳ không cập nhật tiếp. Hiện tên trên bảng xếp hạng đổi được bất cứ lúc nào.
+        allow update: if isOwner(uid) && (
+          onlyChanges(['leaderboardOptIn', 'displayName']) ||
+          (onlyChanges(['progressValue', 'progressUpdatedAt', 'completedAt']) && challengeOpen(id) &&
+            (challengeClub(id) == null || isMember(challengeClub(id)))) ||
+          // TM32: chọn đội lần đầu tự do; đổi đội tối đa 1 lần; khóa 48 giờ trước khi kết thúc; đội phải tồn tại.
+          (onlyChanges(['teamId', 'teamChanges']) && challengeClub(id) != null && isMember(challengeClub(id)) && teamsOpen(id) &&
+            exists(/databases/$(database)/documents/challenges/$(id)/teams/$(request.resource.data.teamId)) && (
+              (resource.data.get('teamId', null) == null &&
+                request.resource.data.get('teamChanges', 0) == resource.data.get('teamChanges', 0)) ||
+              (resource.data.get('teamId', null) != null && request.resource.data.teamId != resource.data.teamId &&
+                request.resource.data.teamChanges == resource.data.get('teamChanges', 0) + 1 && request.resource.data.teamChanges <= 1)
+            ))
+        );
+        allow delete: if isOwner(uid) && challengeOpen(id);
       }
     }
 

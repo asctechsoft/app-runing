@@ -4,18 +4,18 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../storage/app_database.dart';
-import '../../utils/logger.dart';
-import 'api_client.dart';
-import '../../utils/clock.dart';
-import '../../repository/activity_repository.dart';
-import '../../repository/owner_repository.dart';
-import '../../repository/settings_repository.dart';
 import '../../models/data_models/activity.dart';
 import '../../models/data_models/profile.dart';
 import '../../models/data_models/sync.dart';
-import 'sync_remote.dart';
+import '../../repository/activity_repository.dart';
+import '../../repository/owner_repository.dart';
+import '../../repository/settings_repository.dart';
+import '../../utils/clock.dart';
 import '../../utils/l10n.dart';
+import '../../utils/logger.dart';
+import '../storage/app_database.dart';
+import 'api_client.dart';
+import 'sync_remote.dart';
 
 enum SyncPhase { idle, syncing, error, offline, signedOut, disabled }
 
@@ -91,27 +91,19 @@ class _AuthLost implements Exception {}
 /// Chỉ chạy cho owner đã đăng nhập Firebase (uid == owner) khi Firebase sẵn sàng.
 class SyncService {
   SyncService({
-    required AppDatabase db,
-    required ActivityRepository activities,
-    required SettingsRepository settings,
-    required SyncRemote remote,
-    required String? Function() uid,
+    required this._db,
+    required this._activities,
+    required this._settings,
+    required this._remote,
+    required this._uid,
     bool Function()? ready,
-    required Clock clock,
-    required OwnerState Function() owner,
+    required this._clock,
+    required this._owner,
     this.enabled = true,
-    Stream<bool>? online,
+    this._online,
     this.debounce = const Duration(seconds: 3),
     this.chunkPoints = kTrackChunkPoints,
-  }) : _db = db,
-       _activities = activities,
-       _settings = settings,
-       _remote = remote,
-       _uid = uid,
-       _ready = ready ?? (() => true),
-       _clock = clock,
-       _owner = owner,
-       _online = online;
+  }) : _ready = ready ?? (() => true);
 
   final AppDatabase _db;
   final ActivityRepository _activities;
@@ -774,6 +766,7 @@ const _activityKeys = [
   'hasGps',
   'distanceSource',
   'workoutExecutionId',
+  'locationMocked',
 ];
 
 /// Body `activity` theo validators/activity.ts. Tiêu đề rỗng → nhãn theo loại (server yêu cầu title ≥ 1 ký tự).

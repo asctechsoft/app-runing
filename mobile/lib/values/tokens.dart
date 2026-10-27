@@ -33,6 +33,18 @@ abstract final class StrideColors {
   // Bản đồ (DS mục 07)
   static const mapCurrent = Color(0xFF1D4ED8);
   static const chartBar = Color(0xFFB9D3C2);
+
+  /// Màu đội (TM32) theo chỉ số 0–7 lưu trong `teams/{id}.color`. Luôn đi kèm tên đội (không chỉ dựa vào màu).
+  static const teams = [
+    Color(0xFF137A4B),
+    Color(0xFF1D4ED8),
+    Color(0xFFB42318),
+    Color(0xFF8A4B00),
+    Color(0xFF6D28D9),
+    Color(0xFF0F766E),
+    Color(0xFFBE185D),
+    Color(0xFF102134),
+  ];
 }
 
 /// Lưới 4: 4 8 12 16 20 24 32 40 48 64.
@@ -69,6 +81,12 @@ abstract final class StrideMotion {
   static const state = Duration(milliseconds: 180);
   static const sheet = Duration(milliseconds: 240);
   static const screen = Duration(milliseconds: 250);
+
+  /// M01: thời lượng đã tính chế độ giảm chuyển động của hệ điều hành (`MediaQuery.disableAnimations`) → 0 (đổi tức thời).
+  /// Chỉ ảnh hưởng hiệu ứng; dữ liệu (timer, lộ trình) vẫn cập nhật bình thường.
+  static Duration of(BuildContext context, Duration d) => reduced(context) ? Duration.zero : d;
+
+  static bool reduced(BuildContext context) => MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 }
 
 /// Typography (DS mục 02). Số dùng tabular figures.

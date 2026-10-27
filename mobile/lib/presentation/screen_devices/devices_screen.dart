@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../services/native/permission_coordinator.dart';
-import '../../controller/providers.dart';
-import '../../values/tokens.dart';
-import '../common_components/widgets.dart';
-import '../../repository/device_repository.dart';
 import '../../controller/devices/devices_controller.dart';
 import '../../controller/devices/devices_providers.dart';
+import '../../controller/providers.dart';
+import '../../repository/device_repository.dart';
 import '../../services/application/heart_rate_transport.dart';
+import '../../services/native/permission_coordinator.dart';
 import '../../utils/l10n.dart';
+import '../../values/tokens.dart';
+import '../common_components/widgets.dart';
 
 /// Profile → Data sources → Connect a device (L01/L02).
 /// Ma trận hỗ trợ: chỉ cảm biến Bluetooth LE Heart Rate Service chuẩn (0x180D / 0x2A37); không liệt kê tên hãng.

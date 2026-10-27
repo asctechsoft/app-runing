@@ -1,0 +1,15 @@
+{
+  "name": "stride-firestore-rules-tests",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test rules.test.mjs",
+    "test:emulator": "firebase emulators:exec --only firestore --project demo-stride --config ../firebase.json \"npm test\""
+  },
+  "devDependencies": {
+    "firebase-tools": "13.35.1"
+  }
+}

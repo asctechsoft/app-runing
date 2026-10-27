@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
+import '../../utils/haptics.dart';
 import '../../utils/l10n.dart';
 import '../../values/tokens.dart';
 
@@ -154,10 +154,12 @@ class HoldButton extends StatefulWidget {
 }
 
 class _HoldButtonState extends State<HoldButton> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: widget.duration)
+  // M03: thời gian giữ là thời gian thật — `preserve` để giảm chuyển động (Flutter rút controller thường còn 5%) không
+  // biến "giữ để kết thúc" thành một cái chạm.
+  late final AnimationController _c = AnimationController(vsync: this, duration: widget.duration, animationBehavior: AnimationBehavior.preserve)
     ..addStatusListener((s) {
       if (s == AnimationStatus.completed) {
-        HapticFeedback.mediumImpact();
+        StrideHaptics.heavy();
         widget.onCompleted();
         _c.reset();
       }
@@ -178,7 +180,10 @@ class _HoldButtonState extends State<HoldButton> with SingleTickerProviderStateM
       // Screen reader: double-tap = xác nhận rõ ràng (thay cho nhấn giữ).
       onTap: widget.onCompleted,
       child: GestureDetector(
-        onTapDown: (_) => _c.forward(),
+        onTapDown: (_) {
+          StrideHaptics.selection();
+          _c.forward();
+        },
         onTapUp: (_) {
           if (_c.status != AnimationStatus.completed) _c.reverse();
         },

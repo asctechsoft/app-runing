@@ -1,15 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/utils/clock.dart';
-import 'package:stride/utils/calc/geo.dart';
-import 'package:stride/utils/calc/gps_filter.dart';
-import 'package:stride/utils/calc/run_metrics.dart';
+import 'package:stride/controller/providers.dart';
+import 'package:stride/controller/run/engine/run_session_controller.dart';
 import 'package:stride/models/data_models/activity.dart';
 import 'package:stride/models/data_models/profile.dart';
 import 'package:stride/models/data_models/session_state.dart';
-import 'package:stride/controller/providers.dart';
-import 'package:stride/controller/run/engine/run_session_controller.dart';
 import 'package:stride/models/ui_models/workout_models.dart';
 import 'package:stride/repository/workout_repository.dart';
+import 'package:stride/utils/calc/geo.dart';
+import 'package:stride/utils/calc/gps_filter.dart';
+import 'package:stride/utils/calc/run_metrics.dart';
+import 'package:stride/utils/clock.dart';
 
 import 'run_harness.dart';
 
@@ -95,6 +95,46 @@ void main() {
       final a = await h.ctl.finish();
       expect(a!.movingMs, 90000);
       expect(a.elapsedMs, 390000);
+    });
+  });
+
+  group('TM24: vị trí giả', () {
+    late RunHarness h;
+    setUp(() async => h = await RunHarness.create());
+    tearDown(() async => h.close());
+
+    test('fix từ ứng dụng giả lập → hoạt động đánh dấu locationMocked, event ghi một lần', () async {
+      final started = await h.start();
+      await h.run(seconds: 20);
+      h.move(3);
+      await h.fix(h.lat, h.lon, mocked: true);
+      h.move(3);
+      await h.fix(h.lat, h.lon, mocked: true);
+      await h.run(seconds: 20);
+      await h.ctl.pause();
+      final a = await h.ctl.finish();
+      expect(a!.locationMocked, isTrue);
+      final events = await h.container.read(activityRepositoryProvider).events(started.id);
+      expect(events.where((e) => e.type == SessionEventType.mockLocation), hasLength(1));
+    });
+
+    test('không có fix giả → locationMocked = false', () async {
+      await h.start();
+      await h.run(seconds: 30);
+      await h.ctl.pause();
+      expect((await h.ctl.finish())!.locationMocked, isFalse);
+    });
+  });
+
+  group('Hồi quy: cảm biến treo (X41)', () {
+    test('finish() vẫn hoàn thành khi cancel() của stream GPS và đếm bước không bao giờ trả lời', () async {
+      h.loc.hangOnCancel = true;
+      h.steps.hangOnCancel = true;
+      await h.start();
+      await h.run(seconds: 10);
+      final a = await h.ctl.finish().timeout(const Duration(seconds: 10));
+      expect(a, isNotNull);
+      expect(a!.movingMs, 10000);
     });
   });
 

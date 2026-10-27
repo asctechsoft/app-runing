@@ -4,14 +4,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:stride/values/routes.dart';
-import 'package:stride/services/storage/app_database.dart';
+import 'package:stride/configs/pref_const.dart';
+import 'package:stride/controller/language/language_controller.dart';
 import 'package:stride/controller/providers.dart';
-import 'package:stride/utils/clock.dart';
-import 'package:stride/repository/owner_repository.dart';
+import 'package:stride/controller/sync/sync_providers.dart';
 import 'package:stride/models/data_models/activity.dart';
 import 'package:stride/presentation/screen_startup/startup_screen.dart';
-import 'package:stride/controller/sync/sync_providers.dart';
+import 'package:stride/repository/owner_repository.dart';
+import 'package:stride/services/storage/app_database.dart';
+import 'package:stride/utils/clock.dart';
+import 'package:stride/values/routes.dart';
 
 void main() {
   const guest = OwnerState(ownerId: 'guest:x', isGuest: true);
@@ -27,24 +29,40 @@ void main() {
 
   group('decideStartRoute (E01)', () {
     test('phiên chưa đóng được ưu tiên trước mọi thứ, kể cả intro chưa xem', () {
-      expect(decideStartRoute(owner: guest, unclosedSession: session), Routes.recovery);
+      expect(decideStartRoute(languageChosen: true, owner: guest, unclosedSession: session), Routes.recovery);
       expect(
         decideStartRoute(
+          languageChosen: true,
           owner: const OwnerState(ownerId: 'u', isGuest: false, introSeen: true, profileSetupDone: true),
           unclosedSession: session.copyWith(status: ActivityStatus.awaitingSave),
         ),
         Routes.recovery,
       );
     });
+    test('L19: chưa chọn ngôn ngữ → màn ngôn ngữ (trước intro); phiên dở vẫn thắng', () {
+      expect(decideStartRoute(owner: guest, languageChosen: false), Routes.language);
+      expect(decideStartRoute(owner: guest, languageChosen: false, unclosedSession: session), Routes.recovery);
+    });
+    test('L19: cờ ngôn ngữ — người dùng cũ (đã xem intro) được coi là đã chọn và ghi cờ; người mới thì chưa', () async {
+      SharedPreferences.setMockInitialValues({});
+      final p = await SharedPreferences.getInstance();
+      expect(languageChosen(p, introSeen: false), isFalse);
+      expect(p.getBool(PrefConst.languageChosen), isNull);
+      expect(languageChosen(p, introSeen: true), isTrue);
+      expect(p.getBool(PrefConst.languageChosen), isTrue);
+    });
     test('chưa xem intro → onboarding', () {
-      expect(decideStartRoute(owner: guest), Routes.onboarding);
+      expect(decideStartRoute(languageChosen: true, owner: guest), Routes.onboarding);
     });
     test('đã xem intro, chưa thiết lập: khách → welcome, tài khoản → setup profile', () {
-      expect(decideStartRoute(owner: const OwnerState(ownerId: 'g', isGuest: true, introSeen: true)), Routes.welcome);
-      expect(decideStartRoute(owner: const OwnerState(ownerId: 'u', isGuest: false, introSeen: true)), Routes.setupProfile);
+      expect(decideStartRoute(languageChosen: true, owner: const OwnerState(ownerId: 'g', isGuest: true, introSeen: true)), Routes.welcome);
+      expect(decideStartRoute(languageChosen: true, owner: const OwnerState(ownerId: 'u', isGuest: false, introSeen: true)), Routes.setupProfile);
     });
     test('đã xong → home', () {
-      expect(decideStartRoute(owner: const OwnerState(ownerId: 'g', isGuest: true, introSeen: true, profileSetupDone: true)), Routes.home);
+      expect(
+        decideStartRoute(languageChosen: true, owner: const OwnerState(ownerId: 'g', isGuest: true, introSeen: true, profileSetupDone: true)),
+        Routes.home,
+      );
     });
   });
 
@@ -70,7 +88,7 @@ void main() {
       final router = GoRouter(
         routes: [
           GoRoute(path: Routes.startup, builder: (_, _) => const StartupScreen()),
-          for (final r in [Routes.onboarding, Routes.welcome, Routes.home, Routes.recovery, Routes.setupProfile])
+          for (final r in [Routes.language, Routes.onboarding, Routes.welcome, Routes.home, Routes.recovery, Routes.setupProfile])
             GoRoute(
               path: r,
               builder: (_, _) => Scaffold(body: Text('at:$r')),
@@ -91,11 +109,12 @@ void main() {
       return router;
     }
 
-    testWidgets('lần đầu: splash → onboarding, không tự lưu intro_seen', (tester) async {
+    testWidgets('lần đầu: splash → màn ngôn ngữ, không tự lưu intro_seen/cờ ngôn ngữ', (tester) async {
       await pump(tester, {});
       expect(find.text('Every step, your way'), findsOneWidget);
       await settle(tester);
-      expect(find.text('at:${Routes.onboarding}'), findsOneWidget);
+      expect(find.text('at:${Routes.language}'), findsOneWidget);
+      expect((await SharedPreferences.getInstance()).getBool(PrefConst.languageChosen), isNull);
       final p = await SharedPreferences.getInstance();
       expect(p.getBool('intro_seen'), isNull);
     });
@@ -105,6 +124,19 @@ void main() {
       await pump(tester, {'guest_id': 'guest:x', 'intro_seen': true, 'profile_setup_done:guest:x': true});
       await settle(tester);
       expect(find.text('at:${Routes.recovery}'), findsOneWidget);
+    });
+
+    testWidgets('đã chọn ngôn ngữ, chưa xem intro → onboarding', (tester) async {
+      await pump(tester, {PrefConst.languageChosen: true});
+      await settle(tester);
+      expect(find.text('at:${Routes.onboarding}'), findsOneWidget);
+    });
+
+    testWidgets('người dùng cũ (đã xem intro, chưa có cờ ngôn ngữ) → không hỏi lại ngôn ngữ', (tester) async {
+      await pump(tester, {'guest_id': 'guest:x', 'intro_seen': true, 'profile_setup_done:guest:x': true});
+      await settle(tester);
+      expect(find.text('at:${Routes.home}'), findsOneWidget);
+      expect((await SharedPreferences.getInstance()).getBool(PrefConst.languageChosen), isTrue);
     });
 
     testWidgets('đã thiết lập → home, không cần mạng', (tester) async {

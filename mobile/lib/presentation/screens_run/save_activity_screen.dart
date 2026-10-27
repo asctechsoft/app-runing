@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -5,17 +7,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../utils/l10n.dart';
-import '../../values/routes.dart';
-import '../../utils/formatters.dart';
-import '../../utils/logger.dart';
+import '../../controller/profile/profile_logic.dart' show loadDefaultPrivacy;
+import '../../controller/profile/review_prompt.dart';
 import '../../controller/providers.dart';
-import '../../values/tokens.dart';
-import '../common_components/widgets.dart';
+import '../../controller/run/engine/run_session_controller.dart';
 import '../../models/data_models/activity.dart';
 import '../../models/data_models/session_state.dart';
-import '../../controller/profile/profile_logic.dart' show loadDefaultPrivacy;
-import '../../controller/run/engine/run_session_controller.dart';
+import '../../utils/formatters.dart';
+import '../../utils/haptics.dart';
+import '../../utils/l10n.dart';
+import '../../utils/logger.dart';
+import '../../values/routes.dart';
+import '../../values/tokens.dart';
+import '../common_components/widgets.dart';
 import 'components/run_widgets.dart';
 
 String privacyLabel(Privacy p) => switch (p) {
@@ -133,12 +137,16 @@ class _SaveActivityScreenState extends ConsumerState<SaveActivityScreen> {
       final saved = await ref
           .read(runSessionProvider.notifier)
           .save(title: _title.text, feeling: _feeling, notes: _notes.text, privacy: _privacy, photoPaths: List.of(_photos));
+      StrideHaptics.light();
+      // X23: chỉ hỏi đánh giá sau khi đã lưu xong, không chặn điều hướng.
+      unawaited(ref.read(reviewPromptProvider).onRunSaved());
       if (!mounted) return;
       context.go('${Routes.saved}?id=${saved.id}');
     } catch (e, st) {
       StrideLog.e('run.save', e, st);
       if (!mounted) return;
       setState(() => _saving = false);
+      StrideHaptics.heavy();
       showStrideSnack(context, 'run_save_failed'.tr, actionLabel: 'action_retry'.tr, onAction: _save, isError: true);
     }
   });

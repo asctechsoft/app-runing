@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
-import '../services/storage/app_database.dart';
-import '../utils/clock.dart';
 import '../models/data_models/activity.dart';
 import '../models/data_models/sync.dart';
+import '../services/storage/app_database.dart';
+import '../utils/clock.dart';
 
 /// Bộ lọc danh sách hoạt động (I01).
 class ActivityQuery {

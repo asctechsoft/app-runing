@@ -1,12 +1,23 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 
 /// Trạng thái quyền chuẩn hóa giữa nền tảng (E05).
 enum PermStatus { unknown, granted, denied, blocked, restricted, limited }
 
-enum PermKind { motion, location, locationAlways, notification, bluetooth }
+enum PermKind {
+  motion,
+  location,
+  locationAlways,
+  notification,
+  bluetooth,
+
+  /// X20: app được miễn tối ưu pin (Android `isIgnoringBatteryOptimizations`). Chỉ KIỂM TRA; không xin bằng
+  /// `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` (Google Play hạn chế quyền này) — hướng người dùng vào Cài đặt.
+  batteryUnrestricted,
+}
 
 /// Xin quyền theo ngữ cảnh và kiểm tra lại khi app resume — không tin giá trị đã lưu.
 abstract class PermissionCoordinator {
@@ -35,6 +46,7 @@ class DevicePermissionCoordinator implements PermissionCoordinator {
     PermKind.locationAlways => ph.Permission.locationAlways,
     PermKind.notification => ph.Permission.notification,
     PermKind.bluetooth => ph.Permission.bluetoothConnect,
+    PermKind.batteryUnrestricted => ph.Permission.ignoreBatteryOptimizations,
   };
 
   PermStatus _norm(ph.PermissionStatus s) => switch (s) {
@@ -48,6 +60,8 @@ class DevicePermissionCoordinator implements PermissionCoordinator {
 
   @override
   Future<PermStatus> status(PermKind kind) async {
+    // iOS không có tối ưu pin kiểu Android → coi như không bị hạn chế.
+    if (kind == PermKind.batteryUnrestricted && defaultTargetPlatform != TargetPlatform.android) return PermStatus.granted;
     if (kind == PermKind.location) {
       // Vị trí gần đúng (iOS/Android 12+) → limited.
       final p = await Geolocator.checkPermission();
@@ -64,6 +78,11 @@ class DevicePermissionCoordinator implements PermissionCoordinator {
 
   @override
   Future<PermStatus> request(PermKind kind) async {
+    // Không xin trực tiếp (xem PermKind.batteryUnrestricted): mở Cài đặt ứng dụng → Pin.
+    if (kind == PermKind.batteryUnrestricted) {
+      await openSettings();
+      return status(kind);
+    }
     if (kind == PermKind.location) {
       await Geolocator.requestPermission();
       final s = await status(kind);

@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers.dart';
-import '../run_plugins.dart';
 import '../../repository/device_repository.dart';
 import '../../services/application/heart_rate_plugin.dart';
 import '../../services/application/heart_rate_transport.dart';
+import '../providers.dart';
+import '../run_plugins.dart';
 
 /// Lớp BLE thật; test override bằng transport giả.
 final heartRateTransportProvider = Provider<HeartRateTransport>((ref) => FlutterBluePlusTransport());

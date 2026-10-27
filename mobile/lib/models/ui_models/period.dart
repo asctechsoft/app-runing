@@ -1,8 +1,8 @@
 import 'package:intl/intl.dart';
 
 import '../../utils/clock.dart';
-import '../../utils/l10n.dart';
 import '../../utils/date_locale.dart';
+import '../../utils/l10n.dart';
 
 /// Kỳ thống kê (I04).
 enum ProgressPeriod { week, month, year }
@@ -135,15 +135,12 @@ String periodLabel(PeriodRange r) {
     case ProgressPeriod.week:
       final s = r.start;
       final e = DateTime(r.end.year, r.end.month, r.end.day - 1);
-      if (s.year != e.year) {
-        return '${DateFormat('MMM d, y', appDateLocale).format(s)} – ${DateFormat('MMM d, y', appDateLocale).format(e)}';
-      }
-      if (s.month != e.month) {
-        return '${DateFormat('MMM d', appDateLocale).format(s)} – ${DateFormat('MMM d, y', appDateLocale).format(e)}';
-      }
-      return '${DateFormat('MMM d', appDateLocale).format(s)} – ${e.day}, ${e.year}';
+      if (s.year != e.year) return '${AppDates.monthDayYear(s)} – ${AppDates.monthDayYear(e)}';
+      // Dạng gọn "Oct 12 – 18, 2026" chỉ đúng thứ tự trong tiếng Anh; ngôn ngữ khác ghi đủ hai đầu theo skeleton.
+      if (s.month != e.month || !appDateLocale.startsWith('en')) return '${AppDates.monthDay(s)} – ${AppDates.monthDayYear(e)}';
+      return '${AppDates.monthDay(s)} – ${e.day}, ${e.year}';
     case ProgressPeriod.month:
-      return DateFormat('MMMM y', appDateLocale).format(r.start);
+      return AppDates.monthYear(r.start);
     case ProgressPeriod.year:
       return '${r.start.year}';
   }
@@ -158,8 +155,8 @@ String bucketLabel(ProgressPeriod p, PeriodBucket b) => switch (p) {
 
 /// Nhãn đầy đủ cho tooltip / danh sách thay thế.
 String bucketLongLabel(ProgressPeriod p, PeriodBucket b) => switch (p) {
-  ProgressPeriod.year => DateFormat('MMMM y', appDateLocale).format(b.start),
-  _ => DateFormat('EEE, MMM d', appDateLocale).format(b.start),
+  ProgressPeriod.year => AppDates.monthYear(b.start),
+  _ => AppDates.shortWeekdayDate(b.start),
 };
 
 String periodNoun(ProgressPeriod p) => switch (p) {

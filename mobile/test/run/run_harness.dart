@@ -4,21 +4,38 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:stride/services/storage/app_database.dart';
-import 'package:stride/services/native/permission_coordinator.dart';
 import 'package:stride/controller/providers.dart';
-import 'package:stride/controller/run_plugins.dart';
-import 'package:stride/utils/clock.dart';
-import 'package:stride/utils/calc/geo.dart';
-import 'package:stride/models/data_models/activity.dart';
 import 'package:stride/controller/run/engine/run_audio.dart';
 import 'package:stride/controller/run/engine/run_session_controller.dart';
 import 'package:stride/controller/run/engine/run_sources.dart';
+import 'package:stride/controller/run_plugins.dart';
+import 'package:stride/models/data_models/activity.dart';
+import 'package:stride/services/native/permission_coordinator.dart';
+import 'package:stride/services/storage/app_database.dart';
+import 'package:stride/utils/calc/geo.dart';
+import 'package:stride/utils/clock.dart';
+
+/// Mô phỏng kênh native không trả lời lệnh hủy: `cancel()` của subscription không bao giờ hoàn thành (X40/X41).
+Stream<T> hangingOnCancel<T>(Stream<T> source) {
+  late StreamController<T> c;
+  StreamSubscription<T>? inner;
+  c = StreamController<T>(
+    onListen: () => inner = source.listen(c.add, onError: c.addError),
+    onCancel: () {
+      inner?.cancel();
+      return Completer<void>().future;
+    },
+  );
+  return c.stream;
+}
 
 class FakeLocationSource implements RunLocationSource {
   final controller = StreamController<RawFix>.broadcast();
   int recordingListens = 0;
   int previewListens = 0;
+
+  /// true → `cancel()` của stream ghi không bao giờ hoàn thành.
+  bool hangOnCancel = false;
 
   @override
   Stream<RawFix> previewPositions() {
@@ -29,7 +46,7 @@ class FakeLocationSource implements RunLocationSource {
   @override
   Stream<RawFix> recordingPositions(ActivityType type) {
     recordingListens++;
-    return controller.stream;
+    return hangOnCancel ? hangingOnCancel(controller.stream) : controller.stream;
   }
 
   @override
@@ -41,8 +58,12 @@ class FakeLocationSource implements RunLocationSource {
 
 class FakeStepSource implements RunStepSource {
   final controller = StreamController<int?>.broadcast();
+
+  /// true → `cancel()` của stream đếm bước không bao giờ hoàn thành (lỗi đã gặp thật: nút Kết thúc không phản hồi).
+  bool hangOnCancel = false;
+
   @override
-  Stream<int?> watchSteps(String ownerId, int fromMs) => controller.stream;
+  Stream<int?> watchSteps(String ownerId, int fromMs) => hangOnCancel ? hangingOnCancel(controller.stream) : controller.stream;
 }
 
 class FakeAudio implements RunAudio {
@@ -155,8 +176,8 @@ class RunHarness {
     lon = lo;
   }
 
-  Future<void> fix(double la, double lo, {double accuracy = 5, double? speed}) async {
-    loc.controller.add(RawFix(t: clock.nowMs(), lat: la, lon: lo, accuracyM: accuracy, speedMps: speed));
+  Future<void> fix(double la, double lo, {double accuracy = 5, double? speed, bool mocked = false}) async {
+    loc.controller.add(RawFix(t: clock.nowMs(), lat: la, lon: lo, accuracyM: accuracy, speedMps: speed, mocked: mocked));
     await pumpEventQueue();
     await ctl.settle();
   }

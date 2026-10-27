@@ -5,12 +5,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../services/application/firebase_providers.dart';
-import '../utils/logger.dart';
-import '../services/application/api_client.dart';
 import '../controller/providers.dart';
+import '../services/application/api_client.dart';
+import '../services/application/firebase_providers.dart';
 import '../utils/clock.dart';
 import '../utils/l10n.dart';
+import '../utils/logger.dart';
 
 /// Người dùng đăng nhập; [id] là Firebase uid.
 class AuthUser {
@@ -61,11 +61,9 @@ final authRepositoryProvider = Provider<AuthRepository>(
 
 /// Auth qua Firebase Auth + hồ sơ trong Firestore `users/{uid}`. Không bao giờ log mật khẩu/token.
 class AuthRepository {
-  AuthRepository({required bool ready, required FirebaseAuth Function() auth, required FirebaseFirestore Function() firestore, required Clock clock})
-    : _ready = ready,
-      _authFn = auth,
-      _fsFn = firestore,
-      _clock = clock;
+  AuthRepository({required this._ready, required FirebaseAuth Function() auth, required FirebaseFirestore Function() firestore, required this._clock})
+    : _authFn = auth,
+      _fsFn = firestore;
 
   final bool _ready;
   final FirebaseAuth Function() _authFn;

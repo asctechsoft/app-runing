@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../controller/profile/diagnostics_consent.dart';
+import '../../controller/profile/profile_logic.dart';
+import '../../controller/providers.dart';
+import '../../models/data_models/activity.dart';
 import '../../utils/l10n.dart';
 import '../../values/routes.dart';
-import '../../controller/providers.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../models/data_models/activity.dart';
-import '../../controller/profile/profile_logic.dart';
 import 'components/profile_widgets.dart';
 
 final profileDefaultPrivacyProvider = FutureProvider.autoDispose<Privacy>((ref) async {
@@ -93,6 +94,18 @@ class PrivacyScreen extends ConsumerWidget {
             title: 'profile_privacy_location_title'.tr,
             child: Text('profile_privacy_location_text'.tr, style: StrideText.bodySecondary),
           ),
+          SettingsGroup(
+            children: [
+              ProfileSwitchRow(
+                icon: Icons.insights_outlined,
+                title: 'profile_privacy_diagnostics_title'.tr,
+                subtitle: 'profile_privacy_diagnostics_subtitle'.tr,
+                value: ref.watch(diagnosticsConsentProvider),
+                onChanged: (v) => ref.read(diagnosticsConsentProvider.notifier).set(v),
+              ),
+            ],
+          ),
+          const Gap(12),
           SettingsGroup(
             children: [
               SettingsRow(

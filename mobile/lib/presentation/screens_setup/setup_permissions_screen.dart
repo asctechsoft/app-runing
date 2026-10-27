@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../values/routes.dart';
-import '../../services/native/permission_coordinator.dart';
 import '../../controller/providers.dart';
+import '../../services/native/permission_coordinator.dart';
+import '../../utils/l10n.dart';
+import '../../values/routes.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
 import 'components/setup_widgets.dart';
-import '../../utils/l10n.dart';
 
 /// Bước 3: giải thích và xin từng quyền riêng (E05, F04). Từ chối vẫn vào app được.
 class SetupPermissionsScreen extends ConsumerStatefulWidget {

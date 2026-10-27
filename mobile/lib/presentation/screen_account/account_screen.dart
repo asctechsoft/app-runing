@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import '../../services/application/google_sign_in_service.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,15 +8,16 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../values/routes.dart';
 import '../../controller/providers.dart';
+import '../../controller/sync/sync_providers.dart';
+import '../../repository/account_repository.dart';
+import '../../repository/auth_repository.dart';
+import '../../services/application/google_sign_in_service.dart';
+import '../../services/application/sync_service.dart';
+import '../../utils/l10n.dart';
+import '../../values/routes.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../repository/auth_repository.dart';
-import '../../controller/sync/sync_providers.dart';
-import '../../services/application/sync_service.dart';
-import '../../repository/account_repository.dart';
-import '../../utils/l10n.dart';
 
 /// Profile → Account & data (J05, H06, I07, F21): tài khoản, đồng bộ, export, đăng xuất, xóa tài khoản.
 class AccountScreen extends ConsumerWidget {
@@ -127,7 +126,7 @@ class _SyncSection extends ConsumerWidget {
       SyncPhase.idle when status.pending > 0 => (
         BannerTone.warning,
         'account_sync_pending_title'.tr,
-        (status.pending == 1 ? 'account_sync_pending_one' : 'account_sync_pending_other').trArgs([status.pending]),
+        'account_sync_pending'.trPlural(status.pending, [status.pending]),
       ),
       SyncPhase.idle when status.lastSyncedAt != null => (
         BannerTone.success,
@@ -564,7 +563,7 @@ Future<void> signOutFlow(BuildContext context, WidgetRef ref) async {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('account_signout_unsynced_title'.tr),
-        content: Text((pending == 1 ? 'account_signout_unsynced_one' : 'account_signout_unsynced_other').trArgs([pending])),
+        content: Text('account_signout_unsynced'.trPlural(pending, [pending])),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: Text('action_cancel'.tr)),
           TextButton(onPressed: () => Navigator.pop(ctx, 'anyway'), child: Text('account_signout_anyway'.tr)),

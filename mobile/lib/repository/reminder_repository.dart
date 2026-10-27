@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../services/storage/app_database.dart';
 import '../controller/providers.dart';
-import 'settings_repository.dart';
 import '../controller/reminders/reminder_logic.dart';
+import '../services/storage/app_database.dart';
+import 'settings_repository.dart';
 
 const quietHoursKey = 'quietHours';
 

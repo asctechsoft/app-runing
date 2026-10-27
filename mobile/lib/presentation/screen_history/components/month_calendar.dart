@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../../values/tokens.dart';
 import '../../../utils/clock.dart';
-import '../../../utils/l10n.dart';
 import '../../../utils/date_locale.dart';
+import '../../../utils/l10n.dart';
+import '../../../values/tokens.dart';
 
 /// Lưới tháng dùng cho History (chấm ngày có hoạt động) và Choose period (chọn tuần).
 class MonthCalendar extends StatelessWidget {
@@ -113,12 +113,12 @@ class _DayCell extends StatelessWidget {
         : inMonth
         ? StrideColors.textPrimary
         : StrideColors.textMuted;
-    final label = DateFormat('EEEE, MMMM d', appDateLocale).format(day);
+    final label = AppDates.weekdayMonthDay(day);
     return Semantics(
       button: enabled,
       selected: selected || inRange,
       enabled: enabled,
-      label: count > 0 ? (count == 1 ? 'history_day_activity_one' : 'history_day_activity_other').trArgs([label, count]) : label,
+      label: count > 0 ? 'history_day_activity'.trPlural(count, [label, count]) : label,
       excludeSemantics: true,
       child: InkWell(
         onTap: enabled ? onTap : null,

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../models/data_models/profile.dart';
+import '../../../utils/calc/calories.dart';
 import '../../../utils/formatters.dart';
 import '../../../utils/l10n.dart';
 import '../../../values/tokens.dart';
 import '../../common_components/widgets.dart';
-import '../../../utils/calc/calories.dart';
-import '../../../models/data_models/profile.dart';
 
 /// Ba chỉ số phụ dưới vòng bước: quãng đường ước tính, kcal ước tính, phút vận động.
 /// Thiếu chiều cao/cân nặng hoặc không có bước → "—" (không đoán sải chân, không cân nặng mẫu).

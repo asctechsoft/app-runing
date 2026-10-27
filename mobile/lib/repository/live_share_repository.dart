@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 
-import '../services/application/api_client.dart';
 import '../models/data_models/activity.dart';
 import '../models/ui_models/live_share_models.dart';
+import '../services/application/api_client.dart';
 import '../utils/l10n.dart';
 
 enum LiveShareErrorKind {
@@ -98,17 +98,8 @@ bool liveShareIsLive(Map<String, Object?> d, int nowMs) => d['status'] != 'ended
 
 /// Client M07 trên Firestore `liveShares`. Người xem chỉ đọc (không có trong client này). Chỉ lưu điểm mới nhất (ghi đè).
 class LiveShareRepository {
-  LiveShareRepository({
-    required bool Function() ready,
-    required FirebaseFirestore Function() firestore,
-    required String? Function() uid,
-    int Function()? nowMs,
-    Duration timeout = const Duration(seconds: 15),
-  }) : _ready = ready,
-       _firestore = firestore,
-       _uid = uid,
-       _nowMs = nowMs ?? (() => DateTime.now().millisecondsSinceEpoch),
-       _timeout = timeout;
+  LiveShareRepository({required this._ready, required this._firestore, required this._uid, int Function()? nowMs, this._timeout = const Duration(seconds: 15)})
+    : _nowMs = nowMs ?? (() => DateTime.now().millisecondsSinceEpoch);
 
   final bool Function() _ready;
   final FirebaseFirestore Function() _firestore;
@@ -124,7 +115,8 @@ class LiveShareRepository {
     if (e is LiveShareException) return e;
     if (e is TimeoutException) return LiveShareException(LiveShareErrorKind.network, 'live_err_network'.tr);
     if (e is FirebaseException) e = mapFirebaseError(e);
-    if (e is! ApiException) return LiveShareException(LiveShareErrorKind.server, e.toString());
+    // L12: không đưa chuỗi lỗi gốc (tiếng Anh, có thể chứa dữ liệu) ra UI — chỉ key đã dịch; chi tiết để log.
+    if (e is! ApiException) return LiveShareException(LiveShareErrorKind.server, 'live_err_server'.tr);
     if (e.status == 0) {
       return e.code == 'not_configured'
           ? LiveShareException(LiveShareErrorKind.notConfigured, 'live_err_not_configured'.tr)
@@ -141,10 +133,10 @@ class LiveShareRepository {
       return switch (e.code) {
         'live_share_active' => LiveShareException(LiveShareErrorKind.alreadyActive, 'live_err_already_active'.tr),
         'live_share_ended' => LiveShareException(LiveShareErrorKind.ended, 'live_ended'.tr),
-        _ => LiveShareException(LiveShareErrorKind.server, e.message),
+        _ => LiveShareException(LiveShareErrorKind.server, 'live_err_server'.tr),
       };
     }
-    if (e.status == 400 || e.status == 422) return LiveShareException(LiveShareErrorKind.validation, e.message);
+    if (e.status == 400 || e.status == 422) return LiveShareException(LiveShareErrorKind.validation, 'live_err_invalid_request'.tr);
     return LiveShareException(LiveShareErrorKind.server, 'live_err_server'.tr);
   }
 

@@ -2,18 +2,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:stride/services/storage/app_database.dart';
-import 'package:stride/services/native/permission_coordinator.dart';
+import 'package:stride/controller/home/home_providers.dart';
 import 'package:stride/controller/providers.dart';
 import 'package:stride/controller/reminders/reminder_logic.dart';
 import 'package:stride/repository/reminder_repository.dart';
 import 'package:stride/services/application/reminder_scheduler.dart';
+import 'package:stride/services/native/permission_coordinator.dart';
+import 'package:stride/services/storage/app_database.dart';
+import 'package:stride/utils/calc/streak.dart';
+import 'package:stride/utils/clock.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 
 class _FakeScheduler implements ReminderScheduler {
   final applied = <ReminderKind, List<ReminderSlot>>{};
   @override
   Future<void> apply(Reminder r, List<ReminderSlot> slots) async => applied[r.kind] = slots;
+  List<EventReminderSlot>? events;
+  @override
+  Future<void> applyEvents(List<EventReminderSlot> slots) async => events = slots;
 }
 
 void main() {
@@ -84,6 +90,35 @@ void main() {
       expect(nextSlotTime(s2, now), DateTime(2026, 10, 20, 9, 15));
     });
 
+    test('TM52: nhắc chuỗi — hôm nay nếu chưa đạt; đã đạt → ngày chọn kế tiếp; không có chuỗi → không nhắc', () {
+      final r = Reminder.defaults(ReminderKind.streak).copyWith(enabled: true);
+      expect(nextStreakReminder(r, quietOff, now, hasStreak: true, todayDone: false), DateTime(2026, 10, 18, 20));
+      expect(nextStreakReminder(r, quietOff, now, hasStreak: true, todayDone: true), DateTime(2026, 10, 19, 20));
+      expect(nextStreakReminder(r, quietOff, now, hasStreak: false, todayDone: false), isNull);
+      // Giờ nhắc hôm nay đã qua → mai; ngày không chọn bị bỏ qua.
+      expect(nextStreakReminder(r, quietOff, DateTime(2026, 10, 18, 21), hasStreak: true, todayDone: false), DateTime(2026, 10, 19, 20));
+      final weekdaysOnly = r.copyWith(weekdays: {DateTime.wednesday});
+      expect(nextStreakReminder(weekdaysOnly, quietOff, now, hasStreak: true, todayDone: false), DateTime(2026, 10, 21, 20));
+      // Tắt hoặc rơi vào giờ yên lặng → không nhắc.
+      expect(nextStreakReminder(r.copyWith(enabled: false), quietOff, now, hasStreak: true, todayDone: false), isNull);
+      const quiet = QuietHours(enabled: true, startMin: 19 * 60, endMin: 7 * 60);
+      expect(nextStreakReminder(r, quiet, now, hasStreak: true, todayDone: false), isNull);
+    });
+
+    test('TM52: số giờ còn lại trong ngày', () {
+      expect(hoursLeftInDay(DateTime(2026, 10, 18, 20)), 4);
+      expect(hoursLeftInDay(DateTime(2026, 10, 18, 23, 30)), 0);
+      expect(hoursLeftInDay(DateTime(2026, 10, 18, 21, 15)), 2);
+    });
+
+    test('slot id nhắc chuỗi không trùng hai loại còn lại', () {
+      final all = {
+        for (final k in ReminderKind.values)
+          for (var d = 1; d <= 7; d++) reminderNotificationId(k, d),
+      };
+      expect(all.length, 21);
+    });
+
     test('formatMinuteOfDay', () {
       expect(formatMinuteOfDay(0), '12:00 AM');
       expect(formatMinuteOfDay(18 * 60 + 30), '6:30 PM');
@@ -138,6 +173,34 @@ void main() {
       await repo.save('guest:r', Reminder.defaults(ReminderKind.dailySteps).copyWith(enabled: true));
       await c.read(remindersSyncProvider)();
       expect(sched.applied[ReminderKind.dailySteps], isEmpty);
+    });
+
+    test('TM52: nhắc chuỗi chỉ đặt một lần, theo tình trạng chuỗi; không có chuỗi → hủy', () async {
+      final prefs = await SharedPreferences.getInstance();
+      Future<List<ReminderSlot>> run(StreakSummary streak) async {
+        final sched = _FakeScheduler();
+        final c = ProviderContainer(
+          overrides: [
+            databaseProvider.overrideWithValue(db),
+            sharedPrefsProvider.overrideWithValue(prefs),
+            permissionsProvider.overrideWithValue(FakePermissionCoordinator({PermKind.notification: PermStatus.granted})),
+            remindersSchedulerProvider.overrideWithValue(sched),
+            clockProvider.overrideWithValue(FakeClock(DateTime(2026, 10, 18, 10).millisecondsSinceEpoch)),
+            personalStreakProvider.overrideWith((ref) async => streak),
+          ],
+        );
+        addTearDown(c.dispose);
+        await c.read(remindersRepositoryProvider).save('guest:r', Reminder.defaults(ReminderKind.streak).copyWith(enabled: true));
+        await c.read(remindersSyncProvider)();
+        return sched.applied[ReminderKind.streak]!;
+      }
+
+      const atRisk = StreakSummary(current: 3, longest: 5, todayAchieved: false, freezesLeftThisMonth: 2);
+      final today = await run(atRisk);
+      expect(today.single.at, DateTime(2026, 10, 18, 20));
+      const done = StreakSummary(current: 4, longest: 5, todayAchieved: true, freezesLeftThisMonth: 2);
+      expect((await run(done)).single.at, DateTime(2026, 10, 19, 20));
+      expect(await run(StreakSummary.empty), isEmpty);
     });
 
     test('có quyền → lên lịch; tắt → hủy (slots rỗng)', () async {

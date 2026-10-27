@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/utils/analytics.dart';
 import 'package:stride/configs/env.dart';
 import 'package:stride/services/application/app_lifecycle.dart';
+import 'package:stride/utils/analytics.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -15,6 +15,17 @@ void main() {
       Analytics.sink = (name, params) => sent.add((name, params));
     });
     tearDown(Analytics.resetSink);
+
+    test('X11: tắt đồng ý chia sẻ dữ liệu → không gửi event nào; bật lại thì gửi', () {
+      addTearDown(() => Analytics.collectionEnabled = true);
+      Analytics.collectionEnabled = false;
+      Analytics.appOpen(firstOpen: false);
+      Analytics.screenView('/home');
+      expect(sent, isEmpty);
+      Analytics.collectionEnabled = true;
+      Analytics.appForeground();
+      expect(sent.map((e) => e.$1), ['stride_foreground']);
+    });
 
     test('tên event hợp lệ theo luật Firebase, chặn tiền tố dành riêng', () {
       expect(Analytics.isValidEventName('app_open'), isTrue);
@@ -35,6 +46,22 @@ void main() {
       expect(sent[0].$2, {'first_open': 'true'});
       expect(sent[1].$2, {'firebase_screen': '/home/activity/:id'});
       expect(sent.every((e) => e.$2 == null || e.$2!.values.every((v) => v is String)), isTrue);
+    });
+
+    test('TM76: event nhóm hợp lệ, tham số chuỗi, không id; mốc chuỗi chỉ khi vượt qua', () {
+      Analytics.clubCreate(visibility: 'private');
+      Analytics.clubInviteShare();
+      Analytics.clubJoin(via: 'invite_code');
+      Analytics.challengeJoin(metric: 'distance');
+      Analytics.leaderboardView();
+      Analytics.streakMilestone(days: 7);
+      expect(sent.map((e) => e.$1), ['club_create', 'club_invite_share', 'club_join', 'challenge_join', 'leaderboard_view', 'streak_milestone']);
+      expect(sent.map((e) => e.$1).every(Analytics.isValidEventName), isTrue);
+      expect(sent.last.$2, {'days': '7'});
+      expect(Analytics.crossedStreakMilestone(6, 7), 7);
+      expect(Analytics.crossedStreakMilestone(7, 8), isNull);
+      expect(Analytics.crossedStreakMilestone(2, 15), 14);
+      expect(Analytics.crossedStreakMilestone(5, 0), isNull);
     });
 
     test('không có Firebase vẫn không ném lỗi (offline-first)', () {
@@ -83,6 +110,13 @@ void main() {
       final env = EnvConfig.fromEnvironment();
       expect(env.env, StrideEnv.dev);
       expect(env.isProduction, isFalse);
+    });
+
+    test('nguồn tile mặc định luôn có nguồn dự phòng khác nguồn chính (X41: mạng chặn openstreetmap.org)', () {
+      final env = EnvConfig.fromEnvironment();
+      expect(env.tileUrlTemplate, contains('{z}/{x}/{y}'));
+      expect(env.tileFallbackUrlTemplate, contains('{z}/{x}/{y}'));
+      expect(env.tileFallbackUrlTemplate, isNot(env.tileUrlTemplate));
     });
   });
 }

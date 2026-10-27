@@ -1,14 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stride/utils/formatters.dart';
-import 'package:stride/utils/logger.dart';
-import 'package:stride/utils/clock.dart';
+import 'package:stride/models/data_models/activity.dart';
+import 'package:stride/models/data_models/profile.dart';
+import 'package:stride/models/data_models/session_state.dart';
+import 'package:stride/models/data_models/steps.dart';
 import 'package:stride/utils/calc/calories.dart';
 import 'package:stride/utils/calc/records.dart';
 import 'package:stride/utils/calc/step_aggregate.dart';
-import 'package:stride/models/data_models/activity.dart';
-import 'package:stride/models/data_models/profile.dart';
-import 'package:stride/models/data_models/steps.dart';
-import 'package:stride/models/data_models/session_state.dart';
+import 'package:stride/utils/clock.dart';
+import 'package:stride/utils/formatters.dart';
+import 'package:stride/utils/logger.dart';
 
 void main() {
   group('session state machine (C05)', () {
@@ -223,6 +223,13 @@ void main() {
       expect(out, isNot(contains('10.12345')));
       expect(out, isNot(contains('secret')));
       expect(out, isNot(contains('106.654321')));
+    });
+
+    test('X42: che email trong thông báo lỗi Firebase', () {
+      final out = StrideLog.redact('[firebase_auth/user-not-found] No user for runner.one+test@example.co.uk (code 17011)');
+      expect(out, isNot(contains('example.co.uk')));
+      expect(out, contains('[email]'));
+      expect(out, contains('user-not-found'));
     });
   });
 

@@ -1,7 +1,7 @@
 import '../../../models/data_models/activity.dart';
-import '../../../utils/l10n.dart';
 import '../../../models/data_models/session_state.dart';
 import '../../../models/ui_models/workout_models.dart';
+import '../../../utils/l10n.dart';
 import 'run_sources.dart';
 
 /// Lựa chọn ở màn chuẩn bị — chưa ghi gì vào DB (G01).

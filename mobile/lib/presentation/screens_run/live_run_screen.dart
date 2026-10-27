@@ -4,18 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../utils/l10n.dart';
-import '../../values/routes.dart';
-import '../../utils/formatters.dart';
 import '../../controller/providers.dart';
-import '../../values/tokens.dart';
-import '../common_components/widgets.dart';
-import '../../utils/calc/run_metrics.dart';
-import '../../models/data_models/profile.dart';
-import '../../models/data_models/session_state.dart';
 import '../../controller/run/engine/run_session_controller.dart';
 import '../../controller/run/engine/run_session_state.dart';
 import '../../controller/run/engine/run_sources.dart';
+import '../../models/data_models/profile.dart';
+import '../../models/data_models/session_state.dart';
+import '../../utils/calc/run_metrics.dart';
+import '../../utils/formatters.dart';
+import '../../utils/l10n.dart';
+import '../../values/routes.dart';
+import '../../values/tokens.dart';
+import '../common_components/widgets.dart';
 import 'components/run_map.dart';
 import 'components/run_widgets.dart';
 

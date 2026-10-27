@@ -2,8 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../utils/route_analytics.dart';
 import '../presentation/screen_account/account_screen.dart';
+import '../presentation/screen_devices/devices_screen.dart';
+import '../presentation/screen_goals/goals_screen.dart';
+import '../presentation/screen_history/history_screen.dart';
+import '../presentation/screen_home/home_screen.dart';
+import '../presentation/screen_language/language_selection_screen.dart';
+import '../presentation/screen_live/live_share_screen.dart';
+import '../presentation/screen_notifications/notifications_screen.dart';
+import '../presentation/screen_onboarding/onboarding_screen.dart';
+import '../presentation/screen_reminders/reminders_screen.dart';
+import '../presentation/screen_shell/app_shell.dart';
+import '../presentation/screen_startup/startup_screen.dart';
+import '../presentation/screen_steps/daily_steps_screen.dart';
 import '../presentation/screens_activity/activity_detail_screen.dart';
 import '../presentation/screens_activity/activity_map_screen.dart';
 import '../presentation/screens_activity/edit_activity_screen.dart';
@@ -14,18 +25,16 @@ import '../presentation/screens_auth/merge_guest_screen.dart';
 import '../presentation/screens_auth/register_screen.dart';
 import '../presentation/screens_auth/verify_email_screen.dart';
 import '../presentation/screens_auth/welcome_screen.dart';
-import '../presentation/screen_devices/devices_screen.dart';
-import '../presentation/screen_steps/daily_steps_screen.dart';
+import '../presentation/screens_explore/challenge_results_screen.dart';
 import '../presentation/screens_explore/challenges_screen.dart';
+import '../presentation/screens_explore/club_members_screen.dart';
 import '../presentation/screens_explore/clubs_screen.dart';
+import '../presentation/screens_explore/create_challenge_screen.dart';
+import '../presentation/screens_explore/create_club_screen.dart';
+import '../presentation/screens_explore/event_form_screen.dart';
 import '../presentation/screens_explore/explore_screen.dart';
+import '../presentation/screens_explore/leaderboard_screen.dart';
 import '../presentation/screens_explore/routes_screen.dart';
-import '../presentation/screen_goals/goals_screen.dart';
-import '../presentation/screen_history/history_screen.dart';
-import '../presentation/screen_home/home_screen.dart';
-import '../presentation/screen_live/live_share_screen.dart';
-import '../presentation/screen_notifications/notifications_screen.dart';
-import '../presentation/screen_onboarding/onboarding_screen.dart';
 import '../presentation/screens_profile/data_sources_screen.dart';
 import '../presentation/screens_profile/edit_profile_screen.dart';
 import '../presentation/screens_profile/help_screen.dart';
@@ -33,10 +42,10 @@ import '../presentation/screens_profile/privacy_screen.dart';
 import '../presentation/screens_profile/profile_screen.dart';
 import '../presentation/screens_profile/run_settings_screen.dart';
 import '../presentation/screens_profile/units_screen.dart';
+import '../presentation/screens_progress/badges_screen.dart';
 import '../presentation/screens_progress/filtered_runs_screen.dart';
 import '../presentation/screens_progress/progress_screen.dart';
 import '../presentation/screens_progress/records_screen.dart';
-import '../presentation/screen_reminders/reminders_screen.dart';
 import '../presentation/screens_run/activity_selector_screen.dart';
 import '../presentation/screens_run/countdown_screen.dart';
 import '../presentation/screens_run/live_run_screen.dart';
@@ -49,10 +58,9 @@ import '../presentation/screens_run/saved_screen.dart';
 import '../presentation/screens_setup/setup_goal_screen.dart';
 import '../presentation/screens_setup/setup_permissions_screen.dart';
 import '../presentation/screens_setup/setup_profile_screen.dart';
-import '../presentation/screen_startup/startup_screen.dart';
 import '../presentation/screens_workout/interval_editor_screen.dart';
 import '../presentation/screens_workout/workout_chooser_screen.dart';
-import '../presentation/screen_shell/app_shell.dart';
+import '../utils/route_analytics.dart';
 import 'routes.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -69,6 +77,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: Routes.startup,
     routes: [
       GoRoute(path: Routes.startup, builder: (c, s) => const StartupScreen()),
+      GoRoute(path: Routes.language, builder: (c, s) => const LanguageSelectionScreen()),
       GoRoute(path: Routes.onboarding, builder: (c, s) => const OnboardingScreen()),
       GoRoute(path: Routes.welcome, builder: (c, s) => const WelcomeScreen()),
       GoRoute(path: Routes.login, builder: (c, s) => const LoginScreen()),
@@ -154,6 +163,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                     builder: (c, s) => const RecordsScreen(),
                     routes: [GoRoute(path: 'how', builder: (c, s) => const RecordsHowScreen())],
                   ),
+                  GoRoute(path: 'badges', builder: (c, s) => const BadgesScreen()),
                   _activityRoute(),
                 ],
               ),
@@ -199,6 +209,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(path: 'run-settings', builder: (c, s) => const RunSettingsScreen()),
                   GoRoute(path: 'reminders', builder: (c, s) => const RemindersScreen()),
                   GoRoute(path: 'units', builder: (c, s) => const UnitsScreen()),
+                  GoRoute(path: 'language', builder: (c, s) => const LanguageSelectionScreen(firstRun: false)),
                   GoRoute(
                     path: 'data-sources',
                     builder: (c, s) => const DataSourcesScreen(),
@@ -215,9 +226,33 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'clubs',
                         builder: (c, s) => const ClubsScreen(),
                         routes: [
+                          // 'new' phải đứng trước ':id'.
+                          GoRoute(path: 'new', builder: (c, s) => const CreateClubScreen()),
                           GoRoute(
                             path: ':id',
                             builder: (c, s) => ClubDetailScreen(clubId: s.pathParameters['id']!),
+                            routes: [
+                              GoRoute(
+                                path: 'members',
+                                builder: (c, s) => ClubMembersScreen(clubId: s.pathParameters['id']!),
+                              ),
+                              GoRoute(
+                                path: 'edit',
+                                builder: (c, s) => CreateClubScreen(clubId: s.pathParameters['id']!),
+                              ),
+                              GoRoute(
+                                path: 'challenges/new',
+                                builder: (c, s) => CreateChallengeScreen(clubId: s.pathParameters['id']!),
+                              ),
+                              GoRoute(
+                                path: 'events/new',
+                                builder: (c, s) => EventFormScreen(clubId: s.pathParameters['id']!),
+                              ),
+                              GoRoute(
+                                path: 'events/:eventId/edit',
+                                builder: (c, s) => EventFormScreen(clubId: s.pathParameters['id']!, eventId: s.pathParameters['eventId']),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -228,6 +263,16 @@ final routerProvider = Provider<GoRouter>((ref) {
                           GoRoute(
                             path: ':id',
                             builder: (c, s) => ChallengeDetailScreen(challengeId: s.pathParameters['id']!),
+                            routes: [
+                              GoRoute(
+                                path: 'leaderboard',
+                                builder: (c, s) => ChallengeLeaderboardScreen(challengeId: s.pathParameters['id']!),
+                              ),
+                              GoRoute(
+                                path: 'results',
+                                builder: (c, s) => ChallengeResultsScreen(challengeId: s.pathParameters['id']!),
+                              ),
+                            ],
                           ),
                         ],
                       ),

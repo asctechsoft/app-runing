@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../values/routes.dart';
-import '../../utils/logger.dart';
 import '../../controller/providers.dart';
-import '../../values/tokens.dart';
-import '../common_components/widgets.dart';
 import '../../controller/run/engine/run_session_controller.dart';
 import '../../models/ui_models/workout_models.dart';
 import '../../repository/workout_repository.dart';
 import '../../utils/l10n.dart';
+import '../../utils/logger.dart';
+import '../../values/routes.dart';
+import '../../values/tokens.dart';
+import '../common_components/widgets.dart';
 
 const _stepMs = 30000;
 const _maxStepMs = 120 * 60000;
@@ -302,10 +302,11 @@ class _IntervalEditorScreenState extends ConsumerState<IntervalEditorScreen> {
               physics: const NeverScrollableScrollPhysics(),
               buildDefaultDragHandles: false,
               itemCount: steps.length,
-              onReorder: (from, to) {
+              // onReorderItem: `to` đã tính sau khi gỡ phần tử ở `from`.
+              onReorderItem: (from, to) {
                 final l = List.of(steps);
                 final item = l.removeAt(from);
-                l.insert(to > from ? to - 1 : to, item);
+                l.insert(to, item);
                 _setSteps(l);
               },
               itemBuilder: (context, i) {

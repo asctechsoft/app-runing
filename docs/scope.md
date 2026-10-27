@@ -53,7 +53,7 @@ A01 A02 A05 (tài liệu), B01–B06, C01–C06, D01–D04, E01–E06, F01–F04
 - K04 giáo án (flag `workout.plans` tắt), Health Connect/HealthKit (flag `steps.health` tắt), Apple/Google sign-in (flag tắt).
 - UI club: duyệt yêu cầu, phân quyền, tạo sự kiện; danh sách route đã lưu; export toàn tài khoản từ màn chi tiết.
 - **Tính năng nhóm/đội:** tạo club trong app (rules đang chặn), mời bạn bè, chuỗi ngày (chỉ có 7 chấm tuần cá nhân), chuỗi và mục tiêu nhóm, bảng xếp hạng (chưa có UI), thử thách đội, huy hiệu/trao giải, push (FCM), chạy nhóm thời gian thực — chi tiết và thứ tự làm ở `docs/checklist-con-lai.md` mục 4B.
-- Chuỗi UI qua localization key (J03): **đã xong** (XML `lib/xml_strings`, en + vi). Còn: thêm ngôn ngữ, màn chọn ngôn ngữ, đổi ngôn ngữ lúc chạy — xem `docs/checklist-con-lai.md` mục 6.
+- Chuỗi UI qua localization key (J03): **đã xong** (XML `lib/xml_strings`, en + vi). Màn chọn ngôn ngữ (lần đầu + Hồ sơ), đổi ngôn ngữ lúc chạy, ngày/số theo locale, TTS theo ngôn ngữ: **đã xong** (2026-10-26). Còn: thêm ngôn ngữ, RTL, số nhiều — xem `docs/checklist-con-lai.md` mục 6.
 - N02/N03 (giám sát, backup), N04 (web admin, P2), Q05–Q07, R01–R05 (phát hành).
 - Logo: **đã thay** bằng asset chính thức (`mobile/assets/images/img_logo.png`; icon launcher sinh từ `mobile/tool/icons`). Backend Next.js đã bỏ từ 2026-10-19 (dùng Firebase) và đã xóa khỏi repo.
 - Danh sách việc còn lại đầy đủ, cập nhật mới nhất: `docs/checklist-con-lai.md`.

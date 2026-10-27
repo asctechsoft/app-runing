@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
@@ -8,7 +9,7 @@ class AppDatabase {
 
   final Database db;
 
-  static const schemaVersion = 1;
+  static const schemaVersion = 2;
 
   static Future<AppDatabase> open({String name = 'stride.db', DatabaseFactory? factory}) async {
     final f = factory ?? databaseFactory;
@@ -18,16 +19,8 @@ class AppDatabase {
       options: OpenDatabaseOptions(
         version: schemaVersion,
         onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'),
-        onCreate: (db, version) async {
-          for (var v = 1; v <= version; v++) {
-            await _migrations[v]!(db);
-          }
-        },
-        onUpgrade: (db, from, to) async {
-          for (var v = from + 1; v <= to; v++) {
-            await _migrations[v]!(db);
-          }
-        },
+        onCreate: (db, version) => applyMigrations(db, from: 0, to: version),
+        onUpgrade: (db, from, to) => applyMigrations(db, from: from, to: to),
       ),
     );
     return AppDatabase._(db);
@@ -35,7 +28,19 @@ class AppDatabase {
 
   Future<void> close() => db.close();
 
+  /// Chạy các bước migration (from, to]. Dùng chung cho tạo mới và nâng cấp; test nâng cấp từ mọi phiên bản cũ (Q03/N03).
+  @visibleForTesting
+  static Future<void> applyMigrations(Database db, {required int from, required int to}) async {
+    for (var v = from + 1; v <= to; v++) {
+      final step = _migrations[v];
+      if (step == null) throw StateError('Thiếu migration v$v');
+      await step(db);
+    }
+  }
+
   static final Map<int, Future<void> Function(Database)> _migrations = {
+    // v2 (TM24): hoạt động có vị trí giả không tính cho chuỗi/nhóm.
+    2: (db) => db.execute('ALTER TABLE activities ADD COLUMN location_mocked INTEGER NOT NULL DEFAULT 0'),
     1: (db) async {
       final b = db.batch();
       b.execute('''

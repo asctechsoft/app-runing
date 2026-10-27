@@ -2,8 +2,8 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'api_client.dart';
 import '../../models/data_models/activity.dart';
+import 'api_client.dart';
 import 'sha256.dart';
 
 /// Số điểm tối đa mỗi chunk track (document Firestore phải < 1 MiB).

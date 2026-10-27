@@ -86,5 +86,3 @@ String formatDurationShort(int? ms) {
   if (h == 0) return '${m}m';
   return '${h}h ${m.toString().padLeft(2, '0')}m';
 }
-
-String plural(int n, String one, String other) => Intl.plural(n, one: '$n $one', other: '$n $other');

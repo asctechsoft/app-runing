@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../values/routes.dart';
 import '../../controller/providers.dart';
+import '../../utils/l10n.dart';
+import '../../values/routes.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../utils/l10n.dart';
 
 /// [title], [body], [semantic] là khóa chuỗi — gọi `.tr` ở nơi hiển thị.
 class _IntroPage {
@@ -53,7 +53,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       _finish();
       return;
     }
-    final reduce = MediaQuery.of(context).disableAnimations;
+    final reduce = StrideMotion.reduced(context);
     if (reduce) {
       _controller.jumpToPage(_index + 1);
     } else {
@@ -64,53 +64,69 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final last = _index == _pages.length - 1;
-    return Scaffold(
-      backgroundColor: StrideColors.canvas,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: StrideSpace.maxContentWidth),
-            child: Column(
-              children: [
-                SizedBox(
-                  height: StrideSpace.touchTarget,
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: last ? null : TextButton(onPressed: _finish, child: Text('onboarding_skip'.tr)),
+    // L19: Back lùi trang; ở trang đầu quay lại màn chọn ngôn ngữ để đổi lựa chọn (không thoát app ngay).
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (_index > 0) {
+          if (StrideMotion.reduced(context)) {
+            _controller.jumpToPage(_index - 1);
+          } else {
+            _controller.previousPage(duration: StrideMotion.screen, curve: Curves.easeOut);
+          }
+        } else {
+          context.go(Routes.language);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: StrideColors.canvas,
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: StrideSpace.maxContentWidth),
+              child: Column(
+                children: [
+                  SizedBox(
+                    height: StrideSpace.touchTarget,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: last ? null : TextButton(onPressed: _finish, child: Text('onboarding_skip'.tr)),
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: PageView.builder(
-                    controller: _controller,
-                    itemCount: _pages.length,
-                    onPageChanged: (i) => setState(() => _index = i),
-                    itemBuilder: (context, i) => _PageBody(page: _pages[i], showFeatures: i == _pages.length - 1),
+                  Expanded(
+                    child: PageView.builder(
+                      controller: _controller,
+                      itemCount: _pages.length,
+                      onPageChanged: (i) => setState(() => _index = i),
+                      itemBuilder: (context, i) => _PageBody(page: _pages[i], showFeatures: i == _pages.length - 1),
+                    ),
                   ),
-                ),
-                _Dots(count: _pages.length, index: _index),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(StrideSpace.gutter, StrideSpace.s16, StrideSpace.gutter, StrideSpace.s8),
-                  child: PrimaryButton(label: last ? 'onboarding_get_started'.tr : 'onboarding_next'.tr, trailingIcon: Icons.arrow_forward, onPressed: _next),
-                ),
-                SizedBox(
-                  height: 56,
-                  child: _index == 0
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Flexible(child: Text('auth_have_account'.tr, style: StrideText.bodySecondary)),
-                            TextButton(
-                              onPressed: () => context.push(Routes.login),
-                              child: Text(
-                                'auth_log_in'.tr,
-                                style: StrideText.body.copyWith(color: StrideColors.primary, fontWeight: FontWeight.w600),
+                  _Dots(count: _pages.length, index: _index),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(StrideSpace.gutter, StrideSpace.s16, StrideSpace.gutter, StrideSpace.s8),
+                    child: PrimaryButton(label: last ? 'onboarding_get_started'.tr : 'onboarding_next'.tr, trailingIcon: Icons.arrow_forward, onPressed: _next),
+                  ),
+                  SizedBox(
+                    height: 56,
+                    child: _index == 0
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Flexible(child: Text('auth_have_account'.tr, style: StrideText.bodySecondary)),
+                              TextButton(
+                                onPressed: () => context.push(Routes.login),
+                                child: Text(
+                                  'auth_log_in'.tr,
+                                  style: StrideText.body.copyWith(color: StrideColors.primary, fontWeight: FontWeight.w600),
+                                ),
                               ),
-                            ),
-                          ],
-                        )
-                      : null,
-                ),
-              ],
+                            ],
+                          )
+                        : null,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

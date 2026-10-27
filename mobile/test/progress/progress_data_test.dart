@@ -1,14 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:stride/services/storage/app_database.dart';
-import 'package:stride/utils/clock.dart';
-import 'package:stride/repository/activity_repository.dart';
-import 'package:stride/repository/settings_repository.dart';
-import 'package:stride/repository/step_repository.dart';
 import 'package:stride/models/data_models/activity.dart';
 import 'package:stride/models/data_models/profile.dart';
 import 'package:stride/models/data_models/steps.dart';
 import 'package:stride/models/ui_models/period.dart';
+import 'package:stride/repository/activity_repository.dart';
+import 'package:stride/repository/settings_repository.dart';
+import 'package:stride/repository/step_repository.dart';
+import 'package:stride/services/storage/app_database.dart';
+import 'package:stride/utils/clock.dart';
 import 'package:stride/utils/progress_data.dart';
 
 import '../activity/fixtures.dart';

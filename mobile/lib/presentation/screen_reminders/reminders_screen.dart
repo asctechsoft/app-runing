@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
-import '../../services/native/permission_coordinator.dart';
 import '../../controller/providers.dart';
-import '../../values/tokens.dart';
-import '../common_components/widgets.dart';
 import '../../controller/reminders/reminder_logic.dart';
 import '../../repository/reminder_repository.dart';
 import '../../services/application/reminder_scheduler.dart';
+import '../../services/native/permission_coordinator.dart';
+import '../../utils/date_locale.dart';
 import '../../utils/l10n.dart';
+import '../../values/tokens.dart';
+import '../common_components/widgets.dart';
 
 /// Quyền notification hiện tại (kiểm tra lại khi coordinator báo đổi).
 final remindersNotificationPermissionProvider = StreamProvider<PermStatus>((ref) async* {
@@ -162,6 +162,16 @@ class _RemindersFormState extends ConsumerState<_RemindersForm> {
             now: now,
           ),
           const Gap(StrideSpace.s16),
+          _reminderCard(
+            ReminderKind.streak,
+            icon: Icons.local_fire_department_outlined,
+            title: 'reminders_streak_title'.tr,
+            subtitle: 'reminders_streak_subtitle'.tr,
+            perm: perm,
+            granted: granted,
+            now: now,
+          ),
+          const Gap(StrideSpace.s16),
           _quietCard(),
           const Gap(StrideSpace.s16),
           SettingsGroup(
@@ -218,7 +228,7 @@ class _RemindersFormState extends ConsumerState<_RemindersForm> {
       tone = BannerTone.warning;
     } else if (active) {
       final next = nextReminderFire(r, _quiet, now);
-      if (next != null) status = 'reminders_status_next'.trArgs([DateFormat('EEE').format(next), formatMinuteOfDay(r.minuteOfDay)]);
+      if (next != null) status = 'reminders_status_next'.trArgs([AppDates.weekdayShort(next), formatMinuteOfDay(r.minuteOfDay)]);
     }
     return StrideCard(
       child: Column(

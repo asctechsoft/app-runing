@@ -3,6 +3,8 @@
 
 import 'package:latlong2/latlong.dart';
 
+import '../../utils/calc/group_stats.dart';
+
 Map<String, Object?> _map(Object? v, String what) {
   if (v is Map) return v.cast<String, Object?>();
   throw FormatException('Expected object for $what');
@@ -51,6 +53,9 @@ class ClubMembership {
   bool get isPending => status == MembershipStatus.pending;
   bool get isOwner => isMember && role == 'owner';
 
+  /// Owner/admin: duyệt yêu cầu, quản lý thành viên (TM02).
+  bool get canManage => isMember && (role == 'owner' || role == 'admin');
+
   static ClubMembership? parse(Object? json) {
     if (json == null) return null;
     final j = _map(json, 'membership');
@@ -69,6 +74,35 @@ class ClubMembership {
   }
 }
 
+/// Mã mời club (TM03) — `clubInvites/{code}`.
+class ClubInvite {
+  const ClubInvite({required this.code, required this.clubId, required this.expiresAt});
+  final String code;
+  final String clubId;
+  final int expiresAt;
+}
+
+/// Một dòng `clubs/{id}/members/{uid}` (TM02).
+class ClubMember {
+  const ClubMember({required this.userId, required this.displayName, required this.role, required this.status, required this.joinedAt});
+
+  final String userId;
+  final String displayName;
+  final String role; // owner | admin | member
+  final String status; // active | pending
+  final int joinedAt;
+
+  bool get isPending => status == 'pending';
+
+  factory ClubMember.fromDoc(String id, Map<String, Object?> d) => ClubMember(
+    userId: _optStr(d, 'userId') ?? id,
+    displayName: _optStr(d, 'displayName') ?? '',
+    role: _optStr(d, 'role') ?? 'member',
+    status: _optStr(d, 'status') ?? 'active',
+    joinedAt: _optInt(d, 'joinedAt') ?? 0,
+  );
+}
+
 class Club {
   const Club({
     required this.id,
@@ -78,18 +112,50 @@ class Club {
     required this.memberCount,
     this.membership,
     this.isDevFixture = false,
+    this.isPrivate = false,
+    this.rulesText = '',
+    this.groupGoal,
+    this.archived = false,
+    this.pinnedPostId,
   });
+
+  /// TM04: bài được ghim đầu feed.
+  final String? pinnedPostId;
+
+  /// TM04: owner đã giải tán (lưu trữ) — chỉ xem lại, không hoạt động mới.
+  final bool archived;
+
+  /// Mục tiêu nhóm hiện tại (TM22); null = chưa đặt.
+  final GroupGoal? groupGoal;
 
   final String id;
   final String name;
   final String description;
   final String regionText;
+
+  /// Nội quy (TM04); rỗng = chưa đặt.
+  final String rulesText;
   final int memberCount;
   final ClubMembership? membership;
   final bool isDevFixture;
 
-  Club withMembership(ClubMembership? m) =>
-      Club(id: id, name: name, description: description, regionText: regionText, memberCount: memberCount, membership: m, isDevFixture: isDevFixture);
+  /// `visibility == 'private'`: vào phải được duyệt hoặc có mã mời.
+  final bool isPrivate;
+
+  Club withMembership(ClubMembership? m) => Club(
+    id: id,
+    name: name,
+    description: description,
+    regionText: regionText,
+    memberCount: memberCount,
+    membership: m,
+    isDevFixture: isDevFixture,
+    isPrivate: isPrivate,
+    rulesText: rulesText,
+    groupGoal: groupGoal,
+    archived: archived,
+    pinnedPostId: pinnedPostId,
+  );
 
   factory Club.fromJson(Map<String, Object?> j) => Club(
     id: _str(j, 'id'),
@@ -110,6 +176,11 @@ class Club {
     memberCount: _optInt(d, 'memberCount') ?? 0,
     membership: membership,
     isDevFixture: _bool(d, 'isDevFixture'),
+    isPrivate: d['visibility'] == 'private',
+    rulesText: _optStr(d, 'rulesText') ?? '',
+    groupGoal: GroupGoal.fromMap(d['groupGoal']),
+    archived: d['archivedAt'] != null,
+    pinnedPostId: _optStr(d, 'pinnedPostId'),
   );
 }
 
@@ -200,6 +271,7 @@ class ClubPost {
     cheerCount: _optInt(d, 'cheerCount') ?? 0,
     cheeredByMe: cheeredByMe,
     createdAt: _optInt(d, 'createdAt') ?? 0,
+    activity: d['activity'] is Map ? PostActivity.fromJson((d['activity'] as Map).cast<String, Object?>()) : null,
   );
 }
 
@@ -245,9 +317,17 @@ class ClubEvent {
     this.cancelledAt,
     required this.goingCount,
     this.myRsvp,
+    this.createdBy = '',
+    this.maxGoing,
   });
   final String id;
   final String clubId;
+
+  /// Người tạo (TM05: cùng owner/admin được sửa/hủy).
+  final String createdBy;
+
+  /// Số người tối đa; null = không giới hạn.
+  final int? maxGoing;
   final String title;
   final String description;
   final int startAt;
@@ -289,18 +369,75 @@ class ClubEvent {
     cancelledAt: _optInt(d, 'cancelledAt'),
     goingCount: _optInt(d, 'goingCount') ?? 0,
     myRsvp: going ? 'going' : null,
+    createdBy: _optStr(d, 'createdBy') ?? '',
+    maxGoing: _optInt(d, 'maxGoing'),
   );
+}
+
+/// Người đăng ký sự kiện (TM05) — `events/{id}/rsvps/{uid}`.
+class EventAttendee {
+  const EventAttendee({required this.userId, required this.displayName});
+  final String userId;
+  final String displayName;
 }
 
 enum ChallengeTarget { distance, count, time }
 
+/// Một dòng bảng xếp hạng thử thách (TM30).
+class LeaderboardEntry {
+  const LeaderboardEntry({required this.userId, required this.displayName, required this.value, required this.updatedAt, this.rank = 0});
+
+  final String userId;
+  final String displayName;
+  final double value;
+
+  /// Lúc tiến độ đổi lần cuối — dùng phân hạng khi bằng điểm (ai đạt trước xếp trên).
+  final int updatedAt;
+  final int rank;
+
+  LeaderboardEntry withRank(int r) => LeaderboardEntry(userId: userId, displayName: displayName, value: value, updatedAt: updatedAt, rank: r);
+
+  factory LeaderboardEntry.fromDoc(String id, Map<String, Object?> d) => LeaderboardEntry(
+    userId: _optStr(d, 'userId') ?? id,
+    displayName: _optStr(d, 'displayName') ?? '',
+    value: _optDouble(d, 'progressValue') ?? 0,
+    updatedAt: _optInt(d, 'progressUpdatedAt') ?? 0,
+  );
+}
+
+class ChallengeLeaderboard {
+  const ChallengeLeaderboard({required this.entries, required this.me, required this.optedIn, required this.joined});
+
+  /// Top N người bật hiển thị (đã bỏ người bị chặn), có hạng.
+  final List<LeaderboardEntry> entries;
+
+  /// Dòng của tôi (có hạng nếu đang hiển thị trên bảng); null khi chưa tham gia.
+  final LeaderboardEntry? me;
+  final bool optedIn;
+  final bool joined;
+}
+
 class ChallengeParticipation {
-  const ChallengeParticipation({required this.joinedAt, required this.progressValue, required this.targetValue, required this.percent, this.completedAt});
+  const ChallengeParticipation({
+    required this.joinedAt,
+    required this.progressValue,
+    required this.targetValue,
+    required this.percent,
+    this.completedAt,
+    this.teamId,
+    this.teamChanges = 0,
+  });
   final int joinedAt;
   final double progressValue;
   final double targetValue;
   final int percent;
   final int? completedAt;
+
+  /// Đội đang ở (TM32); null = chưa chọn.
+  final String? teamId;
+
+  /// Số lần đã đổi đội (tối đa [maxTeamChanges]).
+  final int teamChanges;
   bool get completed => completedAt != null;
 
   factory ChallengeParticipation.fromJson(Map<String, Object?> j) => ChallengeParticipation(
@@ -321,8 +458,29 @@ class ChallengeParticipation {
       targetValue: targetValue,
       percent: pct.clamp(0, 100),
       completedAt: _optInt(d, 'completedAt'),
+      teamId: _optStr(d, 'teamId'),
+      teamChanges: _optInt(d, 'teamChanges') ?? 0,
     );
   }
+}
+
+/// Đội trong thử thách của club (TM32) — `challenges/{id}/teams/{teamId}`. [color] là chỉ số trong bảng màu đội (0–7).
+class ChallengeTeam {
+  const ChallengeTeam({required this.id, required this.name, required this.color});
+  final String id;
+  final String name;
+  final int color;
+
+  factory ChallengeTeam.fromDoc(String id, Map<String, Object?> d) =>
+      ChallengeTeam(id: id, name: _optStr(d, 'name') ?? '', color: (_optInt(d, 'color') ?? 0).clamp(0, 7));
+}
+
+/// Tiến độ một người trong đội (đọc được vì vào đội = đồng ý cho thành viên club xem).
+class TeamMemberProgress {
+  const TeamMemberProgress({required this.userId, required this.teamId, required this.value});
+  final String userId;
+  final String teamId;
+  final double value;
 }
 
 class Challenge {
@@ -338,10 +496,24 @@ class Challenge {
     required this.targetValue,
     this.badgeKey,
     this.participation,
+    this.clubId,
+    this.startsAt = 0,
+    this.endsAt = 0,
+    this.cancelled = false,
   });
   final String id;
   final String title;
   final String description;
+
+  /// Thử thách của club (TM31); null = thử thách chung.
+  final String? clubId;
+
+  /// Mốc bắt đầu (UTC ms) — chỉ hủy được trước mốc này.
+  final int startsAt;
+
+  /// Mốc kết thúc (UTC ms, tính cả ms cuối của ngày cuối).
+  final int endsAt;
+  final bool cancelled;
   final List<String> activityTypes;
   final String startDate; // YYYY-MM-DD theo tz của challenge
   final String endDate;
@@ -365,6 +537,10 @@ class Challenge {
     targetValue: targetValue,
     badgeKey: badgeKey,
     participation: p,
+    clubId: clubId,
+    startsAt: startsAt,
+    endsAt: endsAt,
+    cancelled: cancelled,
   );
 
   factory Challenge.fromJson(Map<String, Object?> j) => Challenge(
@@ -399,6 +575,10 @@ class Challenge {
       targetValue: _optDouble(d, 'target') ?? (throw const FormatException('Missing target')),
       badgeKey: _optStr(d, 'badgeKey'),
       participation: participation,
+      clubId: _optStr(d, 'clubId'),
+      startsAt: starts,
+      endsAt: ends,
+      cancelled: d['cancelledAt'] != null,
     );
   }
 }

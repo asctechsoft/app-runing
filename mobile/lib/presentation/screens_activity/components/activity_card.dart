@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
-import '../../../utils/formatters.dart';
 import '../../../controller/providers.dart';
-import '../../../values/tokens.dart';
-import '../../common_components/widgets.dart';
 import '../../../models/data_models/activity.dart';
 import '../../../utils/activity_format.dart';
-import '../../../utils/route_geometry.dart';
-import '../../../utils/l10n.dart';
 import '../../../utils/date_locale.dart';
+import '../../../utils/formatters.dart';
+import '../../../utils/l10n.dart';
+import '../../../utils/route_geometry.dart';
+import '../../../values/tokens.dart';
+import '../../common_components/widgets.dart';
 
 /// Tuyến rút gọn cho thumbnail (≤ ~150 điểm mỗi hoạt động), đọc từ DB local.
 final activityThumbRouteProvider = FutureProvider.autoDispose.family<RouteLines?, String>((ref, id) async {
@@ -45,7 +44,7 @@ class ActivityCard extends ConsumerWidget {
     final f = ref.watch(formatProvider);
     final route = a.hasGps ? ref.watch(activityThumbRouteProvider(a.id)).value : null;
     final title = activityDisplayTitle(a);
-    final date = DateFormat('EEE, MMM d', appDateLocale).format(activityLocalStart(a));
+    final date = AppDates.shortWeekdayDate(activityLocalStart(a));
     final pace = f.pace(a.avgPaceSecPerKm);
     final estimated = a.distanceSource != DistanceSource.gps;
     return StrideCard(

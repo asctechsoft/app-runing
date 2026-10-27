@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../values/tokens.dart';
 import '../../../utils/l10n.dart';
+import '../../../values/tokens.dart';
 
 /// Thanh tiến trình 3 bước của thiết lập: Profile → Goal → Ready.
 class SetupSteps extends StatelessWidget {

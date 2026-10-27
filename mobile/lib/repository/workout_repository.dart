@@ -5,8 +5,8 @@ import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
 import '../controller/providers.dart';
-import '../utils/clock.dart';
 import '../models/ui_models/workout_models.dart';
+import '../utils/clock.dart';
 
 /// Kết quả thực hiện interval đã lưu (bảng workout_executions).
 class WorkoutExecution {

@@ -3,16 +3,16 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../utils/l10n.dart';
-import '../../values/routes.dart';
-import '../../utils/formatters.dart';
 import '../../controller/providers.dart';
-import '../../values/tokens.dart';
-import '../common_components/widgets.dart';
 import '../../models/ui_models/explore_models.dart';
 import '../../repository/explore_repository.dart';
-import 'components/explore_widgets.dart';
+import '../../utils/formatters.dart';
+import '../../utils/l10n.dart';
+import '../../values/routes.dart';
+import '../../values/tokens.dart';
 import '../common_components/map_tiles.dart';
+import '../common_components/widgets.dart';
+import 'components/explore_widgets.dart';
 
 enum RouteDistanceBucket { any, short, medium, long }
 
@@ -75,6 +75,9 @@ class _RoutesBodyState extends ConsumerState<_RoutesBody> {
   final _debounce = Debouncer();
   RouteDistanceBucket _bucket = RouteDistanceBucket.any;
   String? _surface;
+
+  /// F05: chỉ hiện tuyến đã lưu (`users/{uid}/savedRoutes`); bỏ qua bộ lọc vùng/quãng đường/mặt đường.
+  bool _savedOnly = false;
   List<RouteSummary>? _items;
   String? _cursor;
   ExploreFailure? _error;
@@ -107,9 +110,10 @@ class _RoutesBodyState extends ConsumerState<_RoutesBody> {
     });
     final (minM, maxM) = routeBucketRange(_bucket, ref.read(formatProvider));
     try {
-      final page = await ref
-          .read(exploreRepositoryProvider)
-          .searchRoutes(region: _region.text, minDistanceM: minM, maxDistanceM: maxM, surface: _surface, cursor: more ? _cursor : null);
+      final repo = ref.read(exploreRepositoryProvider);
+      final page = _savedOnly
+          ? ExplorePage<RouteSummary>(await repo.savedRoutes(), null)
+          : await repo.searchRoutes(region: _region.text, minDistanceM: minM, maxDistanceM: maxM, surface: _surface, cursor: more ? _cursor : null);
       if (id != _req || !mounted) return;
       setState(() {
         _items = more ? [...?_items, ...page.items] : page.items;
@@ -148,44 +152,58 @@ class _RoutesBodyState extends ConsumerState<_RoutesBody> {
           decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: 'explore_routes_region_hint'.tr),
         ),
         const Gap(4),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (final b in RouteDistanceBucket.values)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: StrideChip(
-                    label: routeBucketLabel(b, fmt),
-                    selected: _bucket == b,
-                    onTap: () {
-                      setState(() => _bucket = b);
-                      _load();
-                    },
-                  ),
-                ),
-            ],
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: StrideChip(
+            key: const Key('routes-saved-only'),
+            label: 'explore_routes_saved_only'.tr,
+            selected: _savedOnly,
+            onTap: () {
+              setState(() => _savedOnly = !_savedOnly);
+              _load();
+            },
           ),
         ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (final s in <String?>[null, ...routeSurfaces])
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: StrideChip(
-                    label: s == null ? 'explore_surface_any'.tr : routeSurfaceLabel(s),
-                    selected: _surface == s,
-                    onTap: () {
-                      setState(() => _surface = s);
-                      _load();
-                    },
+        if (!_savedOnly)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final b in RouteDistanceBucket.values)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: StrideChip(
+                      label: routeBucketLabel(b, fmt),
+                      selected: _bucket == b,
+                      onTap: () {
+                        setState(() => _bucket = b);
+                        _load();
+                      },
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
+        if (!_savedOnly)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final s in <String?>[null, ...routeSurfaces])
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: StrideChip(
+                      label: s == null ? 'explore_surface_any'.tr : routeSurfaceLabel(s),
+                      selected: _surface == s,
+                      onTap: () {
+                        setState(() => _surface = s);
+                        _load();
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
         const Gap(8),
         Expanded(child: _content(fmt)),
       ],
@@ -202,7 +220,9 @@ class _RoutesBodyState extends ConsumerState<_RoutesBody> {
     final items = _items ?? const <RouteSummary>[];
     if (items.isEmpty) {
       return SingleChildScrollView(
-        child: EmptyState(icon: Icons.search_off, title: 'explore_routes_empty_title'.tr, message: 'explore_routes_empty_message'.tr),
+        child: _savedOnly
+            ? EmptyState(icon: Icons.bookmark_border, title: 'explore_routes_saved_empty_title'.tr, message: 'explore_routes_saved_empty_message'.tr)
+            : EmptyState(icon: Icons.search_off, title: 'explore_routes_empty_title'.tr, message: 'explore_routes_empty_message'.tr),
       );
     }
     return RefreshIndicator(
@@ -345,11 +365,12 @@ class _RouteDetailBodyState extends ConsumerState<_RouteDetailBody> {
                     label: 'explore_route_map_label'.trArgs([s.name]),
                     child: FlutterMap(
                       options: MapOptions(
-                        initialCameraFit: CameraFit.coordinates(coordinates: r.points, padding: const EdgeInsets.all(32)),
+                        initialCameraFit: CameraFit.coordinates(coordinates: r.points, padding: const EdgeInsets.all(32), maxZoom: routeFitMaxZoom),
+                        maxZoom: mapMaxZoom,
                         interactionOptions: const InteractionOptions(flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag | InteractiveFlag.doubleTapZoom),
                       ),
                       children: [
-                        strideTileLayer(env),
+                        StrideTileLayer(env: env),
                         PolylineLayer(
                           polylines: [Polyline(points: r.points, strokeWidth: 5, color: StrideColors.primary)],
                         ),

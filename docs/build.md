@@ -54,18 +54,21 @@ main()
  └─ runApp(ProviderScope → StrideApp)
       ├─ AppLifecycle: resumed → làm mới quyền; foreground/background → analytics
       ├─ RouteAnalytics: screen_view theo mẫu đường dẫn (không có id)
-      └─ StartupScreen: appOpen → phiên chưa đóng → intro → thiết lập hồ sơ → Home (sync bắt đầu sau khi điều hướng)
+      ├─ languageProvider: đổi ngôn ngữ → MaterialApp.locale + dựng lại cả cây (giữ route stack), lên lịch nhắc nhở lại
+      └─ StartupScreen: appOpen → phiên chưa đóng → **chọn ngôn ngữ lần đầu** (cờ theo thiết bị `stride_language_chosen`;
+         người dùng cũ đã xem intro được bỏ qua) → intro → thiết lập hồ sơ → Home (sync bắt đầu sau khi điều hướng)
 ```
 Firebase chỉ khởi tạo trên Android (có `google-services.json`); lỗi/không mạng thì app chạy offline và ẩn tính năng tài khoản/đám mây.
 
 ## Bản đồ (tile)
-Một chỗ dựng lớp tile cho mọi màn: `presentation/common_components/map_tiles.dart` (`strideTileLayer`), cấu hình ở `configs/env.dart`:
+Một chỗ dựng lớp tile cho mọi màn: `presentation/common_components/map_tiles.dart` (`StrideTileLayer`; nhiều ô lỗi → banner "không tải được nền bản đồ", MAP03), cấu hình ở `configs/env.dart`:
 
 | `--dart-define` | Mặc định | Ghi chú |
 |---|---|---|
 | `STRIDE_TILE_URL` | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` | Không cần key, nhưng máy chủ cộng đồng: không dành cho app thương mại lưu lượng lớn |
 | `STRIDE_TILE_FALLBACK_URL` | OSM France (HOT) khi dùng nguồn mặc định, rỗng nếu đã tự chọn nguồn | Dùng khi nguồn chính lỗi (vd. mạng/ISP chặn `openstreetmap.org` — router trả `127.0.0.1`) |
 | `STRIDE_TILE_ATTRIBUTION` | `© OpenStreetMap contributors` | Bắt buộc hiển thị đúng nhà cung cấp |
+| `STRIDE_TILE_MAX_ZOOM` | `19` (OSM) | Mức zoom cao nhất nhà cung cấp có ô thật (MAP04); bản đồ phóng tới 20 bằng cách phóng to ô mức này |
 
 Đã thử: CARTO voyager nay in watermark "API KEY REQUIRED" khi không có key → không dùng làm dự phòng. Trước khi phát hành phải chuyển sang nhà cung cấp có SLA (MapTiler, Stadia, Mapbox...);
 khóa truyền qua `--dart-define`/secret CI, không commit.

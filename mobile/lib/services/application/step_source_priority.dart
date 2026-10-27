@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../controller/profile/profile_logic.dart' show loadStepSourcePriority;
 import '../../controller/providers.dart';
 import '../../models/data_models/steps.dart';
-import '../../controller/profile/profile_logic.dart' show loadStepSourcePriority;
 
 /// Thứ tự ưu tiên nguồn bước của owner (F02). Màn Data sources (profile) lưu vào kv 'stepSourcePriority';
 /// kvSet không phát sự kiện đổi → Home invalidate provider này khi resume/pull-to-refresh.

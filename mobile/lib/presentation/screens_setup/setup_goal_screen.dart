@@ -4,16 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../values/routes.dart';
 import '../../controller/providers.dart';
-import '../../values/tokens.dart';
-import '../../utils/clock.dart';
-import '../common_components/widgets.dart';
-import '../../models/data_models/profile.dart';
-import '../../controller/sync/sync_providers.dart';
 import '../../controller/setup/setup_logic.dart';
-import 'components/setup_widgets.dart';
+import '../../controller/sync/sync_providers.dart';
+import '../../models/data_models/profile.dart';
+import '../../utils/clock.dart';
+import '../../utils/date_locale.dart';
 import '../../utils/l10n.dart';
+import '../../values/routes.dart';
+import '../../values/tokens.dart';
+import '../common_components/widgets.dart';
+import 'components/setup_widgets.dart';
 
 const _metersPerMile = 1609.344;
 
@@ -35,7 +36,7 @@ class _SetupGoalScreenState extends ConsumerState<SetupGoalScreen> {
   bool _saving = false;
   String? _error;
 
-  final _fmt = NumberFormat.decimalPattern('en_US');
+  final _fmt = NumberFormat.decimalPattern(appDateLocale);
 
   Future<void> _customSteps() async {
     final controller = TextEditingController(text: '$_steps');

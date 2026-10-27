@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../repository/auth_repository.dart';
+import '../../../utils/l10n.dart';
 import '../../../values/routes.dart';
 import '../../../values/tokens.dart';
 import '../../common_components/widgets.dart';
-import '../../../repository/auth_repository.dart';
-import '../../../utils/l10n.dart';
 
 /// Quay lại màn trước; nếu mở trực tiếp (không có stack) thì về [fallback] (E02: hủy auth quay lại đúng chỗ).
 void popOr(BuildContext context, String fallback) {

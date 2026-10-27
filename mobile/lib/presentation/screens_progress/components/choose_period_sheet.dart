@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../models/ui_models/period.dart';
+import '../../../utils/date_locale.dart';
 import '../../../utils/l10n.dart';
 import '../../../utils/progress_data.dart';
 import '../../../values/tokens.dart';
 import '../../common_components/widgets.dart';
 import '../../screen_history/components/month_calendar.dart';
-import '../../../models/ui_models/period.dart';
-import '../../../utils/date_locale.dart';
 
 /// Mở sheet "Choose period"; trả kỳ đã chọn khi bấm Apply, null khi đóng.
 Future<PeriodRange?> showChoosePeriodSheet(BuildContext context, {required PeriodRange initial, required int weekStart, required DateTime now}) {
@@ -116,7 +116,7 @@ class _ChoosePeriodPanelState extends State<ChoosePeriodPanel> {
               icon: const Icon(Icons.chevron_left),
             ),
             Expanded(
-              child: Text(DateFormat('MMMM y', appDateLocale).format(_visibleMonth), style: StrideText.subheading, textAlign: TextAlign.center),
+              child: Text(AppDates.monthYear(_visibleMonth), style: StrideText.subheading, textAlign: TextAlign.center),
             ),
             IconButton(
               tooltip: 'progress_next_month'.tr,

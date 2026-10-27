@@ -7,12 +7,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../../controller/profile/profile_logic.dart';
 import '../../controller/providers.dart';
+import '../../models/data_models/profile.dart';
 import '../../utils/l10n.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../models/data_models/profile.dart';
-import '../../controller/profile/profile_logic.dart';
 import 'components/profile_widgets.dart';
 
 /// Chọn ảnh và chép vào thư mục documents của app; override trong test.

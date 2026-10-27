@@ -3,19 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../values/routes.dart';
-import '../../utils/formatters.dart';
-import '../../controller/providers.dart';
-import '../../values/tokens.dart';
-import '../../utils/clock.dart';
-import '../../utils/l10n.dart';
-import '../common_components/widgets.dart';
-import '../../repository/activity_repository.dart';
-import '../../models/data_models/activity.dart';
-import '../screens_activity/components/activity_card.dart';
 import '../../controller/history/activity_feed_controller.dart';
-import 'components/month_calendar.dart';
+import '../../controller/providers.dart';
+import '../../models/data_models/activity.dart';
+import '../../repository/activity_repository.dart';
+import '../../utils/clock.dart';
 import '../../utils/date_locale.dart';
+import '../../utils/formatters.dart';
+import '../../utils/l10n.dart';
+import '../../values/routes.dart';
+import '../../values/tokens.dart';
+import '../common_components/widgets.dart';
+import '../screens_activity/components/activity_card.dart';
+import 'components/month_calendar.dart';
 
 enum HistoryView { list, calendar }
 
@@ -216,7 +216,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(DateFormat('MMMM y', appDateLocale).format(_month), style: StrideText.subheading),
+                      Text(AppDates.monthYear(_month), style: StrideText.subheading),
                       const Icon(Icons.expand_more, size: 20),
                     ],
                   ),
@@ -270,7 +270,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: InputChip(
-                  label: Text('history_showing'.trArgs([DateFormat('EEE, MMM d', appDateLocale).format(_day!)])),
+                  label: Text('history_showing'.trArgs([AppDates.shortWeekdayDate(_day!)])),
                   onDeleted: () => _setDay(null),
                   deleteButtonTooltipMessage: 'history_show_whole_month'.tr,
                 ),
@@ -338,7 +338,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5))
                 : _feed.hasMore
                 ? TextButton(onPressed: _feed.loadMore, child: Text('history_load_more'.tr))
-                : Text(items.length == 1 ? 'history_count_one'.tr : 'history_count_other'.trArgs([items.length]), style: StrideText.caption),
+                : Text('history_count'.trPlural(items.length, [items.length]), style: StrideText.caption),
           ),
         ),
       ),
@@ -356,10 +356,10 @@ class _TotalsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = totals;
     final countLabel = switch (type) {
-      HistoryTypeFilter.run => t?.count == 1 ? 'history_total_run_one'.tr : 'history_total_run_other'.tr,
-      HistoryTypeFilter.walk => t?.count == 1 ? 'history_total_walk_one'.tr : 'history_total_walk_other'.tr,
-      HistoryTypeFilter.indoor => t?.count == 1 ? 'history_total_indoor_one'.tr : 'history_total_indoor_other'.tr,
-      HistoryTypeFilter.all => t?.count == 1 ? 'history_total_activity_one'.tr : 'history_total_activity_other'.tr,
+      HistoryTypeFilter.run => 'history_total_run'.trPlural(t?.count ?? 0),
+      HistoryTypeFilter.walk => 'history_total_walk'.trPlural(t?.count ?? 0),
+      HistoryTypeFilter.indoor => 'history_total_indoor'.trPlural(t?.count ?? 0),
+      HistoryTypeFilter.all => 'history_total_activity'.trPlural(t?.count ?? 0),
     };
     return SageCard(
       child: t == null

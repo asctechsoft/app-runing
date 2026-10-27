@@ -2,13 +2,14 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../services/native/permission_coordinator.dart';
-import '../providers.dart';
 import '../../repository/device_repository.dart';
-import 'devices_providers.dart';
 import '../../services/application/heart_rate_parser.dart';
 import '../../services/application/heart_rate_transport.dart';
+import '../../services/native/permission_coordinator.dart';
 import '../../utils/l10n.dart';
+import '../../utils/stream_utils.dart';
+import '../providers.dart';
+import 'devices_providers.dart';
 
 enum ScanPhase { idle, scanning, done, error }
 
@@ -111,7 +112,7 @@ class DevicesController extends Notifier<DevicesState> {
 
   Future<void> startScan() async {
     if (state.scan == ScanPhase.scanning || state.busy) return;
-    await _scanSub?.cancel();
+    await cancelBounded(_scanSub, tag: 'devices.scan');
     _set(state.copyWith(scan: ScanPhase.scanning, found: const [], scanError: () => null, connectError: () => null));
     final done = Completer<void>();
     _scanSub = _transport
@@ -138,7 +139,7 @@ class DevicesController extends Notifier<DevicesState> {
   }
 
   Future<void> stopScan() async {
-    await _scanSub?.cancel();
+    await cancelBounded(_scanSub, tag: 'devices.scan');
     _scanSub = null;
     try {
       await _transport.stopScan();
@@ -222,7 +223,7 @@ class DevicesController extends Notifier<DevicesState> {
   }
 
   Future<void> _closeConnection() async {
-    await _measureSub?.cancel();
+    await cancelBounded(_measureSub, tag: 'devices.measure');
     _measureSub = null;
     final c = _conn;
     _conn = null;

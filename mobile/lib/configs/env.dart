@@ -5,7 +5,14 @@ import 'package:asc_common/asc_common.dart';
 enum StrideEnv { dev, staging, production }
 
 class EnvConfig {
-  const EnvConfig({required this.env, required this.tileUrlTemplate, required this.tileAttribution, required this.flags, this.tileFallbackUrlTemplate = ''});
+  const EnvConfig({
+    required this.env,
+    required this.tileUrlTemplate,
+    required this.tileAttribution,
+    required this.flags,
+    this.tileFallbackUrlTemplate = '',
+    this.tileMaxNativeZoom = 19,
+  });
 
   final StrideEnv env;
   final String tileUrlTemplate;
@@ -13,6 +20,10 @@ class EnvConfig {
   /// Nguồn tile dự phòng, dùng khi nguồn chính không tải được (mạng/ISP chặn tên miền, nguồn quá tải). Rỗng = không dự phòng.
   final String tileFallbackUrlTemplate;
   final String tileAttribution;
+
+  /// MAP04: mức zoom cao nhất nhà cung cấp có ô thật (OSM = 19). Phóng hơn thì phóng to ô của mức này thay vì tải ô
+  /// không tồn tại (lỗi/ảnh trắng). Đổi nhà cung cấp → `--dart-define=STRIDE_TILE_MAX_ZOOM=<n>`.
+  final int tileMaxNativeZoom;
   final FeatureFlags flags;
 
   bool get isProduction => env == StrideEnv.production;
@@ -31,7 +42,15 @@ class EnvConfig {
       defaultValue: tiles == defaultTiles ? 'https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png' : '',
     );
     const attribution = String.fromEnvironment('STRIDE_TILE_ATTRIBUTION', defaultValue: '© OpenStreetMap contributors');
-    return EnvConfig(env: env, tileUrlTemplate: tiles, tileFallbackUrlTemplate: fallback, tileAttribution: attribution, flags: FeatureFlags.defaultsFor(env));
+    const maxNative = int.fromEnvironment('STRIDE_TILE_MAX_ZOOM', defaultValue: 19);
+    return EnvConfig(
+      env: env,
+      tileUrlTemplate: tiles,
+      tileFallbackUrlTemplate: fallback,
+      tileAttribution: attribution,
+      tileMaxNativeZoom: maxNative,
+      flags: FeatureFlags.defaultsFor(env),
+    );
   }
 }
 

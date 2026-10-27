@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../controller/providers.dart';
+import '../../controller/run/engine/run_session_controller.dart';
+import '../../models/data_models/activity.dart';
+import '../../models/data_models/profile.dart';
 import '../../utils/l10n.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../models/data_models/activity.dart';
-import '../../models/data_models/profile.dart';
-import '../../controller/run/engine/run_session_controller.dart';
 
 /// Mục tiêu cho buổi chạy này (Free / Distance / Time) — không phải Goals hằng ngày.
 class RunGoalScreen extends ConsumerStatefulWidget {

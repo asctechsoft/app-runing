@@ -1,18 +1,18 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../utils/l10n.dart';
-import '../../values/routes.dart';
 import '../../controller/providers.dart';
-import '../../values/tokens.dart';
-import '../common_components/widgets.dart';
-import '../../models/data_models/session_state.dart';
 import '../../controller/run/engine/run_session_controller.dart';
 import '../../controller/run/engine/run_session_state.dart';
+import '../../models/data_models/session_state.dart';
+import '../../utils/haptics.dart';
+import '../../utils/l10n.dart';
+import '../../values/routes.dart';
+import '../../values/tokens.dart';
+import '../common_components/widgets.dart';
 import 'components/run_widgets.dart';
 
 /// Đếm ngược 3–2–1 (G02). Mỗi số đúng 1 s theo Timer, không phụ thuộc animation.
@@ -48,7 +48,7 @@ class _CountdownScreenState extends ConsumerState<CountdownScreen> with SingleTi
     if (_n > 1) {
       setState(() => _n--);
       _ring.forward(from: 0);
-      HapticFeedback.selectionClick();
+      StrideHaptics.selection();
       return;
     }
     _timer?.cancel();
@@ -62,7 +62,7 @@ class _CountdownScreenState extends ConsumerState<CountdownScreen> with SingleTi
       final a = await ref.read(runSessionProvider.notifier).startRecording();
       if (!mounted) return;
       if (a != null || ref.read(runSessionProvider).isActive) {
-        HapticFeedback.heavyImpact();
+        StrideHaptics.heavy();
         context.go(Routes.live);
       } else {
         context.go(Routes.run);

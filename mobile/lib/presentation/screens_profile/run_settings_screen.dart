@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../controller/profile/haptics_setting.dart';
+import '../../controller/profile/profile_logic.dart';
+import '../../controller/providers.dart';
+import '../../models/data_models/profile.dart';
 import '../../utils/formatters.dart';
 import '../../utils/l10n.dart';
-import '../../controller/providers.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../models/data_models/profile.dart';
-import '../../controller/profile/profile_logic.dart';
 import 'components/profile_widgets.dart';
 
 /// Run settings / Audio updates (J01, mở từ Profile và Run → Audio updates).
@@ -35,8 +36,10 @@ class _RunSettingsScreenState extends ConsumerState<RunSettingsScreen> {
     if (_testing) return;
     setState(() => _testing = true);
     try {
-      final ok = await ref.read(profileVoiceProvider).speak(voiceTestPhrase(s.audioCues, fmt));
-      if (!ok && mounted) showStrideSnack(context, 'profile_run_tts_unavailable'.tr, isError: true);
+      final r = await ref.read(profileVoiceProvider).speak(voiceTestPhrase(s.audioCues, fmt));
+      if (!mounted) return;
+      if (r == VoiceTestResult.failed) showStrideSnack(context, 'profile_run_tts_unavailable'.tr, isError: true);
+      if (r == VoiceTestResult.spokenFallback) showStrideSnack(context, 'profile_run_tts_fallback'.tr);
     } catch (_) {
       if (mounted) showStrideSnack(context, 'profile_run_tts_unavailable'.tr, isError: true);
     } finally {
@@ -122,6 +125,13 @@ class _RunSettingsScreenState extends ConsumerState<RunSettingsScreen> {
                     subtitle: 'profile_run_auto_pause_subtitle'.tr,
                     value: s.autoPause,
                     onChanged: (v) => _update(s, (l) => l.copyWith(autoPause: v)),
+                  ),
+                  ProfileSwitchRow(
+                    icon: Icons.vibration,
+                    title: 'profile_run_vibration'.tr,
+                    subtitle: 'profile_run_vibration_subtitle'.tr,
+                    value: ref.watch(hapticsSettingProvider),
+                    onChanged: (v) => ref.read(hapticsSettingProvider.notifier).set(v),
                   ),
                 ],
               ),

@@ -3,11 +3,11 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../controller/providers.dart';
+import '../../models/data_models/activity.dart';
 import '../../repository/activity_repository.dart';
 import '../../repository/settings_repository.dart';
 import '../../utils/calc/records.dart';
 import '../../utils/calc/run_metrics.dart';
-import '../../models/data_models/activity.dart';
 import '../../utils/l10n.dart';
 
 /// Khóa cache effort theo hoạt động; gắn revision để sửa/đồng bộ lại thì tính lại.

@@ -5,31 +5,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../../values/routes.dart';
-import '../../services/storage/app_database.dart';
-import '../providers.dart';
 import '../../repository/activity_repository.dart';
+import '../../repository/auth_repository.dart';
 import '../../repository/owner_repository.dart';
 import '../../repository/settings_repository.dart';
-import '../sync/sync_providers.dart';
-import '../../services/application/sync_service.dart';
-import '../../repository/auth_repository.dart';
 import '../../services/application/google_sign_in_service.dart';
+import '../../services/application/sync_service.dart';
+import '../../services/storage/app_database.dart';
 import '../../utils/l10n.dart';
+import '../../values/routes.dart';
+import '../providers.dart';
+import '../sync/sync_providers.dart';
 
 /// Chuyển dữ liệu khách sang tài khoản (E03). Idempotent: chạy lại không nhân đôi, không đụng owner khác.
 class GuestTransferService {
-  GuestTransferService({
-    required AppDatabase db,
-    required ActivityRepository activities,
-    required SettingsRepository settings,
-    required OwnerRepository owners,
-    required SharedPreferences prefs,
-  }) : _db = db,
-       _prefs = prefs,
-       _activities = activities,
-       _settings = settings,
-       _owners = owners;
+  GuestTransferService({required this._db, required this._activities, required this._settings, required this._owners, required this._prefs});
 
   final AppDatabase _db;
   final ActivityRepository _activities;

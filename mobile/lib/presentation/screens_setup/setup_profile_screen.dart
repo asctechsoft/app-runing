@@ -3,15 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../values/routes.dart';
 import '../../controller/providers.dart';
+import '../../controller/setup/setup_logic.dart';
+import '../../controller/sync/sync_providers.dart';
+import '../../models/data_models/profile.dart';
+import '../../utils/l10n.dart';
+import '../../values/routes.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../models/data_models/profile.dart';
-import '../../controller/sync/sync_providers.dart';
-import '../../controller/setup/setup_logic.dart';
 import 'components/setup_widgets.dart';
-import '../../utils/l10n.dart';
 
 /// Bước 1: hồ sơ tối thiểu (E04). Tên bắt buộc; chiều cao/cân nặng tùy chọn — không tự điền giá trị mẫu.
 class SetupProfileScreen extends ConsumerStatefulWidget {

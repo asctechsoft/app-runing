@@ -38,4 +38,40 @@ void main() {
     }
     expect(used.difference(en.keys.toSet()), isEmpty);
   });
+
+  // L04: 'base'.trPlural(n) cần ít nhất `base_other` ở mọi ngôn ngữ (dạng thiếu rơi về _other).
+  test('mọi key số nhiều (base.trPlural) có dạng _other ở en và vi', () {
+    final bases = <String>{};
+    final pattern = RegExp(r'''['"]([a-z][a-z0-9_]*)['"]\s*\.trPlural\b''');
+    for (final f in Directory('lib').listSync(recursive: true).whereType<File>()) {
+      if (f.path.endsWith('.dart')) bases.addAll(pattern.allMatches(f.readAsStringSync()).map((m) => m.group(1)!));
+    }
+    expect(bases, isNotEmpty);
+    final missing = [
+      for (final b in bases)
+        for (final (lang, map) in [('en', en), ('vi', vi)])
+          if (!map.containsKey('${b}_other')) '$lang:${b}_other',
+    ];
+    expect(missing, isEmpty);
+  });
+
+  // L17: chặn chuỗi giao diện viết cứng tái phát (Text('…'), label:/title:/hintText:/tooltip:… là literal có chữ, không qua .tr).
+  // Ngoại lệ có chủ đích: tên thương hiệu STRIDE.
+  test('không có chuỗi giao diện viết cứng trong lib/', () {
+    const allowed = {'STRIDE'};
+    final pattern = RegExp(
+      r'''(?:\bText|label:|title:|hintText:|labelText:|helperText:|tooltip:|semanticLabel:|message:|semanticsLabel:)\s*\(?\s*'([^'$\\]*[A-Za-z]{2,}[^'$\\]*)'\s*[,)]''',
+    );
+    final offenders = <String>[];
+    for (final f in Directory('lib').listSync(recursive: true).whereType<File>()) {
+      if (!f.path.endsWith('.dart')) continue;
+      final lines = f.readAsLinesSync();
+      for (var i = 0; i < lines.length; i++) {
+        for (final m in pattern.allMatches(lines[i])) {
+          if (!allowed.contains(m.group(1))) offenders.add('${f.path}:${i + 1}: ${m.group(0)}');
+        }
+      }
+    }
+    expect(offenders, isEmpty, reason: 'Thêm key vào values/strings.xml + values-vi/strings.xml và dùng .tr (CLAUDE.md)');
+  });
 }

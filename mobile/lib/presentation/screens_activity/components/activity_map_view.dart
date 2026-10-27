@@ -3,11 +3,11 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../../../controller/providers.dart';
-import '../../../values/tokens.dart';
 import '../../../controller/activity/activity_providers.dart';
-import '../../../utils/route_geometry.dart';
+import '../../../controller/providers.dart';
 import '../../../utils/l10n.dart';
+import '../../../utils/route_geometry.dart';
+import '../../../values/tokens.dart';
 import '../../common_components/map_tiles.dart';
 
 /// Bản đồ tuyến: segment vẽ riêng (không nối qua pause/gap), marker start + cờ đích.
@@ -31,7 +31,7 @@ class ActivityRouteMapState extends ConsumerState<ActivityRouteMap> {
       for (final p in s) LatLng(p.lat, p.lon),
   ];
 
-  CameraFit get _fit => CameraFit.coordinates(coordinates: _all, padding: widget.padding, maxZoom: 17);
+  CameraFit get _fit => CameraFit.coordinates(coordinates: _all, padding: widget.padding, maxZoom: routeFitMaxZoom);
 
   /// Đưa camera về toàn tuyến (nút Re-center ở màn full map).
   void recenter() => _controller.fitCamera(_fit);
@@ -58,11 +58,12 @@ class ActivityRouteMapState extends ConsumerState<ActivityRouteMap> {
       mapController: _controller,
       options: MapOptions(
         initialCameraFit: _fit,
+        maxZoom: mapMaxZoom,
         backgroundColor: StrideColors.subtle,
         interactionOptions: InteractionOptions(flags: widget.interactive ? InteractiveFlag.all & ~InteractiveFlag.rotate : InteractiveFlag.none),
       ),
       children: [
-        strideTileLayer(env),
+        StrideTileLayer(env: env),
         PolylineLayer(
           polylines: [
             for (final seg in route)

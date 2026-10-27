@@ -78,6 +78,7 @@ class Activity {
     this.hasGps = false,
     this.distanceSource = DistanceSource.gps,
     this.workoutExecutionId,
+    this.locationMocked = false,
     this.syncState = SyncState.local,
     this.revision = 0,
     this.createdAt = 0,
@@ -109,6 +110,9 @@ class Activity {
   final bool hasGps;
   final DistanceSource distanceSource;
   final String? workoutExecutionId;
+
+  /// TM24: có ít nhất một điểm GPS từ ứng dụng vị trí giả (`isMocked`) → không tính cho chuỗi/nhóm/thử thách.
+  final bool locationMocked;
   final SyncState syncState;
   final int revision;
   final int createdAt;
@@ -141,6 +145,7 @@ class Activity {
     bool? hasGps,
     DistanceSource? distanceSource,
     String? workoutExecutionId,
+    bool? locationMocked,
     SyncState? syncState,
     int? revision,
     int? updatedAt,
@@ -172,6 +177,7 @@ class Activity {
       hasGps: hasGps ?? this.hasGps,
       distanceSource: distanceSource ?? this.distanceSource,
       workoutExecutionId: workoutExecutionId ?? this.workoutExecutionId,
+      locationMocked: locationMocked ?? this.locationMocked,
       syncState: syncState ?? this.syncState,
       revision: revision ?? this.revision,
       createdAt: createdAt,
@@ -205,6 +211,7 @@ class Activity {
     'has_gps': hasGps ? 1 : 0,
     'distance_source': distanceSource.name,
     'workout_execution_id': workoutExecutionId,
+    'location_mocked': locationMocked ? 1 : 0,
     'sync_state': syncState.name,
     'revision': revision,
     'created_at': createdAt,
@@ -237,6 +244,7 @@ class Activity {
     hasGps: (r['has_gps'] as int? ?? 0) == 1,
     distanceSource: _enumByName(DistanceSource.values, r['distance_source'] as String?, DistanceSource.gps),
     workoutExecutionId: r['workout_execution_id'] as String?,
+    locationMocked: (r['location_mocked'] as int? ?? 0) == 1,
     syncState: _enumByName(SyncState.values, r['sync_state'] as String?, SyncState.local),
     revision: r['revision'] as int? ?? 0,
     createdAt: r['created_at'] as int? ?? 0,
@@ -269,6 +277,7 @@ class Activity {
     'hasGps': hasGps,
     'distanceSource': distanceSource.name,
     'workoutExecutionId': workoutExecutionId,
+    'locationMocked': locationMocked,
     'revision': revision,
     'deletedAt': deletedAt,
   };
@@ -298,6 +307,7 @@ class Activity {
     hasGps: j['hasGps'] as bool? ?? false,
     distanceSource: _enumByName(DistanceSource.values, j['distanceSource'] as String?, DistanceSource.gps),
     workoutExecutionId: j['workoutExecutionId'] as String?,
+    locationMocked: j['locationMocked'] as bool? ?? false,
     syncState: SyncState.synced,
     revision: (j['revision'] as num?)?.toInt() ?? 0,
     createdAt: (j['createdAt'] as num?)?.toInt() ?? 0,
@@ -410,7 +420,8 @@ class TrackPoint {
   };
 }
 
-enum SessionEventType { start, pause, resume, autoPause, autoResume, gpsLost, gpsRecovered, lock, unlock, finish, recovered, phaseStart, discard }
+/// `mockLocation`: ghi một lần khi gặp fix vị trí giả đầu tiên (TM24) — lưu cùng phiên nên còn sau khi khôi phục.
+enum SessionEventType { start, pause, resume, autoPause, autoResume, gpsLost, gpsRecovered, lock, unlock, finish, recovered, phaseStart, discard, mockLocation }
 
 class SessionEvent {
   const SessionEvent({required this.id, required this.activityId, required this.seq, required this.type, required this.t, required this.monoMs, this.data});

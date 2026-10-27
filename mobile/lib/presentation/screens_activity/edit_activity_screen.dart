@@ -8,15 +8,15 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../utils/formatters.dart';
+import '../../controller/activity/activity_actions.dart';
+import '../../controller/activity/activity_providers.dart';
 import '../../controller/providers.dart';
+import '../../models/data_models/activity.dart';
+import '../../utils/activity_format.dart';
+import '../../utils/formatters.dart';
+import '../../utils/l10n.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../models/data_models/activity.dart';
-import '../../controller/activity/activity_actions.dart';
-import '../../utils/activity_format.dart';
-import '../../controller/activity/activity_providers.dart';
-import '../../utils/l10n.dart';
 
 const int maxActivityPhotos = 10;
 const int maxNotesLength = 500;

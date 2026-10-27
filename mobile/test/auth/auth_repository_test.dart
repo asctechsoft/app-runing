@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stride/repository/auth_repository.dart';
 import 'package:stride/services/application/api_client.dart';
 import 'package:stride/utils/clock.dart';
-import 'package:stride/repository/auth_repository.dart';
 
 void main() {
   group('AuthRepository khi Firebase chưa sẵn sàng (E02)', () {

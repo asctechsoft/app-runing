@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../controller/run/engine/run_sources.dart';
+import '../../../models/data_models/activity.dart';
+import '../../../models/ui_models/workout_models.dart';
+import '../../../utils/date_locale.dart';
 import '../../../utils/formatters.dart';
 import '../../../utils/l10n.dart';
 import '../../../values/tokens.dart';
-import '../../../models/data_models/activity.dart';
-import '../../../models/ui_models/workout_models.dart';
-import '../../../controller/run/engine/run_sources.dart';
 
 String runGoalLabel(RunGoal g, StrideFormat fmt) => switch (g.type) {
   RunGoalType.free => 'run_goal_free'.tr,
@@ -16,7 +17,7 @@ String runGoalLabel(RunGoal g, StrideFormat fmt) => switch (g.type) {
 
 String workoutLabel(WorkoutPlan? plan) => plan == null ? 'run_goal_free'.tr : 'run_workout_label'.trArgs([plan.name, formatStepDuration(plan.totalMs)]);
 
-String longDate(int utcMs) => DateFormat('EEEE, MMMM d, y').format(DateTime.fromMillisecondsSinceEpoch(utcMs));
+String longDate(int utcMs) => AppDates.longDate(DateTime.fromMillisecondsSinceEpoch(utcMs));
 String clockTime(int utcMs) => DateFormat.jm().format(DateTime.fromMillisecondsSinceEpoch(utcMs));
 
 /// Chip trạng thái GPS: luôn có icon + chữ.

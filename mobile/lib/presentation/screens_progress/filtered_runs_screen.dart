@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../controller/history/activity_feed_controller.dart';
+import '../../controller/providers.dart';
+import '../../models/data_models/activity.dart';
+import '../../utils/date_locale.dart';
 import '../../utils/formatters.dart';
 import '../../utils/l10n.dart';
-import '../../controller/providers.dart';
+import '../../utils/progress_data.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
-import '../../models/data_models/activity.dart';
 import '../screens_activity/components/activity_card.dart';
-import '../../controller/history/activity_feed_controller.dart';
-import '../../utils/progress_data.dart';
-import '../../utils/date_locale.dart';
 
 enum _RunsFilter { all, run }
 
@@ -64,7 +64,7 @@ class _FilteredRunsScreenState extends ConsumerState<FilteredRunsScreen> {
     if (widget.fromMs == null || widget.toMs == null) return null;
     final s = DateTime.fromMillisecondsSinceEpoch(widget.fromMs!);
     final e = DateTime.fromMillisecondsSinceEpoch(widget.toMs!).subtract(const Duration(milliseconds: 1));
-    final fmt = DateFormat('MMM d, y', appDateLocale);
+    final fmt = DateFormat.yMMMd(appDateLocale);
     return s.year == e.year && s.month == e.month && s.day == e.day ? fmt.format(s) : '${fmt.format(s)} – ${fmt.format(e)}';
   }
 

@@ -2,8 +2,8 @@ import 'dart:convert';
 
 import '../../utils/l10n.dart';
 
-/// Loại nhắc (J02).
-enum ReminderKind { dailySteps, run }
+/// Loại nhắc (J02; [streak] = TM52 nhắc giữ chuỗi).
+enum ReminderKind { dailySteps, run, streak }
 
 /// Một lịch nhắc. [enabled] là ý định của người dùng; nhắc chỉ "active" khi đồng thời có quyền notification.
 class Reminder {
@@ -23,6 +23,7 @@ class Reminder {
   factory Reminder.defaults(ReminderKind kind) => switch (kind) {
     ReminderKind.dailySteps => const Reminder(kind: ReminderKind.dailySteps, enabled: false, minuteOfDay: 18 * 60 + 30, weekdays: {1, 2, 3, 4, 5}),
     ReminderKind.run => const Reminder(kind: ReminderKind.run, enabled: false, minuteOfDay: 7 * 60, weekdays: {2, 4, 6}),
+    ReminderKind.streak => const Reminder(kind: ReminderKind.streak, enabled: false, minuteOfDay: 20 * 60, weekdays: {1, 2, 3, 4, 5, 6, 7}),
   };
 
   Reminder copyWith({bool? enabled, int? minuteOfDay, Set<int>? weekdays, int? updatedAt}) => Reminder(
@@ -113,11 +114,14 @@ bool isInQuietHours(int minuteOfDay, QuietHours q) {
 
 /// Một slot lặp hằng tuần cần đăng ký với OS.
 class ReminderSlot {
-  const ReminderSlot({required this.notificationId, required this.weekday, required this.hour, required this.minute});
+  const ReminderSlot({required this.notificationId, required this.weekday, required this.hour, required this.minute, this.at});
   final int notificationId;
   final int weekday;
   final int hour;
   final int minute;
+
+  /// Có giá trị = nhắc một lần đúng thời điểm này (giờ địa phương), không lặp hằng tuần (TM52).
+  final DateTime? at;
 }
 
 /// ID notification cố định theo loại + thứ để hủy/đặt lại chính xác.
@@ -131,6 +135,21 @@ List<ReminderSlot> reminderSlots(Reminder r, QuietHours q) {
       ReminderSlot(notificationId: reminderNotificationId(r.kind, d), weekday: d, hour: r.minuteOfDay ~/ 60, minute: r.minuteOfDay % 60),
   ];
 }
+
+/// TM52: thời điểm nhắc giữ chuỗi kế tiếp — chỉ MỘT lần, lên lịch lại mỗi khi app đồng bộ lịch nhắc (khởi động, resume,
+/// đạt mục tiêu trong app). Không có chuỗi đang giữ ([hasStreak] = false) → không nhắc (tránh tạo áp lực). Hôm nay đã đạt
+/// hoặc giờ nhắc hôm nay đã qua → ngày được chọn kế tiếp. Ngày rơi vào giờ yên lặng → không nhắc.
+DateTime? nextStreakReminder(Reminder r, QuietHours q, DateTime now, {required bool hasStreak, required bool todayDone}) {
+  if (!hasStreak || reminderSlots(r, q).isEmpty) return null;
+  for (var i = todayDone ? 1 : 0; i <= 7; i++) {
+    final c = DateTime(now.year, now.month, now.day + i, r.minuteOfDay ~/ 60, r.minuteOfDay % 60);
+    if (c.isAfter(now) && r.weekdays.contains(c.weekday)) return c;
+  }
+  return null;
+}
+
+/// Số giờ trọn còn lại từ [at] tới hết ngày địa phương (nội dung "còn X giờ để giữ chuỗi").
+int hoursLeftInDay(DateTime at) => DateTime(at.year, at.month, at.day + 1).difference(at).inMinutes ~/ 60;
 
 /// Lần nhắc kế tiếp (giờ địa phương) sau [now]; null nếu không có lịch hiệu lực.
 DateTime? nextReminderFire(Reminder r, QuietHours q, DateTime now) {
@@ -158,3 +177,17 @@ String formatMinuteOfDay(int m) {
   final h12 = h % 12 == 0 ? 12 : h % 12;
   return '$h12:${min.toString().padLeft(2, '0')} $suffix';
 }
+
+/// TM05: một lần nhắc sự kiện đã đăng ký (đặt một lần, không lặp).
+class EventReminderSlot {
+  const EventReminderSlot({required this.notificationId, required this.at, required this.title, required this.body, required this.link});
+  final int notificationId;
+  final DateTime at;
+  final String title;
+  final String body;
+  final String link;
+}
+
+/// Dải id thông báo nhắc nhóm (sự kiện TM05 + thử thách TM34): tối đa [maxEventReminders] lần nhắc, gần nhất trước.
+const eventReminderIdBase = 7400;
+const maxEventReminders = 30;
