@@ -2,7 +2,7 @@
 
 ## Flavor
 `alpha` (không quảng cáo), `dev`, `product`, `claude` — khai ở `mobile/android/app/build.gradle.kts`, đọc trong code qua `AppFigs` (`lib/configs/app_figs.dart`).
-Cùng `applicationId` (`com.asc.app_runing`) nên chỉ cần một `android/app/google-services.json`.
+Cùng `applicationId` (`com.asc.app_runing`) nên chỉ cần một `android/app/google-services.json` (đã commit trong repo, CI không cần secret).
 
 ```bash
 cd mobile

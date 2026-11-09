@@ -7,8 +7,8 @@ Firestore; không có server backend riêng. Tổng quan monorepo: [`../README.m
 
 - Flutter **3.47.x** (Dart ≥ 3.13.3). Kiểm tra: `flutter --version`.
 - Android SDK 37. Python 3 nếu dùng build tự động (`build.py`).
-- Submodule `dsp_base/` (và `../asc_common/`): `git submodule update --init --recursive`.
-- `android/app/google-services.json` lấy từ Firebase Console (project `app-runing-667b3`). **Không commit.**
+- `asc_common` và `dsp_base` là git dependency trong `pubspec.yaml` (ghim theo commit): `flutter pub get` tự tải, không cần submodule.
+- `android/app/google-services.json` đã nằm trong repo (config client Firebase, project `app-runing-667b3`).
 
 ## Chạy app
 

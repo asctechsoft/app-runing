@@ -53,10 +53,10 @@
       "problemMatcher": []
     },
     {
-      "label": "Git submodules update",
+      "label": "Pub get",
       "type": "shell",
-      "command": "git submodule update --init --recursive",
-      "options": { "cwd": "${workspaceFolder}" },
+      "command": "flutter pub get",
+      "options": { "cwd": "${workspaceFolder}/mobile" },
       "presentation": { "reveal": "always", "panel": "shared" },
       "problemMatcher": []
     }

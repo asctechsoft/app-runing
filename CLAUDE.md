@@ -34,7 +34,7 @@ Danh sách việc chưa làm (kiểm chứng thiết bị, Firebase, đa ngôn n
 Đã chốt trong `docs/adr/0001-stack.md` (Flutter + Riverpod/go_router + Firebase Auth/Cloud Firestore + OSM; **không có server backend riêng**) và `docs/adr/0002-shared-base.md` (dùng chung base ASC). Không tự đổi framework hay nâng/hạ phiên bản thư viện nền mà không cập nhật ADR.
 
 ## Base dùng chung với các app ASC (smart_drink...)
-- `asc_common/` (submodule ở gốc repo) và `mobile/dsp_base/` (submodule) cùng commit với smart_drink. **Không sửa trong repo này** — sửa ở repo gốc của base rồi cập nhật con trỏ submodule. Clone mới: `git submodule update --init --recursive`.
+- `asc_common` và `dsp_base` là git dependency trong `mobile/pubspec.yaml` (ghim `ref` theo commit, cùng commit với smart_drink), tải từ `asctechsoft/asc_common` và `asctechsoft/dsp_base_app`. **Không có bản sao trong repo này** — sửa ở repo gốc của base rồi đổi `ref` ở pubspec (cả hai app cùng lúc).
 - Phiên bản Firebase (`firebase_core ^4`, `firebase_auth ^6`, `cloud_firestore ^6`) và `permission_handler ^13` phải khớp họ phiên bản của `dsp_base`/`asc_common`; đừng nâng riêng lẻ.
 - STRIDE giữ Riverpod + go_router; GetX chỉ là hạ tầng của base (`Get.put` service, `.tr` cho chuỗi XML). Không viết màn hình/state mới bằng GetX.
 - Khởi động: `lib/main.dart` → `services/application/stride_base.dart` (Firebase, App Check, Crashlytics, Remote Config chạy nền). Chưa có quảng cáo: không gọi `DspAdsController.start` khi chưa có quyết định sản phẩm. Vòng đời: `services/application/app_lifecycle.dart`. Analytics: `utils/analytics.dart`, `utils/route_analytics.dart` (không đưa id/tọa độ vào event).

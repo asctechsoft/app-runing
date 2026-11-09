@@ -16,6 +16,6 @@ Gói nền của STRIDE (đổi cần cập nhật ADR 0001): Flutter 3.47.x, `f
 
 ## Quy trình nâng base
 1. Sửa ở repo gốc của `dsp_base` / `asc_common`, chạy test của **mọi app** dùng base (STRIDE, smart_drink).
-2. Cập nhật con trỏ submodule ở **cả hai app** cùng lúc.
+2. Đổi `ref` git dependency (`dsp_base`, `asc_common`) trong pubspec của **cả hai app** cùng lúc.
 3. Ở STRIDE: nâng ràng buộc trong `mobile/pubspec.yaml`, `flutter pub get`, `flutter analyze`, `flutter test`, build `alpha` thử.
 4. Định kỳ hằng tháng: `flutter pub outdated` trong `mobile/` để xem gói có bản mới.

@@ -11,7 +11,7 @@ project có cùng hạ tầng, cấu trúc build tự động và vòng đời k
 ## Quyết định
 | Hạng mục | Lựa chọn |
 |---|---|
-| Nguồn base | Git submodule: `asc_common/` (gốc repo) và `mobile/dsp_base/`; pubspec dùng `path`. Cùng commit với smart_drink. |
+| Nguồn base | Git dependency trong `mobile/pubspec.yaml` (`asc_common` từ asctechsoft/asc_common, `dsp_base` từ asctechsoft/dsp_base_app), ghim `ref` theo commit, cùng commit với smart_drink. |
 | State/Navigation | **Giữ Riverpod + go_router** (156 file hiện có, ADR 0001). Base dùng GetX như hạ tầng nội bộ: `Get.put` service, `.tr`. Không có `GetMaterialApp`. |
 | Firebase | Hạ về họ 4.x để khớp `dsp_base` (`firebase_core ^4`, `firebase_auth ^6`, `cloud_firestore ^6`). Không sửa `dsp_base` để nâng 5.x vì sẽ lệch smart_drink. |
 | permission_handler | `^13.0.2` (asc_common yêu cầu) → `compileSdk = 37`. |
@@ -24,7 +24,7 @@ project có cùng hạ tầng, cấu trúc build tự động và vòng đời k
 ## Hệ quả
 - `build_helper.py`/`translate.py` trong `dsp_base` chưa được commit lên remote của base (mới chỉ staged ở máy dev) nên được đặt
   trong `mobile/tool/` để repo tự đủ. Khi base commit chính thức thì cân nhắc dùng lại bản của base.
-- Sửa base phải làm ở repo gốc của base rồi cập nhật con trỏ submodule ở cả hai app.
+- Sửa base phải làm ở repo gốc của base rồi đổi `ref` ở pubspec của cả hai app.
 - `flutter run` bắt buộc `--flavor`.
 - Đổi ngôn ngữ lúc chạy chưa cập nhật giao diện ngay (app Riverpod không có `GetMaterialApp` để rebuild): áp dụng ở lần mở sau.
 

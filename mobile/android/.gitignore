@@ -18,6 +18,3 @@ debug_keystore.properties
 # Gradle build output
 /build/
 .kotlin/
-
-# Firebase config (chứa API key, lấy từ Firebase console / secret CI)
-/app/google-services.json
