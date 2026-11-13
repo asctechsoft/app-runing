@@ -804,6 +804,9 @@ Map<String, Object?> profilePayloadForServer(UserSettings s) => {
   'weekStart': s.weekStart,
   'locale': s.localeTag,
   'autoPause': s.autoPause,
+  'gender': s.gender?.name,
+  'countryCode': s.countryCode,
+  'birthDate': s.birthDate,
 };
 
 UserSettings settingsFromServerProfile(UserSettings current, Map<String, Object?> p) {
@@ -822,6 +825,9 @@ UserSettings settingsFromServerProfile(UserSettings current, Map<String, Object?
     weekStart: (p['weekStart'] as num?)?.toInt(),
     localeTag: p['locale'] as String?,
     autoPause: p['autoPause'] as bool?,
+    gender: p['gender'] == null ? null : byName(Gender.values, p['gender'], Gender.male),
+    countryCode: p['countryCode'] as String?,
+    birthDate: p['birthDate'] as String?,
   );
 }
 

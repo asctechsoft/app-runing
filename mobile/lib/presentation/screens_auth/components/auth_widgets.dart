@@ -19,7 +19,7 @@ void popOr(BuildContext context, String fallback) {
 
 /// Khung chung cho các màn auth: back, wordmark, tiêu đề + mô tả.
 class AuthScaffold extends StatelessWidget {
-  const AuthScaffold({super.key, required this.title, this.subtitle, required this.children, this.fallback = Routes.welcome, this.bottom});
+  const AuthScaffold({super.key, required this.title, this.subtitle, required this.children, this.fallback = Routes.startup, this.bottom});
 
   final String title;
   final String? subtitle;

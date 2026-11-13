@@ -76,6 +76,7 @@ void main() {
     await tester.pumpWidget(_app(h, Routes.countdown));
     await tester.pump();
     expect(find.text('3'), findsOneWidget);
+    expect(find.text('Running'), findsOneWidget, reason: 'tiêu đề theo loại hoạt động, phủ trên bản đồ nền');
     await tester.pump(const Duration(seconds: 1));
     expect(find.text('2'), findsOneWidget);
     await tester.tap(find.text('Cancel'));
@@ -218,6 +219,34 @@ void main() {
       await tester.runAsync(() => h.close());
     });
 
+    testWidgets('Prepare: chọn Đi bộ / Chạy bộ / Đạp xe đổi loại hoạt động và nhãn nút bắt đầu', (tester) async {
+      await phone(tester);
+      final h = await harness(tester);
+      h.ctl.open();
+      h.ctl.setPlan(null);
+      await tester.pumpWidget(_app(h, '/prepare-real'));
+      await _drain(tester);
+      expect(find.text('Walk'), findsOneWidget);
+      expect(find.text('Run'), findsOneWidget);
+      expect(find.text('Cycle'), findsOneWidget);
+
+      await tester.tap(find.text('Cycle'));
+      await tester.pump();
+      expect(h.ctl.state.setup.type, ActivityType.bike);
+      expect(find.text('Start cycling'), findsOneWidget);
+
+      await tester.tap(find.text('Walk'));
+      await tester.pump();
+      expect(h.ctl.state.setup.type, ActivityType.walk);
+      expect(find.text('Start walking'), findsOneWidget);
+
+      await tester.tap(find.text('Run'));
+      await tester.pump();
+      expect(h.ctl.state.setup.type, ActivityType.run);
+      expect(find.text('Start running'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    });
+
     testWidgets('Results + Recovery + Prepare + Workout render', (tester) async {
       await phone(tester);
       final h = await harness(tester);
@@ -225,8 +254,8 @@ void main() {
       h.ctl.setPlan(null);
       await tester.pumpWidget(_app(h, '/prepare-real'));
       await _drain(tester);
-      expect(find.text('Ready for a run?'), findsOneWidget);
-      expect(find.text('Start a run'), findsOneWidget);
+      expect(find.text('Workout'), findsOneWidget);
+      expect(find.text('Start running'), findsOneWidget);
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
       await tester.pumpWidget(const SizedBox());

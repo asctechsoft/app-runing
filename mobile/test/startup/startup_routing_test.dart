@@ -54,8 +54,8 @@ void main() {
     test('chưa xem intro → onboarding', () {
       expect(decideStartRoute(languageChosen: true, owner: guest), Routes.onboarding);
     });
-    test('đã xem intro, chưa thiết lập: khách → welcome, tài khoản → setup profile', () {
-      expect(decideStartRoute(languageChosen: true, owner: const OwnerState(ownerId: 'g', isGuest: true, introSeen: true)), Routes.welcome);
+    test('đã xem intro, chưa thiết lập: cả khách lẫn tài khoản → màn cập nhật thông tin (có nút Đăng nhập Google)', () {
+      expect(decideStartRoute(languageChosen: true, owner: const OwnerState(ownerId: 'g', isGuest: true, introSeen: true)), Routes.setupProfile);
       expect(decideStartRoute(languageChosen: true, owner: const OwnerState(ownerId: 'u', isGuest: false, introSeen: true)), Routes.setupProfile);
     });
     test('đã xong → home', () {
@@ -88,7 +88,7 @@ void main() {
       final router = GoRouter(
         routes: [
           GoRoute(path: Routes.startup, builder: (_, _) => const StartupScreen()),
-          for (final r in [Routes.language, Routes.onboarding, Routes.welcome, Routes.home, Routes.recovery, Routes.setupProfile])
+          for (final r in [Routes.language, Routes.onboarding, Routes.home, Routes.recovery, Routes.setupProfile])
             GoRoute(
               path: r,
               builder: (_, _) => Scaffold(body: Text('at:$r')),

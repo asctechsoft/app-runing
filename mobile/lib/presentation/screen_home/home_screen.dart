@@ -17,6 +17,7 @@ import '../../services/application/reminder_scheduler.dart';
 import '../../services/application/step_source_priority.dart';
 import '../../services/application/step_tracking_service.dart';
 import '../../services/native/permission_coordinator.dart';
+import '../../utils/activity_format.dart' show activityTypeIcon;
 import '../../utils/analytics.dart';
 import '../../utils/clock.dart';
 import '../../utils/date_locale.dart';
@@ -246,6 +247,7 @@ class _Header extends ConsumerWidget {
             ),
           ),
         ),
+        IconButton(tooltip: 'home_community'.tr, onPressed: () => context.push(Routes.community), icon: const Icon(Icons.groups_outlined)),
         if (flags.notificationsInbox)
           IconButton(
             tooltip: unread > 0 ? 'home_notifications_unread'.trArgs([unread]) : 'home_notifications'.tr,
@@ -484,6 +486,7 @@ class _ActivityCard extends StatelessWidget {
       ActivityType.run => 'home_type_run'.tr,
       ActivityType.walk => 'home_type_walk'.tr,
       ActivityType.indoorRun => 'home_type_indoor_run'.tr,
+      ActivityType.bike => 'home_type_bike'.tr,
     };
     final title = a.title.trim().isEmpty ? typeLabel : a.title;
     final start = DateTime.fromMillisecondsSinceEpoch(a.startedAt, isUtc: true).add(Duration(minutes: a.tzOffsetMin));
@@ -493,7 +496,7 @@ class _ActivityCard extends StatelessWidget {
       semanticLabel: '$title, ${AppDates.weekdayMonthDay(start)}',
       child: Row(
         children: [
-          IconBadge(icon: a.type == ActivityType.walk ? Icons.directions_walk : Icons.directions_run, size: 48),
+          IconBadge(icon: activityTypeIcon(a.type), size: 48),
           const SizedBox(width: StrideSpace.s12),
           Expanded(
             child: Column(

@@ -15,12 +15,13 @@ import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
 
 /// Quyết định màn đầu tiên (E01, L19). Thuần, không I/O — để test.
-/// Thứ tự: phiên chưa đóng (không bao giờ bị chặn) → chọn ngôn ngữ lần đầu → intro → thiết lập hồ sơ → Home.
+/// Thứ tự: phiên chưa đóng (không bao giờ bị chặn) → chọn ngôn ngữ lần đầu → intro → cập nhật thông tin
+/// (có nút "Đăng nhập" Google cho người từng có tài khoản) → xin quyền → Home.
 String decideStartRoute({required OwnerState owner, required bool languageChosen, Activity? unclosedSession}) {
   if (unclosedSession != null) return Routes.recovery;
   if (!languageChosen) return Routes.language;
   if (!owner.introSeen) return Routes.onboarding;
-  if (!owner.profileSetupDone) return owner.isGuest ? Routes.welcome : Routes.setupProfile;
+  if (!owner.profileSetupDone) return Routes.setupProfile;
   return Routes.home;
 }
 

@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/data_models/activity.dart';
@@ -11,6 +11,15 @@ String activityTypeLabel(ActivityType t) => switch (t) {
   ActivityType.run => 'activity_type_run'.tr,
   ActivityType.walk => 'activity_type_walk'.tr,
   ActivityType.indoorRun => 'activity_type_indoor_run'.tr,
+  ActivityType.bike => 'activity_type_bike'.tr,
+};
+
+/// Icon theo loại hoạt động (Home, History, chọn loại trong tab Run).
+IconData activityTypeIcon(ActivityType t) => switch (t) {
+  ActivityType.run => Icons.directions_run,
+  ActivityType.walk => Icons.directions_walk,
+  ActivityType.indoorRun => Icons.home_outlined,
+  ActivityType.bike => Icons.pedal_bike,
 };
 
 String feelingLabel(Feeling? f) => switch (f) {
@@ -52,6 +61,7 @@ String activityDisplayTitle(Activity a) {
     ActivityType.run => 'run',
     ActivityType.walk => 'walk',
     ActivityType.indoorRun => 'indoor_run',
+    ActivityType.bike => 'bike',
   };
   return 'activity_title_${part}_$kind'.tr;
 }

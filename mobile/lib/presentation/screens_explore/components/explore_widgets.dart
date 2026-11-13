@@ -118,3 +118,32 @@ class ExploreLoadMore extends StatelessWidget {
     ),
   );
 }
+
+/// Hộp nhập lý do báo cáo (dùng cho bài trong club và bài Cộng đồng). Trả null khi hủy.
+Future<String?> askReportReason(BuildContext context, String title) {
+  final c = TextEditingController();
+  return showStrideSheet<String>(
+    context,
+    title: title,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setState) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('explore_report_prompt'.tr, style: StrideText.bodySecondary),
+          const Gap(12),
+          TextField(
+            controller: c,
+            autofocus: true,
+            maxLength: 500,
+            minLines: 2,
+            maxLines: 4,
+            decoration: InputDecoration(labelText: 'explore_report_reason'.tr),
+            onChanged: (_) => setState(() {}),
+          ),
+          const Gap(8),
+          PrimaryButton(label: 'explore_report_send'.tr, onPressed: c.text.trim().isEmpty ? null : () => Navigator.of(ctx).pop(c.text.trim())),
+        ],
+      ),
+    ),
+  );
+}

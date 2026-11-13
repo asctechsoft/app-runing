@@ -165,6 +165,7 @@ String defaultActivityTitle(ActivityType type, DateTime local) {
     ActivityType.run => 'run',
     ActivityType.walk => 'walk',
     ActivityType.indoorRun => 'indoor',
+    ActivityType.bike => 'bike',
   };
   return 'run_title_${part}_$noun'.tr;
 }
@@ -173,4 +174,5 @@ String activityTypeLabel(ActivityType type) => switch (type) {
   ActivityType.run => 'run_type_run'.tr,
   ActivityType.walk => 'run_type_walk'.tr,
   ActivityType.indoorRun => 'run_type_indoor'.tr,
+  ActivityType.bike => 'run_type_bike'.tr,
 };

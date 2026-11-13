@@ -331,6 +331,33 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ---- Cộng đồng: chỉ người đã đăng nhập đọc, đăng và thả tim. `activity` là số liệu tóm tắt (không tọa độ/ghi chú/id hoạt động).
+    function validCommunityPost(d) {
+      return d.keys().hasOnly(['authorId', 'authorName', 'text', 'createdAt', 'likeCount', 'deletedAt', 'activity']) &&
+        d.authorId == request.auth.uid &&
+        d.authorName is string && d.authorName.size() <= 60 &&
+        d.text is string && d.text.size() <= 500 &&
+        d.createdAt is int && d.likeCount == 0 && d.get('deletedAt', null) == null &&
+        d.activity is map &&
+        d.activity.keys().hasOnly(['type', 'startedAt', 'distanceM', 'distanceEstimated', 'movingMs', 'avgPaceSecPerKm']) &&
+        d.activity.type in ['run', 'walk', 'indoorRun', 'bike'];
+    }
+
+    match /communityPosts/{postId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && validCommunityPost(request.resource.data);
+      allow update: if signedIn() && (
+        (resource.data.authorId == request.auth.uid && onlyChanges(['deletedAt'])) ||
+        (onlyChanges(['likeCount']) && counterStep('likeCount'))
+      );
+      allow delete: if false;
+
+      match /likes/{uid} {
+        allow read: if signedIn();
+        allow create, delete: if isOwner(uid);
+      }
+    }
+
     // ---- Chỉ tạo
     match /reports/{id} {
       allow create: if signedIn() && request.resource.data.reporterId == request.auth.uid;

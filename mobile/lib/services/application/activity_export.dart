@@ -25,6 +25,7 @@ String? buildGpx(Activity a, List<TrackPoint> points, {String title = ''}) {
   final name = _xml(title.isNotEmpty ? title : a.title);
   final type = switch (a.type) {
     ActivityType.walk => 'walking',
+    ActivityType.bike => 'biking',
     _ => 'running',
   };
   final b = StringBuffer()

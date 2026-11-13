@@ -39,12 +39,13 @@ void main() {
 
   bool selectedTitle(WidgetTester tester, String title) => tester.widget<LanguageTile>(find.widgetWithText(LanguageTile, title)).selected;
 
-  Future<void> pumpFirstRun(WidgetTester tester, SharedPreferences p, {double textScale = 1}) async {
+  /// [waitContinue]: chờ qua 3 giây để nút Tiếp tục hiện (mặc định); false → chụp ngay sau khi dựng màn.
+  Future<void> pumpFirstRun(WidgetTester tester, SharedPreferences p, {double textScale = 1, bool waitContinue = true}) async {
     final router = GoRouter(
       initialLocation: Routes.language,
       routes: [
         GoRoute(path: Routes.language, builder: (_, _) => const LanguageSelectionScreen()),
-        for (final r in [Routes.onboarding, Routes.welcome, Routes.home])
+        for (final r in [Routes.onboarding, Routes.home])
           GoRoute(
             path: r,
             builder: (_, _) => Scaffold(body: Text('at:$r')),
@@ -64,7 +65,28 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    if (waitContinue) {
+      await tester.pump(LanguageSelectionScreen.continueDelay);
+      await tester.pumpAndSettle();
+    }
   }
+
+  double continueOpacity(WidgetTester tester) =>
+      tester.widget<AnimatedOpacity>(find.ancestor(of: find.text('Continue'), matching: find.byType(AnimatedOpacity))).opacity;
+
+  testWidgets('nút Tiếp tục ẩn và không bấm được 3 giây đầu, sau đó mới hiện', (tester) async {
+    final p = await prefs();
+    await pumpFirstRun(tester, p, waitContinue: false);
+    expect(continueOpacity(tester), 0, reason: 'chưa đủ 3 giây');
+    // Chạm vào chỗ nút đang ẩn không được đi tiếp.
+    await tester.tap(find.text('Continue'), warnIfMissed: false);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(p.getBool(PrefConst.languageChosen), isNull);
+    await tester.pump(LanguageSelectionScreen.continueDelay);
+    await tester.pumpAndSettle();
+    expect(continueOpacity(tester), 1);
+    expect(find.text('Continue').hitTestable(), findsOneWidget);
+  });
 
   testWidgets('mặc định tô sẵn ngôn ngữ của máy; có dòng "Theo hệ thống"; nút Tiếp tục luôn bật', (tester) async {
     await pumpFirstRun(tester, await prefs());

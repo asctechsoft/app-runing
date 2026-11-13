@@ -17,6 +17,9 @@ enum IneligibleReason {
   /// `indoorRun`: quãng đường ước lượng từ bước, không có GPS thật.
   indoor,
 
+  /// `bike`: đạp xe được ghi và chia sẻ riêng, không tính vào chuỗi/nhóm/thử thách chạy-đi bộ.
+  cycling,
+
   /// Không có điểm GPS hợp lệ hoặc quãng đường không đến từ GPS.
   noGps,
 
@@ -37,6 +40,7 @@ enum IneligibleReason {
 IneligibleReason? streakIneligibility(Activity a) {
   if (a.status != ActivityStatus.saved || a.deletedAt != null) return IneligibleReason.notSaved;
   if (a.type == ActivityType.indoorRun) return IneligibleReason.indoor;
+  if (a.type == ActivityType.bike) return IneligibleReason.cycling;
   final d = a.distanceM;
   if (!a.hasGps || a.distanceSource != DistanceSource.gps || d == null) return IneligibleReason.noGps;
   if (a.locationMocked) return IneligibleReason.mockedLocation;

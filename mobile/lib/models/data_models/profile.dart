@@ -6,6 +6,8 @@ enum WeightUnit { kg, lb }
 
 enum HeightUnit { cm, ftin }
 
+enum Gender { male, female }
+
 enum ActivityLevel { newbie, occasional, regular, active }
 
 enum GoalType { dailySteps, weeklyRuns, weeklyDistanceM }
@@ -57,6 +59,9 @@ class UserSettings {
     this.audioCues = const AudioCueSettings(),
     this.autoPause = false,
     this.avatarPath,
+    this.gender,
+    this.countryCode,
+    this.birthDate,
     this.revision = 0,
     this.updatedAt = 0,
   });
@@ -74,6 +79,13 @@ class UserSettings {
   final AudioCueSettings audioCues;
   final bool autoPause;
   final String? avatarPath;
+
+  /// Thông tin thêm ở bước cập nhật hồ sơ; lưu cục bộ (không đưa vào `toJson` đồng bộ lên Firestore).
+  final Gender? gender;
+  final String? countryCode;
+
+  /// Ngày sinh dạng `YYYY-MM-DD`.
+  final String? birthDate;
   final int revision;
   final int updatedAt;
 
@@ -93,6 +105,10 @@ class UserSettings {
     AudioCueSettings? audioCues,
     bool? autoPause,
     String? avatarPath,
+    Gender? gender,
+    String? countryCode,
+    String? birthDate,
+    bool clearBirthDate = false,
     int? revision,
     int? updatedAt,
   }) => UserSettings(
@@ -109,6 +125,9 @@ class UserSettings {
     audioCues: audioCues ?? this.audioCues,
     autoPause: autoPause ?? this.autoPause,
     avatarPath: avatarPath ?? this.avatarPath,
+    gender: gender ?? this.gender,
+    countryCode: countryCode ?? this.countryCode,
+    birthDate: clearBirthDate ? null : (birthDate ?? this.birthDate),
     revision: revision ?? this.revision,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -130,7 +149,7 @@ class UserSettings {
 
   Map<String, Object?> toRow() => {
     'owner_id': ownerId,
-    'json': jsonEncode({...toJson(), 'avatarPath': avatarPath}),
+    'json': jsonEncode({...toJson(), 'avatarPath': avatarPath, 'gender': gender?.name, 'countryCode': countryCode, 'birthDate': birthDate}),
     'revision': revision,
     'updated_at': updatedAt,
   };
@@ -149,6 +168,9 @@ class UserSettings {
     audioCues: j['audioCues'] is Map ? AudioCueSettings.fromJson((j['audioCues'] as Map).cast<String, Object?>()) : const AudioCueSettings(),
     autoPause: j['autoPause'] as bool? ?? false,
     avatarPath: j['avatarPath'] as String?,
+    gender: j['gender'] == null ? null : _byName(Gender.values, j['gender'], Gender.male),
+    countryCode: j['countryCode'] as String?,
+    birthDate: j['birthDate'] as String?,
     revision: (j['revision'] as num?)?.toInt() ?? 0,
     updatedAt: updatedAt ?? 0,
   );

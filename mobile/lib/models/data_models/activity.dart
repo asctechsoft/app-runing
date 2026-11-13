@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 /// Loại hoạt động. indoorRun chỉ dùng khi flag `run.indoor` bật.
-enum ActivityType { run, walk, indoorRun }
+enum ActivityType { run, walk, indoorRun, bike }
 
 /// Trạng thái phiên (C05). Tên khớp docs/domain-model.md.
 enum ActivityStatus { recording, paused, awaitingSave, saved, discarded, recoveryNeeded }

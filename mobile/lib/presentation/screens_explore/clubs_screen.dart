@@ -893,7 +893,7 @@ class _PostCardState extends ConsumerState<_PostCard> {
         case _PostAction.reportPost:
         case _PostAction.reportUser:
           final isUser = a == _PostAction.reportUser;
-          final reason = await _askReason(context, isUser ? 'explore_report_user_title'.trArgs([name]) : 'explore_report_post'.tr);
+          final reason = await askReportReason(context, isUser ? 'explore_report_user_title'.trArgs([name]) : 'explore_report_post'.tr);
           if (reason == null) return;
           await repo.report(targetType: isUser ? 'user' : 'post', targetId: isUser ? p.authorId : p.id, reason: reason);
           if (mounted) showStrideSnack(context, 'explore_report_sent'.tr);
@@ -1035,34 +1035,6 @@ class _PostCardState extends ConsumerState<_PostCard> {
       ),
     );
   }
-}
-
-Future<String?> _askReason(BuildContext context, String title) {
-  final c = TextEditingController();
-  return showStrideSheet<String>(
-    context,
-    title: title,
-    builder: (ctx) => StatefulBuilder(
-      builder: (ctx, setState) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('explore_report_prompt'.tr, style: StrideText.bodySecondary),
-          const Gap(12),
-          TextField(
-            controller: c,
-            autofocus: true,
-            maxLength: 500,
-            minLines: 2,
-            maxLines: 4,
-            decoration: InputDecoration(labelText: 'explore_report_reason'.tr),
-            onChanged: (_) => setState(() {}),
-          ),
-          const Gap(8),
-          PrimaryButton(label: 'explore_report_send'.tr, onPressed: c.text.trim().isEmpty ? null : () => Navigator.of(ctx).pop(c.text.trim())),
-        ],
-      ),
-    ),
-  );
 }
 
 class _ActivitySummary extends StatelessWidget {

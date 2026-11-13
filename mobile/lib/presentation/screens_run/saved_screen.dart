@@ -10,6 +10,7 @@ import '../../utils/l10n.dart';
 import '../../values/routes.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
+import '../screens_community/share_to_community.dart';
 import 'components/run_widgets.dart';
 
 final _savedActivityProvider = FutureProvider.autoDispose.family<Activity?, String>((ref, id) {
@@ -113,6 +114,12 @@ class SavedScreen extends ConsumerWidget {
                     label: 'run_saved_view'.tr,
                     trailingIcon: Icons.arrow_forward,
                     onPressed: () => _leave(context, ref, Routes.historyActivity(activityId)),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlineButton(
+                    label: 'community_share_button'.tr,
+                    icon: Icons.groups_outlined,
+                    onPressed: () => shareRunToCommunity(context, ref, async.value!),
                   ),
                   const SizedBox(height: 8),
                   OutlineButton(label: 'run_back_home'.tr, onPressed: () => _leave(context, ref, Routes.home)),

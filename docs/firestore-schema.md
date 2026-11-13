@@ -47,6 +47,10 @@ document. Thành viên active đọc; app ghi lại mỗi lần mở (Home). Chu
 `uses` chỉ tăng 1 trong cùng transaction người dùng vào club bằng mã đó.
 `posts/{postId}` → `{clubId, authorId, authorName, text, createdAt, cheerCount, commentCount, deletedAt|null, activity?}` — `activity` (TM06) chỉ gồm `{id, type, title, startedAt, distanceM?, distanceEstimated, movingMs, avgPaceSecPerKm?, steps?}`: không tọa độ, không bản đồ, không ghi chú (rules chặn khóa khác)
 `posts/{postId}/cheers/{uid}` → `{createdAt}`
+
+Cộng đồng (chia sẻ buổi chạy; **chỉ người đã đăng nhập** đọc/đăng/thả tim — khách không xem được):
+`communityPosts/{postId}` → `{authorId, authorName, text, createdAt, likeCount, deletedAt|null, activity}` — `activity` chỉ gồm `{type(run|walk|indoorRun|bike), startedAt, distanceM?, distanceEstimated, movingMs, avgPaceSecPerKm?}`: không tọa độ, không bản đồ, không ghi chú, không id hoạt động (rules chặn khóa khác). Tác giả chỉ đặt `deletedAt`; người khác chỉ đổi `likeCount` ±1.
+`communityPosts/{postId}/likes/{uid}` → `{createdAt}` (chỉ chính `uid` tạo/xóa)
 `posts/{postId}/comments/{commentId}` → `{authorId, authorName, text, createdAt, deletedAt|null}`
 `events/{eventId}` → `{clubId, title, description, location, startsAt, endsAt|null, tzId, maxGoing|null, createdBy, goingCount, cancelledAt|null, createdAt, updatedAt}`
 — TM05: owner/admin tạo (giờ trong tương lai, `goingCount` = 0); người tạo hoặc owner/admin sửa trước giờ bắt đầu (không hạ `maxGoing` dưới
