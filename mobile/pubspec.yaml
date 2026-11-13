@@ -70,6 +70,7 @@ dependencies:
     git:
       url: https://github.com/asctechsoft/asc_common.git
       ref: 96a4c3b573fa16e8c4bb3bb28a004b66881ed7d0
+  video_player: ^2.14.1
 
 dev_dependencies:
   flutter_test:

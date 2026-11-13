@@ -18,6 +18,11 @@ import json
 import os
 import sys
 
+# Windows: stdout/stdin mặc định cp1252 → in emoji/tiếng Việt lỗi; ép UTF-8.
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8", errors="replace")
+
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 os.chdir(PROJECT_DIR)
 sys.path.insert(0, os.path.join(PROJECT_DIR, "tool"))

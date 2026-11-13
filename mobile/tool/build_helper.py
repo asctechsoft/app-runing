@@ -73,7 +73,7 @@ def func_get_build_version_and_number():
     global BUILD_VERSION, BUILD_NUMBER
     # Update the patch version (z) in version: x.y.z+a in pubspec.yaml, increment z by 1
     pubspec_path = 'pubspec.yaml'
-    with open(pubspec_path, 'r') as f:
+    with open(pubspec_path, 'r', encoding='utf-8') as f:
         lines = f.readlines()
     for i, line in enumerate(lines):
         if line.strip().startswith('version:'):
@@ -186,7 +186,7 @@ def _get_git_uncommitted_summary():
 def func_release_note():
     # Ensure .gitignore entries
     if os.path.exists('.gitignore'):
-        with open('.gitignore', 'r') as f:
+        with open('.gitignore', 'r', encoding='utf-8') as f:
             gitignore_lines = f.readlines()
 
         entries_to_add = []
@@ -194,7 +194,7 @@ def func_release_note():
             if entry not in gitignore_lines and entry + '\n' not in gitignore_lines:
                 entries_to_add.append(entry)
         if entries_to_add:
-            with open('.gitignore', 'a') as f:
+            with open('.gitignore', 'a', encoding='utf-8') as f:
                 for entry in entries_to_add:
                     f.write('\n' + entry)
 
