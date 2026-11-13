@@ -73,7 +73,7 @@ class ActivityCard extends ConsumerWidget {
                       padding: const EdgeInsets.only(top: 2, bottom: 6),
                       child: Row(
                         children: [
-                          Icon(a.type == ActivityType.walk ? Icons.directions_walk : Icons.directions_run, size: 16, color: StrideColors.primary),
+                          Icon(activityTypeIcon(a.type), size: 16, color: StrideColors.primary),
                           const SizedBox(width: 4),
                           Text(activityTypeLabel(a.type), style: StrideText.caption.copyWith(color: StrideColors.textSecondary)),
                           const Spacer(),

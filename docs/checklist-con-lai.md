@@ -591,3 +591,16 @@ Nguồn: đối chiếu `Full_luong_app_dem_buoc_chan_chay_bo.docx`, `STRIDE_Tod
 | Token chuyển động / màu | `mobile/lib/values/tokens.dart` |
 | Test chuỗi | `mobile/test/core/strings_xml_test.dart` |
 | Chạy app trên máy | `flutter run --flavor dev` (xem `docs/build.md`) |
+
+---
+
+## Luồng mới (2026-11-13) — luồng đầu app, Run, Cộng đồng
+Luồng: splash → chọn ngôn ngữ (nút Tiếp tục hiện sau 3 giây) → 3 màn onboarding → Cập nhật thông tin (Bắt đầu / Đăng nhập Google) → Yêu cầu quyền truy cập → Home. Tab Run: bản đồ + chọn Đi bộ / Chạy bộ / Đạp xe → đếm ngược 3 giây phủ trên bản đồ. Cộng đồng: chỉ người đăng nhập xem, chia sẻ buổi chạy từ màn Saved (kèm chú thích), thả tim, báo cáo/chặn, phân trang.
+Đã có 585 test tự động đạt và `firestore.rules` 42/42 ca (Emulator). ID `FL` để không trùng `N01…` ở trên.
+- [ ] **FL01 · P1** — Chạy thử cả luồng trên máy thật (Android): ngôn ngữ → onboarding → hồ sơ → quyền → Home; Đăng nhập Google từ màn hồ sơ (cần SHA-1, xem `FB08`); chia sẻ, thả tim, báo cáo, chặn với Firestore thật (cần deploy `firestore.rules`, xem `FB02`).
+- [ ] **FL02 · P1** — Hàng "Đồng bộ với Google Fit (Tùy chọn)" ở màn quyền **chưa làm**: Google Fit đã ngừng, cần Health Connect (`F02`, cờ `steps.health` đang tắt). Không ship nút giả.
+- [x] **FL03 · P2** — Dọn mã không còn trong luồng. Người: Claude · 2026-11-13 · Bằng chứng: xóa `SetupGoalScreen`, `WelcomeScreen`, `SetupHeader` và hai route `/setup/goal`, `/welcome`; đăng xuất và `AuthScaffold` fallback về `Routes.startup` (tự quyết màn đầu); bỏ link "Đăng nhập" email ở onboarding; xóa 134 chuỗi mồ côi (en + vi). Đăng ký/đăng nhập email vẫn còn ở Hồ sơ → Tài khoản, Explore, Live share (chưa gỡ).
+- [x] **FL04 · P2** — Giới tính, quốc gia, ngày sinh đồng bộ lên `users/{uid}.profile` (`profilePayloadForServer` / `settingsFromServerProfile`); tài khoản cũ chưa có trường mới thì giữ giá trị trên máy. Bằng chứng: `test/sync/profile_payload_test.dart`. Rules `users/{uid}` không đổi (chủ sở hữu đọc/ghi).
+- [x] **FL05 · P2** — Đạp xe (`ActivityType.bike`): bộ lọc "Đạp xe" ở History; calo theo MET xe đạp; không tính vào chuỗi/nhóm/thử thách (`IneligibleReason.cycling`) nên không cần ngưỡng pace riêng.
+- [x] **FL06 · P2** — Cộng đồng: phân trang 20 bài/trang (cursor `createdAt`), báo cáo bài/người dùng (`reports`), chặn người dùng (chung `users/{uid}/blocks` với Explore), chú thích ≤ 280 ký tự khi chia sẻ. Bằng chứng: `test/community/*`. Còn lại: push khi được thả tim.
+- [x] **FL07 · P2** — Đếm ngược 3-2-1 phủ trên bản đồ nền tại vị trí hiện tại, tiêu đề theo loại ("Đang đi bộ/chạy bộ/đạp xe").

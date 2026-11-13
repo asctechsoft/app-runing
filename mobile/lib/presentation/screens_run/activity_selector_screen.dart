@@ -28,6 +28,7 @@ class _ActivitySelectorScreenState extends ConsumerState<ActivitySelectorScreen>
     final options = <(ActivityType, IconData, String)>[
       (ActivityType.run, Icons.directions_run, 'run_activity_run_desc'.tr),
       (ActivityType.walk, Icons.directions_walk, 'run_activity_walk_desc'.tr),
+      (ActivityType.bike, Icons.pedal_bike, 'run_activity_bike_desc'.tr),
       if (flags.runIndoor) (ActivityType.indoorRun, Icons.home_outlined, 'run_activity_indoor_desc'.tr),
     ];
     return StrideScreen(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,12 +21,18 @@ class LanguageSelectionScreen extends ConsumerStatefulWidget {
 
   final bool firstRun;
 
+  /// Lần đầu: nút "Tiếp tục" chỉ hiện sau khoảng này để người dùng kịp chọn ngôn ngữ.
+  static const continueDelay = Duration(seconds: 3);
+
   @override
   ConsumerState<LanguageSelectionScreen> createState() => _LanguageSelectionScreenState();
 }
 
 class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScreen> {
   final _guard = OnceGuard();
+  Timer? _continueTimer;
+
+  bool _canContinue = false;
 
   String get _source => widget.firstRun ? 'first_run' : 'settings';
 
@@ -32,6 +40,17 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
   void initState() {
     super.initState();
     Analytics.languageScreenView(source: _source);
+    if (widget.firstRun) {
+      _continueTimer = Timer(LanguageSelectionScreen.continueDelay, () {
+        if (mounted) setState(() => _canContinue = true);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _continueTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _selectLocale(Locale l) async {
@@ -93,8 +112,18 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
                 ),
                 Padding(
                   padding: EdgeInsets.fromLTRB(StrideScreen.gutterOf(context), StrideSpace.s8, StrideScreen.gutterOf(context), StrideSpace.s16),
-                  // Luôn bật: ngôn ngữ của máy đã được chọn sẵn.
-                  child: PrimaryButton(label: 'lang_continue'.tr, trailingIcon: Icons.arrow_forward, onPressed: _continue),
+                  // Giữ chỗ để bố cục không nhảy; chỉ nhận chạm và đọc được sau 3 giây.
+                  child: AnimatedOpacity(
+                    opacity: _canContinue ? 1 : 0,
+                    duration: StrideMotion.of(context, StrideMotion.screen),
+                    child: IgnorePointer(
+                      ignoring: !_canContinue,
+                      child: ExcludeSemantics(
+                        excluding: !_canContinue,
+                        child: PrimaryButton(label: 'lang_continue'.tr, trailingIcon: Icons.arrow_forward, onPressed: _continue),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),

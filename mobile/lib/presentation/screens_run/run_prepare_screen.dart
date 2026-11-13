@@ -12,6 +12,7 @@ import '../../controller/run/engine/run_sources.dart';
 import '../../models/data_models/activity.dart';
 import '../../models/data_models/session_state.dart';
 import '../../services/native/permission_coordinator.dart';
+import '../../utils/activity_format.dart' show activityTypeIcon;
 import '../../utils/l10n.dart';
 import '../../values/routes.dart';
 import '../../values/tokens.dart';
@@ -36,6 +37,7 @@ class _RunPrepareScreenState extends ConsumerState<RunPrepareScreen> with Widget
   bool _visible = false;
   bool _appActive = true;
   final _startGuard = OnceGuard();
+  bool _moreOpen = false;
 
   @override
   void initState() {
@@ -217,152 +219,202 @@ class _RunPrepareScreenState extends ConsumerState<RunPrepareScreen> with Widget
     final g = StrideScreen.gutterOf(context);
     final startLabel = setup.plan != null
         ? 'run_prepare_start_workout'.tr
-        : setup.type == ActivityType.walk
-        ? 'run_prepare_start_walk'.tr
-        : 'run_prepare_start_run'.tr;
+        : switch (setup.type) {
+            ActivityType.walk => 'run_hub_start_walk'.tr,
+            ActivityType.bike => 'run_hub_start_bike'.tr,
+            _ => 'run_hub_start_run'.tr,
+          };
+    final mapHeight = (MediaQuery.sizeOf(context).height * 0.4).clamp(240.0, 440.0);
+    final needPermission = !indoor && _perm != null && !_locationOk;
 
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: StrideSpace.maxContentWidth),
-            child: ListView(
-              padding: EdgeInsets.fromLTRB(g, 16, g, 24),
+            child: Column(
               children: [
-                Text('run_prepare_title'.tr, style: StrideText.title),
-                Text(longDate(ref.read(clockProvider).nowMs()), style: StrideText.bodySecondary),
-                const SizedBox(height: 16),
-                if (st.isActive) ...[
-                  StatusBanner(
-                    tone: BannerTone.info,
-                    title: 'run_prepare_active_title'.tr,
-                    message: 'run_prepare_active_message'.tr,
-                    actionLabel: 'run_prepare_return'.tr,
-                    onAction: () => context.go(Routes.live),
-                  ),
-                  const SizedBox(height: 12),
-                ] else if (st.phase == SessionPhase.awaitingSave) ...[
-                  StatusBanner(
-                    tone: BannerTone.warning,
-                    title: 'run_prepare_unsaved_title'.tr,
-                    message: 'run_prepare_unsaved_message'.tr,
-                    actionLabel: 'run_prepare_review'.tr,
-                    onAction: () => context.go(Routes.results),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (indoor)
-                  SageCard(
-                    child: Row(
-                      children: [
-                        const IconBadge(icon: Icons.home_outlined),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                Expanded(
+                  child: ListView(
+                    padding: EdgeInsets.fromLTRB(g, 16, g, 16),
+                    children: [
+                      Semantics(header: true, child: Text('run_hub_title'.tr, style: StrideText.title)),
+                      const SizedBox(height: 12),
+                      if (st.isActive) ...[
+                        StatusBanner(
+                          tone: BannerTone.info,
+                          title: 'run_prepare_active_title'.tr,
+                          message: 'run_prepare_active_message'.tr,
+                          actionLabel: 'run_prepare_return'.tr,
+                          onAction: () => context.go(Routes.live),
+                        ),
+                        const SizedBox(height: 12),
+                      ] else if (st.phase == SessionPhase.awaitingSave) ...[
+                        StatusBanner(
+                          tone: BannerTone.warning,
+                          title: 'run_prepare_unsaved_title'.tr,
+                          message: 'run_prepare_unsaved_message'.tr,
+                          actionLabel: 'run_prepare_review'.tr,
+                          onAction: () => context.go(Routes.results),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      if (indoor)
+                        SageCard(
+                          child: Row(
                             children: [
-                              Text('run_prepare_indoor_title'.tr, style: StrideText.label),
-                              Text(
-                                settings?.heightCm == null ? 'run_prepare_indoor_no_height'.tr : 'run_prepare_indoor_estimated'.tr,
-                                style: StrideText.bodySecondary.copyWith(fontSize: 14),
+                              const IconBadge(icon: Icons.home_outlined),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('run_prepare_indoor_title'.tr, style: StrideText.label),
+                                    Text(
+                                      settings?.heightCm == null ? 'run_prepare_indoor_no_height'.tr : 'run_prepare_indoor_estimated'.tr,
+                                      style: StrideText.bodySecondary.copyWith(fontSize: 14),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
-                        ),
-                      ],
-                    ),
-                  )
-                else ...[
-                  if (_perm != null && !_locationOk)
-                    StrideCard(
-                      child: PermissionState(
-                        title: 'run_prepare_perm_title'.tr,
-                        message: 'run_prepare_perm_message'.tr,
-                        actionLabel: (_perm == PermStatus.blocked || _perm == PermStatus.restricted) ? 'run_prepare_open_settings'.tr : 'run_prepare_allow'.tr,
-                        onAction: _requestLocation,
-                        icon: Icons.location_off_outlined,
-                      ),
-                    )
-                  else ...[
-                    if (!_serviceOn) ...[
-                      StatusBanner(
-                        tone: BannerTone.warning,
-                        title: 'run_prepare_services_title'.tr,
-                        message: 'run_prepare_services_message'.tr,
-                        actionLabel: 'run_prepare_turn_on'.tr,
-                        onAction: () async {
-                          await ref.read(runLocationSourceProvider).openLocationSettings();
-                          await _checkPermission();
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(StrideRadius.card),
-                      child: SizedBox(
-                        height: 260,
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                              child: RunMap(
-                                current: _fix == null ? null : RunMapCurrent(lat: _fix!.lat, lon: _fix!.lon, accuracyM: _fix!.accuracyM),
-                              ),
+                        )
+                      else ...[
+                        if (_perm != null && _locationOk && !_serviceOn) ...[
+                          StatusBanner(
+                            tone: BannerTone.warning,
+                            title: 'run_prepare_services_title'.tr,
+                            message: 'run_prepare_services_message'.tr,
+                            actionLabel: 'run_prepare_turn_on'.tr,
+                            onAction: () async {
+                              await ref.read(runLocationSourceProvider).openLocationSettings();
+                              await _checkPermission();
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        // Bản đồ luôn hiện; có vị trí thì camera đi thẳng tới chỗ người dùng đang đứng.
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(StrideRadius.card),
+                          child: SizedBox(
+                            height: mapHeight,
+                            child: Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: RunMap(
+                                    initialZoom: 17,
+                                    current: _fix == null ? null : RunMapCurrent(lat: _fix!.lat, lon: _fix!.lon, accuracyM: _fix!.accuracyM),
+                                  ),
+                                ),
+                                if (!needPermission) Positioned(left: 12, top: 12, child: GpsStatusChip(quality: gps)),
+                                if (needPermission)
+                                  Positioned(
+                                    left: 12,
+                                    right: 12,
+                                    bottom: 12,
+                                    child: StrideCard(
+                                      child: PermissionState(
+                                        title: 'run_prepare_perm_title'.tr,
+                                        message: 'run_prepare_perm_message'.tr,
+                                        actionLabel: (_perm == PermStatus.blocked || _perm == PermStatus.restricted)
+                                            ? 'run_prepare_open_settings'.tr
+                                            : 'run_hub_perm_allow'.tr,
+                                        onAction: _requestLocation,
+                                        icon: Icons.location_off_outlined,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
-                            Positioned(left: 12, top: 12, child: GpsStatusChip(quality: gps)),
+                          ),
+                        ),
+                        if (_perm == PermStatus.limited) ...[
+                          const SizedBox(height: 8),
+                          StatusBanner(
+                            tone: BannerTone.info,
+                            message: 'run_prepare_precise_off'.tr,
+                            actionLabel: 'run_settings'.tr,
+                            onAction: () => ref.read(permissionsProvider).openSettings(),
+                          ),
+                        ],
+                      ],
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          for (final (type, label) in [
+                            (ActivityType.walk, 'run_hub_walk'.tr),
+                            (ActivityType.run, 'run_hub_run'.tr),
+                            (ActivityType.bike, 'run_hub_bike'.tr),
+                          ])
+                            _TypeOption(
+                              icon: activityTypeIcon(type),
+                              label: label,
+                              selected: setup.type == type,
+                              onTap: st.isActive
+                                  ? null
+                                  : () {
+                                      ref.read(runSessionProvider.notifier).setType(type);
+                                      _syncPreview();
+                                    },
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: () => setState(() => _moreOpen = !_moreOpen),
+                        icon: Icon(_moreOpen ? Icons.expand_less : Icons.expand_more),
+                        label: Text('run_hub_more'.tr),
+                      ),
+                      if (_moreOpen)
+                        SettingsGroup(
+                          children: [
+                            SettingsRow(
+                              icon: activityTypeIcon(setup.type),
+                              title: activityTypeLabel(setup.type),
+                              subtitle: indoor ? 'run_prepare_type_indoor'.tr : 'run_prepare_type_outdoor'.tr,
+                              onTap: () => context.push(Routes.runActivity),
+                            ),
+                            SettingsRow(
+                              icon: Icons.flag_outlined,
+                              title: 'run_prepare_row_goal'.tr,
+                              subtitle: runGoalLabel(setup.goal, fmt),
+                              onTap: () => context.push(Routes.runGoal),
+                            ),
+                            if (flags.workoutIntervals)
+                              SettingsRow(
+                                icon: Icons.timer_outlined,
+                                title: 'run_prepare_row_workout'.tr,
+                                subtitle: workoutLabel(setup.plan),
+                                onTap: () => context.push(Routes.runWorkout),
+                              ),
+                            SettingsRow(
+                              icon: Icons.volume_up_outlined,
+                              title: 'run_prepare_row_audio'.tr,
+                              subtitle: audioLabel,
+                              onTap: () => context.push(Routes.runAudio),
+                            ),
+                            if (flags.liveSharing)
+                              SettingsRow(
+                                icon: Icons.share_location_outlined,
+                                title: 'run_prepare_row_live'.tr,
+                                subtitle: _liveShareLabel(ref),
+                                onTap: () => context.push(Routes.runLiveShare),
+                              ),
                           ],
                         ),
-                      ),
-                    ),
-                    if (_perm == PermStatus.limited) ...[
-                      const SizedBox(height: 8),
-                      StatusBanner(
-                        tone: BannerTone.info,
-                        message: 'run_prepare_precise_off'.tr,
-                        actionLabel: 'run_settings'.tr,
-                        onAction: () => ref.read(permissionsProvider).openSettings(),
-                      ),
                     ],
-                  ],
-                ],
-                const SizedBox(height: 16),
-                SettingsGroup(
-                  children: [
-                    SettingsRow(
-                      icon: setup.type == ActivityType.walk ? Icons.directions_walk : Icons.directions_run,
-                      title: activityTypeLabel(setup.type),
-                      subtitle: indoor ? 'run_prepare_type_indoor'.tr : 'run_prepare_type_outdoor'.tr,
-                      onTap: () => context.push(Routes.runActivity),
-                    ),
-                    SettingsRow(
-                      icon: Icons.flag_outlined,
-                      title: 'run_prepare_row_goal'.tr,
-                      subtitle: runGoalLabel(setup.goal, fmt),
-                      onTap: () => context.push(Routes.runGoal),
-                    ),
-                    if (flags.workoutIntervals)
-                      SettingsRow(
-                        icon: Icons.timer_outlined,
-                        title: 'run_prepare_row_workout'.tr,
-                        subtitle: workoutLabel(setup.plan),
-                        onTap: () => context.push(Routes.runWorkout),
-                      ),
-                    SettingsRow(
-                      icon: Icons.volume_up_outlined,
-                      title: 'run_prepare_row_audio'.tr,
-                      subtitle: audioLabel,
-                      onTap: () => context.push(Routes.runAudio),
-                    ),
-                    if (flags.liveSharing)
-                      SettingsRow(
-                        icon: Icons.share_location_outlined,
-                        title: 'run_prepare_row_live'.tr,
-                        subtitle: _liveShareLabel(ref),
-                        onTap: () => context.push(Routes.runLiveShare),
-                      ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 24),
-                PrimaryButton(label: st.isActive ? 'run_prepare_return_activity'.tr : startLabel, trailingIcon: Icons.arrow_forward, onPressed: _start),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(g, 8, g, 16),
+                  child: PrimaryButton(
+                    label: st.isActive ? 'run_prepare_return_activity'.tr : startLabel,
+                    trailingIcon: Icons.arrow_forward,
+                    onPressed: _start,
+                  ),
+                ),
               ],
             ),
           ),
@@ -370,6 +422,53 @@ class _RunPrepareScreenState extends ConsumerState<RunPrepareScreen> with Widget
       ),
     );
   }
+}
+
+/// Nút tròn chọn loại hoạt động (Đi bộ / Chạy bộ / Đạp xe): chọn rồi thì icon xanh, nhãn đậm.
+class _TypeOption extends StatelessWidget {
+  const _TypeOption({required this.icon, required this.label, required this.selected, required this.onTap});
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    label: label,
+    excludeSemantics: true,
+    child: InkResponse(
+      onTap: onTap,
+      radius: 56,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 88),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 76,
+              height: 76,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: selected ? StrideColors.lime.withValues(alpha: 0.35) : StrideColors.surface,
+                border: Border.all(color: selected ? StrideColors.primary : StrideColors.borderSubtle, width: selected ? 2 : 1),
+              ),
+              child: Icon(icon, size: 38, color: selected ? StrideColors.primary : StrideColors.textMuted),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: StrideText.label.copyWith(
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? StrideColors.textPrimary : StrideColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 /// Trạng thái live share thật cho buổi sắp chạy (mặc định Off).

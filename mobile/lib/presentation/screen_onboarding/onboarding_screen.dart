@@ -45,7 +45,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _finish() => _guard.run(() async {
     await ref.read(ownerRepositoryProvider).markIntroSeen();
     ref.read(ownerProvider.notifier).reload();
-    if (mounted) context.go(Routes.welcome);
+    if (mounted) context.go(Routes.setupProfile);
   });
 
   void _next() {
@@ -107,24 +107,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     padding: const EdgeInsets.fromLTRB(StrideSpace.gutter, StrideSpace.s16, StrideSpace.gutter, StrideSpace.s8),
                     child: PrimaryButton(label: last ? 'onboarding_get_started'.tr : 'onboarding_next'.tr, trailingIcon: Icons.arrow_forward, onPressed: _next),
                   ),
-                  SizedBox(
-                    height: 56,
-                    child: _index == 0
-                        ? Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Flexible(child: Text('auth_have_account'.tr, style: StrideText.bodySecondary)),
-                              TextButton(
-                                onPressed: () => context.push(Routes.login),
-                                child: Text(
-                                  'auth_log_in'.tr,
-                                  style: StrideText.body.copyWith(color: StrideColors.primary, fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                            ],
-                          )
-                        : null,
-                  ),
+                  const SizedBox(height: StrideSpace.s16),
                 ],
               ),
             ),

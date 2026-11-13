@@ -93,6 +93,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     final short = a.movingMs < 60000 || (a.distanceM != null && a.distanceM! < 100);
     final title = switch (a.type) {
       ActivityType.walk => 'run_results_walk_done'.tr,
+      ActivityType.bike => 'run_results_bike_done'.tr,
       _ => st.setup.plan != null ? 'run_interval_complete'.tr : 'run_results_run_done'.tr,
     };
 

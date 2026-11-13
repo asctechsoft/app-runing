@@ -599,5 +599,5 @@ Future<void> _localSignOut(BuildContext context, WidgetRef ref) async {
   await ref.read(ownerRepositoryProvider).signOut();
   ref.read(ownerProvider.notifier).reload();
   await ref.read(syncServiceProvider).refreshStatus();
-  if (context.mounted) context.go(Routes.welcome);
+  if (context.mounted) context.go(Routes.startup);
 }

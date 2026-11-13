@@ -653,6 +653,44 @@ describe('liveShares — chủ ghi, người được mời đọc', () => {
   });
 });
 
+describe('communityPosts (+ likes) — chỉ người đã đăng nhập', () => {
+  const act = { type: 'run', startedAt: 1, distanceM: 5000, distanceEstimated: false, movingMs: 1800000, avgPaceSecPerKm: 360 };
+  const post = (extra = {}) => ({ authorId: 'alice', authorName: 'Alice', text: '', createdAt: 1, likeCount: 0, deletedAt: null, activity: act, ...extra });
+  beforeEach(async () => {
+    await seed('communityPosts/p1', post());
+  });
+  test('người đăng nhập đọc, đăng bài của mình, thả/bỏ tim (counter ±1), tác giả xóa mềm', async () => {
+    await ok(as('bob').get('communityPosts/p1'));
+    await ok(as('bob').list('communityPosts'));
+    await ok(as('bob').set('communityPosts/p2', post({ authorId: 'bob', authorName: 'Bob', activity: { ...act, type: 'bike' } })));
+    await ok(as('bob').set('communityPosts/p1/likes/bob', { createdAt: 1 }));
+    await ok(as('bob').update('communityPosts/p1', { likeCount: 1 }));
+    await ok(as('bob').update('communityPosts/p1', { likeCount: 0 }));
+    await ok(as('bob').delete('communityPosts/p1/likes/bob'));
+    await ok(as('alice').update('communityPosts/p1', { deletedAt: 5 }));
+  });
+  test('chưa đăng nhập không đọc, không đăng, không thả tim', async () => {
+    await denied(as(null).get('communityPosts/p1'));
+    await denied(as(null).list('communityPosts'));
+    await denied(as(null).set('communityPosts/p3', post()));
+    await denied(as(null).get('communityPosts/p1/likes/alice'));
+    await denied(as(null).set('communityPosts/p1/likes/alice', { createdAt: 1 }));
+  });
+  test('chặn: đăng thay người khác, trường lạ, tọa độ trong activity, loại sai, tim giả, nhảy counter, sửa nội dung, xóa cứng', async () => {
+    await denied(as('bob').set('communityPosts/p3', post({ authorId: 'alice' })));
+    await denied(as('bob').set('communityPosts/p4', post({ authorId: 'bob', extra: 1 })));
+    await denied(as('bob').set('communityPosts/p5', post({ authorId: 'bob', activity: { ...act, startLat: 21.0 } })));
+    await denied(as('bob').set('communityPosts/p6', post({ authorId: 'bob', activity: { ...act, type: 'swim' } })));
+    await denied(as('bob').set('communityPosts/p7', post({ authorId: 'bob', likeCount: 99 })));
+    await denied(as('bob').set('communityPosts/p1/likes/alice', { createdAt: 1 }));
+    await denied(as('bob').update('communityPosts/p1', { likeCount: 5 }));
+    await denied(as('bob').update('communityPosts/p1', { text: 'edited' }));
+    await denied(as('bob').update('communityPosts/p1', { deletedAt: 5 }));
+    await denied(as('alice').update('communityPosts/p1', { text: 'edited' }));
+    await denied(as('alice').delete('communityPosts/p1'));
+  });
+});
+
 describe('reports / feedback — chỉ tạo', () => {
   test('tạo đúng người gửi', async () => {
     await ok(as('bob').set('reports/r1', { reporterId: 'bob', targetId: 'p1' }));

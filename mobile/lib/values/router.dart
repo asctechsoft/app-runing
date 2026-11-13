@@ -24,7 +24,7 @@ import '../presentation/screens_auth/login_screen.dart';
 import '../presentation/screens_auth/merge_guest_screen.dart';
 import '../presentation/screens_auth/register_screen.dart';
 import '../presentation/screens_auth/verify_email_screen.dart';
-import '../presentation/screens_auth/welcome_screen.dart';
+import '../presentation/screens_community/community_screen.dart';
 import '../presentation/screens_explore/challenge_results_screen.dart';
 import '../presentation/screens_explore/challenges_screen.dart';
 import '../presentation/screens_explore/club_members_screen.dart';
@@ -55,7 +55,6 @@ import '../presentation/screens_run/run_goal_screen.dart';
 import '../presentation/screens_run/run_prepare_screen.dart';
 import '../presentation/screens_run/save_activity_screen.dart';
 import '../presentation/screens_run/saved_screen.dart';
-import '../presentation/screens_setup/setup_goal_screen.dart';
 import '../presentation/screens_setup/setup_permissions_screen.dart';
 import '../presentation/screens_setup/setup_profile_screen.dart';
 import '../presentation/screens_workout/interval_editor_screen.dart';
@@ -79,7 +78,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.startup, builder: (c, s) => const StartupScreen()),
       GoRoute(path: Routes.language, builder: (c, s) => const LanguageSelectionScreen()),
       GoRoute(path: Routes.onboarding, builder: (c, s) => const OnboardingScreen()),
-      GoRoute(path: Routes.welcome, builder: (c, s) => const WelcomeScreen()),
       GoRoute(path: Routes.login, builder: (c, s) => const LoginScreen()),
       GoRoute(path: Routes.register, builder: (c, s) => const RegisterScreen()),
       GoRoute(path: Routes.forgotPassword, builder: (c, s) => const ForgotPasswordScreen()),
@@ -93,9 +91,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: Routes.mergeGuest, builder: (c, s) => const MergeGuestScreen()),
       GoRoute(path: Routes.setupProfile, builder: (c, s) => const SetupProfileScreen()),
-      GoRoute(path: Routes.setupGoal, builder: (c, s) => const SetupGoalScreen()),
       GoRoute(path: Routes.setupPermissions, builder: (c, s) => const SetupPermissionsScreen()),
       GoRoute(path: Routes.recovery, builder: (c, s) => const RecoveryScreen()),
+      GoRoute(path: Routes.community, parentNavigatorKey: rootNavigatorKey, builder: (c, s) => const CommunityScreen()),
 
       // Phiên ghi: ẩn bottom navigation.
       GoRoute(path: Routes.countdown, builder: (c, s) => const CountdownScreen()),

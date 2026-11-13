@@ -19,13 +19,14 @@ import 'components/month_calendar.dart';
 
 enum HistoryView { list, calendar }
 
-enum HistoryTypeFilter { all, run, walk, indoor }
+enum HistoryTypeFilter { all, run, walk, bike, indoor }
 
 extension on HistoryTypeFilter {
   String get label => switch (this) {
     HistoryTypeFilter.all => 'history_filter_all'.tr,
     HistoryTypeFilter.run => 'history_filter_run'.tr,
     HistoryTypeFilter.walk => 'history_filter_walk'.tr,
+    HistoryTypeFilter.bike => 'history_filter_bike'.tr,
     HistoryTypeFilter.indoor => 'history_filter_indoor'.tr,
   };
 
@@ -33,6 +34,7 @@ extension on HistoryTypeFilter {
     HistoryTypeFilter.all => null,
     HistoryTypeFilter.run => {ActivityType.run},
     HistoryTypeFilter.walk => {ActivityType.walk},
+    HistoryTypeFilter.bike => {ActivityType.bike},
     HistoryTypeFilter.indoor => {ActivityType.indoorRun},
   };
 }
@@ -171,7 +173,13 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     final g = StrideScreen.gutterOf(context);
 
     final noActivitiesAtAll = _feed.ownerTotal == 0 && !_feed.loading && _feed.error == null;
-    final filters = [HistoryTypeFilter.all, HistoryTypeFilter.run, HistoryTypeFilter.walk, if (flags.runIndoor) HistoryTypeFilter.indoor];
+    final filters = [
+      HistoryTypeFilter.all,
+      HistoryTypeFilter.run,
+      HistoryTypeFilter.walk,
+      HistoryTypeFilter.bike,
+      if (flags.runIndoor) HistoryTypeFilter.indoor,
+    ];
 
     final slivers = <Widget>[
       SliverToBoxAdapter(
@@ -358,6 +366,7 @@ class _TotalsCard extends StatelessWidget {
     final countLabel = switch (type) {
       HistoryTypeFilter.run => 'history_total_run'.trPlural(t?.count ?? 0),
       HistoryTypeFilter.walk => 'history_total_walk'.trPlural(t?.count ?? 0),
+      HistoryTypeFilter.bike => 'history_total_bike'.trPlural(t?.count ?? 0),
       HistoryTypeFilter.indoor => 'history_total_indoor'.trPlural(t?.count ?? 0),
       HistoryTypeFilter.all => 'history_total_activity'.trPlural(t?.count ?? 0),
     };

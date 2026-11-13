@@ -11,6 +11,14 @@ double metForSpeed(ActivityType type, double speedKmh) {
     if (speedKmh < 6.4) return 4.3;
     return 5.0;
   }
+  if (type == ActivityType.bike) {
+    if (speedKmh < 16.1) return 4.0;
+    if (speedKmh < 19.3) return 6.8;
+    if (speedKmh < 22.5) return 8.0;
+    if (speedKmh < 25.7) return 10.0;
+    if (speedKmh < 30.6) return 12.0;
+    return 15.8;
+  }
   if (speedKmh < 6.4) return 6.0;
   if (speedKmh < 8.0) return 8.3;
   if (speedKmh < 9.7) return 9.8;

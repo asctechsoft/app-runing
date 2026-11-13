@@ -4,7 +4,6 @@ abstract final class Routes {
   static const startup = '/';
   static const language = '/language'; // chọn ngôn ngữ lần đầu (L19)
   static const onboarding = '/onboarding';
-  static const welcome = '/welcome';
   static const login = '/auth/login';
   static const register = '/auth/register';
   static const forgotPassword = '/auth/forgot';
@@ -12,9 +11,11 @@ abstract final class Routes {
   static const verifyEmail = '/auth/verify'; // ?email=
   static const mergeGuest = '/auth/merge';
   static const setupProfile = '/setup/profile';
-  static const setupGoal = '/setup/goal';
   static const setupPermissions = '/setup/permissions';
   static const recovery = '/recovery';
+
+  // Cộng đồng (chỉ người đã đăng nhập xem được)
+  static const community = '/community';
 
   // Tab Home
   static const home = '/home';
