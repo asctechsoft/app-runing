@@ -157,11 +157,13 @@ void main() {
       return (c, sched);
     }
 
-    test('lưu/đọc lại bảng reminders; mặc định là tắt', () async {
+    test('lưu/đọc lại bảng reminders; mặc định chỉ bật nhắc bước chân 16:00 mỗi ngày', () async {
       final (c, _) = await make(PermStatus.granted);
       final repo = c.read(remindersRepositoryProvider);
       final initial = await repo.load('guest:r');
-      expect(initial.values.every((r) => !r.enabled), isTrue);
+      expect({for (final r in initial.values) r.kind: r.enabled}, {ReminderKind.dailySteps: true, ReminderKind.run: false, ReminderKind.streak: false});
+      expect(initial[ReminderKind.dailySteps]!.minuteOfDay, 16 * 60);
+      expect(initial[ReminderKind.dailySteps]!.weekdays, {1, 2, 3, 4, 5, 6, 7});
       final r = Reminder.defaults(ReminderKind.run).copyWith(enabled: true, minuteOfDay: 400, weekdays: {1, 7});
       await repo.save('guest:r', r);
       expect((await repo.load('guest:r'))[ReminderKind.run], r);

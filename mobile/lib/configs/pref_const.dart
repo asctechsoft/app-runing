@@ -20,4 +20,13 @@ class PrefConst {
   /// X23: số buổi đã lưu (đếm cho lời mời đánh giá) và lần hỏi gần nhất (ms).
   static const String reviewSavedRuns = 'stride_review_saved_runs';
   static const String reviewLastAskedMs = 'stride_review_last_asked_ms';
+
+  /// Tour giới thiệu lần đầu đã xem hoặc đã bỏ qua (theo thiết bị).
+  static const String tourSeen = 'stride_tour_seen';
+
+  /// Bài Cộng đồng đã đăng từ máy này, dạng JSON `{activityId: postId}` (để hiện "Ngừng chia sẻ" cho từng buổi).
+  static const String communityShared = 'stride_community_shared';
+
+  /// Đã hỏi quyền thông báo một lần (lần đầu có quyền chuyển động) để thông báo số bước hôm nay và nhắc giờ hiện được.
+  static const String notificationAsked = 'stride_notification_asked';
 }

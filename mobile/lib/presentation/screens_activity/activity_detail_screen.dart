@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../controller/activity/activity_actions.dart';
 import '../../controller/activity/activity_providers.dart';
+import '../../controller/community/community_providers.dart';
 import '../../controller/providers.dart';
 import '../../models/data_models/activity.dart';
 import '../../models/data_models/profile.dart';
@@ -19,13 +20,14 @@ import '../../utils/route_geometry.dart';
 import '../../values/routes.dart';
 import '../../values/tokens.dart';
 import '../common_components/widgets.dart';
+import '../screens_community/share_to_community.dart';
 import '../screens_explore/post_to_club_sheet.dart';
 import 'components/activity_charts.dart';
 import 'components/activity_map_view.dart';
 
 enum _DetailTab { overview, splits, charts }
 
-enum _MenuAction { edit, share, club, gpx, csv, delete }
+enum _MenuAction { edit, share, community, club, gpx, csv, delete }
 
 /// Chi tiết hoạt động (I02, F15). Dùng chung dưới /home, /progress, /history — luôn đọc theo ID từ DB local.
 class ActivityDetailScreen extends ConsumerStatefulWidget {
@@ -59,6 +61,12 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
         await _edit();
       case _MenuAction.share:
         await context.push(Routes.activityShare(widget.activityId));
+      case _MenuAction.community:
+        if (ref.read(communitySharesProvider).containsKey(d.activity.id)) {
+          await stopSharingRun(context, ref, d.activity.id);
+        } else {
+          await shareRunToCommunity(context, ref, d.activity);
+        }
       case _MenuAction.club:
         await showPostToClubSheet(context, d.activity);
       case _MenuAction.gpx:
@@ -124,6 +132,11 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
           itemBuilder: (_) => [
             PopupMenuItem(value: _MenuAction.edit, child: Text('activity_edit'.tr)),
             PopupMenuItem(value: _MenuAction.share, child: Text('activity_share_image'.tr)),
+            if (a.status == ActivityStatus.saved)
+              PopupMenuItem(
+                value: _MenuAction.community,
+                child: Text(ref.read(communitySharesProvider).containsKey(a.id) ? 'community_stop_button'.tr : 'community_share_button'.tr),
+              ),
             if (canPostToClub) PopupMenuItem(value: _MenuAction.club, child: Text('explore_post_to_club_title'.tr)),
             if (canGpx) PopupMenuItem(value: _MenuAction.gpx, child: Text('activity_export_gpx'.tr)),
             PopupMenuItem(value: _MenuAction.csv, child: Text('activity_export_csv'.tr)),

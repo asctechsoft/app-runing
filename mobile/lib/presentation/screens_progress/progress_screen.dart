@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../controller/badges/badges_providers.dart';
 import '../../controller/home/home_providers.dart';
 import '../../controller/providers.dart';
+import '../../controller/tour/tour_controller.dart';
 import '../../models/data_models/steps.dart';
 import '../../models/ui_models/period.dart';
 import '../../services/application/records_service.dart';
@@ -21,6 +22,7 @@ import '../../utils/progress_data.dart';
 import '../../values/routes.dart';
 import '../../values/tokens.dart';
 import '../common_components/streak_summary.dart';
+import '../common_components/tour_anchor.dart';
 import '../common_components/widgets.dart';
 import '../screens_activity/components/activity_card.dart';
 import 'components/choose_period_sheet.dart';
@@ -139,14 +141,17 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                 Text('progress_title'.tr, style: StrideText.title),
                 const SizedBox(height: 12),
                 const _Streak(),
-                StrideSegmented<ProgressPeriod>(
-                  values: ProgressPeriod.values,
-                  selected: _period,
-                  labelOf: periodSegmentLabel,
-                  onChanged: (p) => setState(() {
-                    _period = p;
-                    if (!_range(weekStart).contains(_anchor)) _anchor = dayOnly(now);
-                  }),
+                TourAnchor(
+                  id: TourAnchors.progressPeriod,
+                  child: StrideSegmented<ProgressPeriod>(
+                    values: ProgressPeriod.values,
+                    selected: _period,
+                    labelOf: periodSegmentLabel,
+                    onChanged: (p) => setState(() {
+                      _period = p;
+                      if (!_range(weekStart).contains(_anchor)) _anchor = dayOnly(now);
+                    }),
+                  ),
                 ),
                 Row(
                   children: [

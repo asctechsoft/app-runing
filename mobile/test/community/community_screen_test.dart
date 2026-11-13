@@ -2,6 +2,7 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stride/configs/env.dart';
 import 'package:stride/controller/community/community_providers.dart';
 import 'package:stride/controller/providers.dart';
@@ -36,8 +37,11 @@ void main() {
   Future<void> pump(WidgetTester tester, {required bool signedIn, String uid = 'bob'}) async {
     await tester.binding.setSurfaceSize(const Size(420, 1200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
     final container = ProviderContainer(
       overrides: [
+        sharedPrefsProvider.overrideWithValue(prefs),
         communitySignedInProvider.overrideWithValue(signedIn),
         communityRepositoryProvider.overrideWithValue(repoFor(signedIn ? uid : null)),
         currentUidProvider.overrideWithValue(signedIn ? uid : null),

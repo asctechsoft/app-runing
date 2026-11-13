@@ -30,20 +30,27 @@ sys.path.insert(0, os.path.join(PROJECT_DIR, "tool"))
 from build_helper import main_build  # noqa: E402
 
 
-def firebase_app_id() -> str:
-    """App ID Firebase (1:<số>:android:<hash>) đọc từ google-services.json — không hardcode vào script."""
+PACKAGE_PRODUCT = "com.asc.app_runing"
+PACKAGE_DEV = PACKAGE_PRODUCT + ".dev"
+
+
+def firebase_app_id(package: str) -> str:
+    """App ID Firebase (1:<số>:android:<hash>) của [package], đọc từ google-services.json — không hardcode vào script."""
     path = os.path.join(PROJECT_DIR, "android", "app", "google-services.json")
     try:
         with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)["client"][0]["client_info"]["mobilesdk_app_id"]
-    except (OSError, KeyError, IndexError, ValueError) as e:
+            clients = json.load(f)["client"]
+        for c in clients:
+            if c["client_info"]["android_client_info"]["package_name"] == package:
+                return c["client_info"]["mobilesdk_app_id"]
+    except (OSError, KeyError, ValueError) as e:
         raise SystemExit(f"Không đọc được Firebase App ID từ {path}: {e}")
+    raise SystemExit(f"google-services.json chưa có app Firebase cho {package}: thêm app trong Firebase Console rồi tải lại file.")
 
 
 if __name__ == "__main__":
-    app_id = firebase_app_id()
     main_build(
         sys=sys,
-        firebase_app_id_prod=app_id,
-        firebase_app_id_dev=app_id,  # cùng một app Firebase cho mọi flavor (cùng applicationId)
+        firebase_app_id_prod=firebase_app_id(PACKAGE_PRODUCT),  # flavor product
+        firebase_app_id_dev=firebase_app_id(PACKAGE_DEV),  # alpha / dev / claude
     )

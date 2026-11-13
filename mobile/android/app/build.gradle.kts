@@ -83,14 +83,18 @@ android {
     flavorDimensions += "environment"
 
     productFlavors {
+        // Mọi flavor trừ product dùng applicationId `com.asc.app_runing.dev` (app Firebase riêng trong google-services.json):
+        // cài song song được với bản product trên cùng máy. Firestore/Auth vẫn chung một project Firebase.
         create("alpha") {
             dimension = "environment"
+            applicationIdSuffix = ".dev"
             resValue("string", "app_name", "STRIDE")
             signingConfig = signingConfigs.getByName("productRelease")
             ndk { abiFilters += listOf("arm64-v8a") }
         }
         create("dev") {
             dimension = "environment"
+            applicationIdSuffix = ".dev"
             resValue("string", "app_name", "STRIDE")
             signingConfig = signingConfigs.getByName("release")
             ndk { abiFilters += listOf("arm64-v8a") }
@@ -102,6 +106,7 @@ android {
         }
         create("claude") {
             dimension = "environment"
+            applicationIdSuffix = ".dev"
             resValue("string", "app_name", "STRIDE")
             signingConfig = signingConfigs.getByName("release")
         }

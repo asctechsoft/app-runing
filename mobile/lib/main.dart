@@ -12,8 +12,10 @@ import 'configs/pref_const.dart';
 import 'controller/devices/devices_providers.dart';
 import 'controller/language/language_controller.dart';
 import 'controller/live/live_share_providers.dart';
+import 'controller/ongoing/ongoing_notification_controller.dart';
 import 'controller/providers.dart';
 import 'controller/run_plugins.dart';
+import 'presentation/common_components/tour_overlay.dart';
 import 'services/application/app_lifecycle.dart';
 import 'services/application/firebase_providers.dart';
 import 'services/application/google_sign_in_service.dart';
@@ -126,8 +128,9 @@ class _StrideAppState extends ConsumerState<StrideApp> {
 
   @override
   Widget build(BuildContext context) {
-    final env = ref.watch(envProvider);
     final locale = ref.watch(languageProvider.select((s) => s.locale));
+    // Thông báo bước hôm nay + thẻ buổi chạy (native); giữ sống cùng app.
+    ref.watch(ongoingNotificationsProvider);
     ref.listen(languageProvider.select((s) => s.locale), (prev, next) {
       if (prev != next) _rebuildAll();
     });
@@ -139,8 +142,7 @@ class _StrideAppState extends ConsumerState<StrideApp> {
       locale: locale,
       localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
       supportedLocales: AppLocaleConfig.supportedLocales,
-      // Chỉ báo môi trường không phải production (B03).
-      builder: (context, child) => env.isProduction ? child! : Banner(message: env.env.name.toUpperCase(), location: BannerLocation.topEnd, child: child!),
+      builder: (context, child) => TourOverlay(child: child!),
     );
   }
 }

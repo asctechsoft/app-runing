@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../configs/pref_const.dart';
 
 import '../../models/ui_models/community_models.dart';
 import '../../repository/community_repository.dart';
@@ -80,6 +84,7 @@ class CommunityFeedController extends AsyncNotifier<CommunityFeed> {
     try {
       await ref.read(communityRepositoryProvider).delete(postId);
       _removeWhere((p) => p.id == postId);
+      await ref.read(communitySharesProvider.notifier).forgetPost(postId);
       return null;
     } catch (e) {
       return communityErrorMessage(e);
@@ -130,3 +135,35 @@ class CommunityFeedController extends AsyncNotifier<CommunityFeed> {
 }
 
 final communityFeedProvider = AsyncNotifierProvider.autoDispose<CommunityFeedController, CommunityFeed>(CommunityFeedController.new);
+
+/// Các buổi đã chia sẻ lên Cộng đồng từ máy này: `activityId → postId`, lưu trong SharedPreferences. Dùng để hiện
+/// "Ngừng chia sẻ" cho từng buổi và không đăng trùng. Chỉ phản ánh bài đăng từ máy này (không đồng bộ qua máy khác).
+class CommunitySharesController extends Notifier<Map<String, String>> {
+  @override
+  Map<String, String> build() {
+    final raw = ref.read(sharedPrefsProvider).getString(PrefConst.communityShared);
+    if (raw == null) return const {};
+    try {
+      return (jsonDecode(raw) as Map).map((k, v) => MapEntry(k as String, v as String));
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  Future<void> _save(Map<String, String> next) async {
+    state = next;
+    await ref.read(sharedPrefsProvider).setString(PrefConst.communityShared, jsonEncode(next));
+  }
+
+  Future<void> record(String activityId, String postId) => _save({...state, activityId: postId});
+
+  Future<void> forgetActivity(String activityId) => _save({...state}..remove(activityId));
+
+  /// Bài bị xóa từ bảng tin: bỏ mọi buổi trỏ tới bài đó.
+  Future<void> forgetPost(String postId) async {
+    if (!state.containsValue(postId)) return;
+    await _save({...state}..removeWhere((_, v) => v == postId));
+  }
+}
+
+final communitySharesProvider = NotifierProvider<CommunitySharesController, Map<String, String>>(CommunitySharesController.new);

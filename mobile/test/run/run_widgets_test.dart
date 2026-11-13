@@ -166,7 +166,6 @@ void main() {
       // T01: vùng chạm màn ghi chạy (Pause ≥ 64, mọi nút ≥ 48) và nhãn truy cập (T08).
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
-      await tester.tap(find.text('Map'));
       await tester.pump(const Duration(seconds: 1));
       await tester.runAsync(() => h.ctl.pause());
       await tester.pump();

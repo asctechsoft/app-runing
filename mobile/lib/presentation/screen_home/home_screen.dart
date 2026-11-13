@@ -10,6 +10,7 @@ import '../../controller/home/home_providers.dart';
 import '../../controller/providers.dart';
 import '../../controller/steps/steps_logic.dart';
 import '../../controller/steps/steps_providers.dart';
+import '../../controller/tour/tour_controller.dart';
 import '../../models/data_models/activity.dart';
 import '../../models/data_models/profile.dart';
 import '../../repository/notification_repository.dart';
@@ -26,6 +27,7 @@ import '../../utils/l10n.dart';
 import '../../values/routes.dart';
 import '../../values/tokens.dart';
 import '../common_components/streak_summary.dart';
+import '../common_components/tour_anchor.dart';
 import '../common_components/widgets.dart';
 import '../screen_steps/components/hourly_steps_chart.dart';
 import '../screen_steps/components/step_metrics_row.dart';
@@ -170,7 +172,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                         onRetry: () => ref.invalidate(stepsDayProvider(todayKey)),
                       ),
                     ),
-                    data: (v) => _StepsCard(view: v, state: state!, settings: settings, format: fmt, onEnable: () => _enableAccess(v.permission)),
+                    data: (v) => TourAnchor(
+                      id: TourAnchors.homeSteps,
+                      child: _StepsCard(view: v, state: state!, settings: settings, format: fmt, onEnable: () => _enableAccess(v.permission)),
+                    ),
                   ),
                   if (view != null && state != HomeStepState.noPermission && state != HomeStepState.unavailable) ...[
                     const Gap(StrideSpace.s16),

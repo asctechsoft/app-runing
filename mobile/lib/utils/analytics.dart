@@ -119,6 +119,12 @@ class Analytics {
   /// Đạt mốc chuỗi cá nhân (TM20). [days]: một trong [streakMilestones].
   static void streakMilestone({required int days}) => _log('streak_milestone', {'days': '$days'});
 
+  /// Tour lần đầu: [step] bắt đầu từ 1.
+  static void tourStepView(int step) => _log('tour_step_view', {'step': '$step'});
+
+  /// [action]: `next` | `previous` | `done` | `close`.
+  static void tourAction(int step, String action) => _log('tour_action', {'step': '$step', 'action': action});
+
   /// Mốc chuỗi được ghi analytics (ít mốc để không thành event theo ngày).
   static const List<int> streakMilestones = [3, 7, 14, 30, 60, 100, 365];
 

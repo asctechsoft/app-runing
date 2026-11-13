@@ -1,6 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import '../data_models/activity.dart';
 
-/// Bài chia sẻ buổi chạy lên Cộng đồng. Chỉ chứa số liệu tóm tắt — không tọa độ, bản đồ, ghi chú hay id hoạt động.
+/// Bài chia sẻ buổi chạy lên Cộng đồng. Số liệu tóm tắt + (tùy chọn) ảnh tuyến đường đã ẩn đầu/cuối — không tọa độ thô, ghi chú hay id hoạt động.
 class CommunityPost {
   const CommunityPost({
     required this.id,
@@ -16,6 +19,7 @@ class CommunityPost {
     this.avgPaceSecPerKm,
     this.likeCount = 0,
     this.likedByMe = false,
+    this.image,
   });
 
   final String id;
@@ -32,6 +36,9 @@ class CommunityPost {
   final int likeCount;
   final bool likedByMe;
 
+  /// Ảnh PNG tuyến đường kèm bài (null = không đính kèm).
+  final Uint8List? image;
+
   CommunityPost copyWith({int? likeCount, bool? likedByMe}) => CommunityPost(
     id: id,
     authorId: authorId,
@@ -46,7 +53,18 @@ class CommunityPost {
     avgPaceSecPerKm: avgPaceSecPerKm,
     likeCount: likeCount ?? this.likeCount,
     likedByMe: likedByMe ?? this.likedByMe,
+    image: image,
   );
+
+  /// Chuỗi base64 lưu trong document → byte; chuỗi hỏng thì coi như không có ảnh.
+  static Uint8List? decodeImage(Object? raw) {
+    if (raw is! String || raw.isEmpty) return null;
+    try {
+      return base64Decode(raw);
+    } on FormatException {
+      return null;
+    }
+  }
 
   /// Trường `activity` của document (khớp `firestore.rules`: `communityActivityKeys`).
   static Map<String, Object?> activityDoc(Activity a) => {
@@ -75,6 +93,7 @@ class CommunityPost {
       avgPaceSecPerKm: (act['avgPaceSecPerKm'] as num?)?.toDouble(),
       likeCount: (d['likeCount'] as num?)?.toInt() ?? 0,
       likedByMe: likedByMe,
+      image: decodeImage(d['image']),
     );
   }
 }

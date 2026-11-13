@@ -126,6 +126,7 @@ class _CountdownScreenState extends ConsumerState<CountdownScreen> with SingleTi
                   interactive: false,
                   showRecenter: false,
                   initialZoom: 17,
+                  showWaiting: false,
                   current: _fix == null ? null : RunMapCurrent(lat: _fix!.lat, lon: _fix!.lon, accuracyM: _fix!.accuracyM),
                 ),
               ),
@@ -169,7 +170,17 @@ class _CountdownScreenState extends ConsumerState<CountdownScreen> with SingleTi
                             liveRegion: true,
                             label: _starting ? 'run_countdown_starting'.tr : 'run_countdown_starting_in'.trArgs([_n]),
                             excludeSemantics: true,
-                            child: Text(_starting ? 'run_countdown_go'.tr : '$_n', style: StrideText.countdown.copyWith(color: StrideColors.surface)),
+                            // Số/chữ nhỏ hơn và luôn nằm gọn trong vòng (FittedBox chặn tràn khi chữ "Chạy"/"Start" dài hơn số).
+                            child: SizedBox(
+                              width: 140,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  _starting ? 'run_countdown_go'.tr : '$_n',
+                                  style: StrideText.countdown.copyWith(color: StrideColors.surface, fontSize: _starting ? 44 : 72),
+                                ),
+                              ),
+                            ),
                           ),
                         ],
                       ),

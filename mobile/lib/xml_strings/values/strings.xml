@@ -1967,8 +1967,8 @@
     <string name="community_deleted">Post deleted</string>
     <string name="community_share_button">Share to community</string>
     <string name="community_share_title">Share this run?</string>
-    <string name="community_share_message">Signed-in members will see your name, activity type, distance and time. No map or location is shared.</string>
-    <string name="community_share_login_message">Sharing needs an account. Log in with Google, then your name, activity type, distance and time will be posted. No map or location is shared.</string>
+    <string name="community_share_message">Signed-in members will see your name, activity type, distance and time. No exact location is shared.</string>
+    <string name="community_share_login_message">Sharing needs an account. Log in with Google, then your name, activity type, distance and time will be posted. No exact location is shared.</string>
     <string name="community_share_confirm">Share</string>
     <string name="community_share_login_confirm">Log in and share</string>
     <string name="community_shared">Shared to the community</string>
@@ -1983,4 +1983,34 @@
     <string name="community_block_message">You won't see each other's posts in the community or in clubs.</string>
     <string name="community_caption_label">Caption (optional)</string>
     <string name="community_caption_hint">Say something about this run</string>
+    <!-- tour -->
+    <string name="tour_back">Back</string>
+    <string name="tour_done">Got it</string>
+    <string name="tour_next">Next</string>
+    <string name="tour_skip">Skip</string>
+    <string name="tour_home_t">Your steps today</string>
+    <string name="tour_home">See today's steps and your goal here. Steps are counted all day without GPS.</string>
+    <string name="tour_progress_t">Week, month, year</string>
+    <string name="tour_progress">Switch the period to see how your steps and runs add up over time.</string>
+    <string name="tour_run_t">Start a run</string>
+    <string name="tour_run">Tap Run to record a walk or run with GPS. GPS only turns on when you start.</string>
+    <string name="tour_profile_t">Profile and settings</string>
+    <string name="tour_profile">Set your goals, units, reminders and language here.</string>
+    <!-- ongoing notifications -->
+    <string name="ongoing_channel_steps">Today's steps</string>
+    <string name="ongoing_channel_run">Activity in progress</string>
+    <string name="ongoing_steps_goal">Your goal is %1$s steps.</string>
+    <string name="ongoing_steps_no_goal">Counting your steps all day, no GPS.</string>
+    <string name="ongoing_steps_waiting">Counting your steps</string>
+    <string name="ongoing_run_title">Recording</string>
+    <string name="ongoing_run_time">Time</string>
+    <!-- community route image + stop sharing -->
+    <string name="community_share_route">Include route picture</string>
+    <string name="community_share_route_hint">Shows the shape of your route and your stats. The first and last 200 m are hidden; no exact location is shared.</string>
+    <string name="community_stop_button">Stop sharing to community</string>
+    <string name="community_stop_title">Stop sharing this run?</string>
+    <string name="community_stop_message">The post and its route picture will be removed from the community. Your run stays on your device.</string>
+    <string name="community_stop_confirm">Stop sharing</string>
+    <string name="community_stopped">Stopped sharing</string>
+    <string name="community_route_image_semantic">Route picture of this run</string>
 </resources>

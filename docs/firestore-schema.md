@@ -49,7 +49,7 @@ document. Thành viên active đọc; app ghi lại mỗi lần mở (Home). Chu
 `posts/{postId}/cheers/{uid}` → `{createdAt}`
 
 Cộng đồng (chia sẻ buổi chạy; **chỉ người đã đăng nhập** đọc/đăng/thả tim — khách không xem được):
-`communityPosts/{postId}` → `{authorId, authorName, text, createdAt, likeCount, deletedAt|null, activity}` — `activity` chỉ gồm `{type(run|walk|indoorRun|bike), startedAt, distanceM?, distanceEstimated, movingMs, avgPaceSecPerKm?}`: không tọa độ, không bản đồ, không ghi chú, không id hoạt động (rules chặn khóa khác). Tác giả chỉ đặt `deletedAt`; người khác chỉ đổi `likeCount` ±1.
+`communityPosts/{postId}` → `{authorId, authorName, text, createdAt, likeCount, deletedAt|null, activity, image?}` — `activity` chỉ gồm `{type(run|walk|indoorRun|bike), startedAt, distanceM?, distanceEstimated, movingMs, avgPaceSecPerKm?}`: không tọa độ, không ghi chú, không id hoạt động (rules chặn khóa khác). `image` (tùy chọn, người dùng bật lúc chia sẻ) là ảnh PNG base64 ≤ 256 K ký tự vẽ lại tuyến đường đã ẩn đầu/cuối 200 m + số liệu — không chứa tọa độ thô. Tác giả chỉ đổi `deletedAt` và `image` (ngừng chia sẻ = đặt `deletedAt` + xóa `image`); người khác chỉ đổi `likeCount` ±1.
 `communityPosts/{postId}/likes/{uid}` → `{createdAt}` (chỉ chính `uid` tạo/xóa)
 `posts/{postId}/comments/{commentId}` → `{authorId, authorName, text, createdAt, deletedAt|null}`
 `events/{eventId}` → `{clubId, title, description, location, startsAt, endsAt|null, tzId, maxGoing|null, createdBy, goingCount, cancelledAt|null, createdAt, updatedAt}`

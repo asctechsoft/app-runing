@@ -29,8 +29,6 @@ class LiveRunScreen extends ConsumerStatefulWidget {
 }
 
 class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
-  final _pages = PageController();
-  int _page = 0;
   Timer? _ticker;
   final _guard = OnceGuard();
 
@@ -60,13 +58,7 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
   @override
   void dispose() {
     _ticker?.cancel();
-    _pages.dispose();
     super.dispose();
-  }
-
-  void _goPage(int i) {
-    setState(() => _page = i);
-    _pages.animateToPage(i, duration: StrideMotion.screen, curve: Curves.easeOut);
   }
 
   Future<void> _confirmFinish() async {
@@ -200,17 +192,6 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
                       child: GpsStatusChip(quality: st.gps),
                     ),
                   ),
-                  if (!st.isIndoor)
-                    SizedBox(
-                      width: 180,
-                      child: StrideSegmented<int>(
-                        dense: true,
-                        values: const [0, 1],
-                        selected: _page,
-                        labelOf: (i) => i == 0 ? 'run_live_tab_metrics'.tr : 'run_live_tab_map'.tr,
-                        onChanged: _goPage,
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -231,62 +212,37 @@ class _LiveRunScreenState extends ConsumerState<LiveRunScreen> {
             Expanded(
               child: st.isIndoor
                   ? _MetricsPage(m: m)
-                  : PageView(
-                      controller: _pages,
-                      onPageChanged: (i) => setState(() => _page = i),
+                  : Column(
                       children: [
-                        _MetricsPage(m: m),
-                        Column(
-                          children: [
-                            Expanded(
-                              child: RunMap(
-                                segments: st.segments,
-                                markerEveryM: everyM,
-                                current: st.lastFix == null
-                                    ? null
-                                    : RunMapCurrent(
-                                        lat: st.lastFix!.lat,
-                                        lon: st.lastFix!.lon,
-                                        accuracyM: st.lastFix!.accuracyM,
-                                        stale: st.gps == GpsQuality.lost,
-                                      ),
+                        Expanded(
+                          child: RunMap(
+                            segments: st.segments,
+                            markerEveryM: everyM,
+                            current: st.lastFix == null
+                                ? null
+                                : RunMapCurrent(lat: st.lastFix!.lat, lon: st.lastFix!.lon, accuracyM: st.lastFix!.accuracyM, stale: st.gps == GpsQuality.lost),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              Expanded(
+                                child: RunMetric(value: m.distance, unit: m.unit, label: 'run_label_distance'.tr, estimated: m.estimatedDistance),
                               ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  Expanded(
-                                    child: RunMetric(value: m.distance, unit: m.unit, label: 'run_label_distance'.tr, estimated: m.estimatedDistance),
-                                  ),
-                                  Expanded(
-                                    child: RunMetric(value: m.time, label: 'run_label_moving_time'.tr),
-                                  ),
-                                  Expanded(
-                                    child: RunMetric(value: m.avgPace, unit: m.avgPace == missingValue ? null : m.paceUnit, label: 'run_label_avg_pace'.tr),
-                                  ),
-                                ],
+                              Expanded(
+                                child: RunMetric(value: m.time, label: 'run_label_moving_time'.tr),
                               ),
-                            ),
-                          ],
+                              Expanded(
+                                child: RunMetric(value: m.avgPace, unit: m.avgPace == missingValue ? null : m.paceUnit, label: 'run_label_avg_pace'.tr),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
             ),
-            if (!st.isIndoor)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  for (var i = 0; i < 2; i++)
-                    Container(
-                      margin: const EdgeInsets.all(4),
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(shape: BoxShape.circle, color: i == _page ? StrideColors.primary : StrideColors.borderSubtle),
-                    ),
-                ],
-              ),
             Padding(
               padding: EdgeInsets.fromLTRB(g, 8, g, 16),
               child: Row(

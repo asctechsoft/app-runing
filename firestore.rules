@@ -333,21 +333,24 @@ service cloud.firestore {
 
     // ---- Cộng đồng: chỉ người đã đăng nhập đọc, đăng và thả tim. `activity` là số liệu tóm tắt (không tọa độ/ghi chú/id hoạt động).
     function validCommunityPost(d) {
-      return d.keys().hasOnly(['authorId', 'authorName', 'text', 'createdAt', 'likeCount', 'deletedAt', 'activity']) &&
+      return d.keys().hasOnly(['authorId', 'authorName', 'text', 'createdAt', 'likeCount', 'deletedAt', 'activity', 'image']) &&
         d.authorId == request.auth.uid &&
         d.authorName is string && d.authorName.size() <= 60 &&
         d.text is string && d.text.size() <= 500 &&
         d.createdAt is int && d.likeCount == 0 && d.get('deletedAt', null) == null &&
         d.activity is map &&
         d.activity.keys().hasOnly(['type', 'startedAt', 'distanceM', 'distanceEstimated', 'movingMs', 'avgPaceSecPerKm']) &&
-        d.activity.type in ['run', 'walk', 'indoorRun', 'bike'];
+        d.activity.type in ['run', 'walk', 'indoorRun', 'bike'] &&
+        // Ảnh tuyến đường (PNG base64) là tùy chọn, tối đa 256 KB ký tự để không phình document/bảng tin.
+        (!('image' in d) || (d.image is string && d.image.size() <= 262144));
     }
 
     match /communityPosts/{postId} {
       allow read: if signedIn();
       allow create: if signedIn() && validCommunityPost(request.resource.data);
       allow update: if signedIn() && (
-        (resource.data.authorId == request.auth.uid && onlyChanges(['deletedAt'])) ||
+        // Ngừng chia sẻ: tác giả đặt `deletedAt` và xóa luôn ảnh tuyến đường (không để lại dữ liệu vị trí).
+        (resource.data.authorId == request.auth.uid && onlyChanges(['deletedAt', 'image'])) ||
         (onlyChanges(['likeCount']) && counterStep('likeCount'))
       );
       allow delete: if false;

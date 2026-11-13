@@ -3,7 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart' show AuthCredential;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stride/controller/community/community_providers.dart';
+import 'package:stride/controller/providers.dart';
 import 'package:stride/models/data_models/activity.dart';
 import 'package:stride/presentation/screens_community/share_to_community.dart';
 import 'package:stride/repository/community_repository.dart';
@@ -43,20 +45,25 @@ void main() {
     google = _CancelledGoogle();
   });
 
-  Future<void> pump(WidgetTester tester, {required bool signedIn}) async {
+  Future<void> pump(WidgetTester tester, {required bool signedIn, Widget? child}) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
     final repo = CommunityRepository(ready: () => true, firestore: () => db, uid: () => signedIn ? 'alice' : null, displayName: () => 'Alice');
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          sharedPrefsProvider.overrideWithValue(prefs),
           communitySignedInProvider.overrideWithValue(signedIn),
           communityRepositoryProvider.overrideWithValue(repo),
           googleCredentialSourceProvider.overrideWithValue(google),
         ],
         child: MaterialApp(
           home: Scaffold(
-            body: Consumer(
-              builder: (context, ref, _) => TextButton(onPressed: () => shareRunToCommunity(context, ref, saved), child: const Text('share')),
-            ),
+            body:
+                child ??
+                Consumer(
+                  builder: (context, ref, _) => TextButton(onPressed: () => shareRunToCommunity(context, ref, saved), child: const Text('share')),
+                ),
           ),
         ),
       ),
@@ -70,7 +77,7 @@ void main() {
     await tester.tap(find.text('share'));
     await tester.pumpAndSettle();
     expect(find.text('Share this run?'), findsOneWidget);
-    expect(find.textContaining('No map or location is shared'), findsOneWidget);
+    expect(find.textContaining('No exact location is shared'), findsOneWidget);
     expect(await posts(), 0, reason: 'chưa xác nhận thì chưa đăng');
 
     await tester.enterText(find.byType(TextField), '  Vui quá!  ');
@@ -101,5 +108,37 @@ void main() {
     expect(google.calls, 1);
     expect(await posts(), 0);
     expect(find.text('Shared to the community'), findsNothing);
+  });
+
+  testWidgets('chia sẻ xong thì nút đổi thành Ngừng chia sẻ; ngừng chia sẻ xóa bài mềm và gỡ ảnh tuyến đường', (tester) async {
+    await pump(tester, signedIn: true, child: CommunityShareButton(activity: saved));
+    // Bài đã đăng từ trước kèm ảnh: ghi thẳng vào Firestore giả và đăng ký là bài của buổi a1.
+    await db.doc('communityPosts/p1').set({
+      'authorId': 'alice',
+      'authorName': 'Alice',
+      'text': '',
+      'createdAt': 1,
+      'likeCount': 0,
+      'deletedAt': null,
+      'activity': {'type': 'run', 'startedAt': 1, 'movingMs': 1, 'distanceEstimated': false},
+      'image': 'AAAA',
+    });
+    final container = ProviderScope.containerOf(tester.element(find.byType(CommunityShareButton)));
+    await tester.runAsync(() => container.read(communitySharesProvider.notifier).record('a1', 'p1'));
+    await tester.pump();
+    expect(find.text('Stop sharing to community'), findsOneWidget);
+
+    await tester.tap(find.text('Stop sharing to community'));
+    await tester.pumpAndSettle();
+    expect(find.text('Stop sharing this run?'), findsOneWidget);
+    await tester.tap(find.text('Stop sharing').last);
+    await tester.pumpAndSettle();
+
+    final d = (await db.doc('communityPosts/p1').get()).data()!;
+    expect(d['deletedAt'], isNotNull);
+    expect(d.containsKey('image'), isFalse, reason: 'ngừng chia sẻ phải xóa luôn ảnh tuyến đường');
+    expect(container.read(communitySharesProvider), isEmpty);
+    expect(find.text('Stopped sharing'), findsOneWidget);
+    expect(find.text('Share to community'), findsOneWidget);
   });
 }

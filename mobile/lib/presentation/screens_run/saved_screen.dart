@@ -116,11 +116,7 @@ class SavedScreen extends ConsumerWidget {
                     onPressed: () => _leave(context, ref, Routes.historyActivity(activityId)),
                   ),
                   const SizedBox(height: 8),
-                  OutlineButton(
-                    label: 'community_share_button'.tr,
-                    icon: Icons.groups_outlined,
-                    onPressed: () => shareRunToCommunity(context, ref, async.value!),
-                  ),
+                  CommunityShareButton(activity: async.value!),
                   const SizedBox(height: 8),
                   OutlineButton(label: 'run_back_home'.tr, onPressed: () => _leave(context, ref, Routes.home)),
                 ],

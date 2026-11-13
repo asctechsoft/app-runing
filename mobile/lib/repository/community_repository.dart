@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +14,9 @@ import '../services/application/api_client.dart';
 import '../services/application/firebase_providers.dart';
 import '../utils/l10n.dart';
 import 'explore_repository.dart' show ExploreFailure, mapExploreError, maxBlocksRead;
+
+/// Ảnh tuyến đường tối đa (byte PNG): base64 phải ≤ 262144 ký tự theo `firestore.rules` (4/3 kích thước gốc).
+const maxCommunityImageBytes = 190000;
 
 /// Số bài mỗi trang (chi phí Firestore: 1 đọc/bài + 1 đọc "tim của tôi"/bài).
 const communityPageSize = 20;
@@ -76,10 +81,14 @@ class CommunityRepository {
     return {for (final d in snap.docs) d.id};
   }
 
-  /// Đăng buổi chạy [a] (đã lưu) lên Cộng đồng. Chỉ gửi số liệu tóm tắt. Hoạt động chưa lưu hoặc đã xóa bị từ chối.
-  Future<CommunityPost> publish(Activity a, {String text = ''}) => _run((db, uid) async {
+  /// Đăng buổi chạy [a] (đã lưu) lên Cộng đồng. Gửi số liệu tóm tắt và, nếu có, ảnh tuyến đường [image] (PNG, ≤ [maxCommunityImageBytes]).
+  /// Hoạt động chưa lưu hoặc đã xóa bị từ chối.
+  Future<CommunityPost> publish(Activity a, {String text = '', Uint8List? image}) => _run((db, uid) async {
     if (a.status != ActivityStatus.saved || a.deletedAt != null) {
       throw ApiException(400, 'validation_error', 'Only saved activities can be shared');
+    }
+    if (image != null && image.length > maxCommunityImageBytes) {
+      throw ApiException(400, 'validation_error', 'Image is too large to share');
     }
     final id = _uuid.v4();
     final data = <String, Object?>{
@@ -90,6 +99,7 @@ class CommunityRepository {
       'likeCount': 0,
       'deletedAt': null,
       'activity': CommunityPost.activityDoc(a),
+      if (image != null) 'image': base64Encode(image),
     };
     await _posts(db).doc(id).set(data);
     return CommunityPost.fromDoc(id, data);
@@ -138,8 +148,8 @@ class CommunityRepository {
     await db.collection('users').doc(uid).collection('blocks').doc(userId).set({'createdAt': _nowMs()});
   });
 
-  /// Xóa mềm: chỉ tác giả được đặt `deletedAt`.
-  Future<void> delete(String postId) => _run((db, uid) => _posts(db).doc(postId).update({'deletedAt': _nowMs()}));
+  /// Ngừng chia sẻ (xóa mềm): chỉ tác giả; đặt `deletedAt` và xóa luôn ảnh tuyến đường khỏi document.
+  Future<void> delete(String postId) => _run((db, uid) => _posts(db).doc(postId).update({'deletedAt': _nowMs(), 'image': FieldValue.delete()}));
 }
 
 final communityRepositoryProvider = Provider<CommunityRepository>((ref) {

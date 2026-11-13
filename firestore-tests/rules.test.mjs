@@ -52,8 +52,9 @@ const as = (uid) => ({
   get: (path) => call(uid, 'GET', path),
   list: (path) => call(uid, 'GET', path),
   set: (path, data) => call(uid, 'PATCH', path, { fields: fields(data) }),
-  update: (path, data) =>
-    call(uid, 'PATCH', `${path}?${Object.keys(data).map((k) => `updateMask.fieldPaths=${k}`).join('&')}&currentDocument.exists=true`, {
+  // `del`: các trường xóa khỏi document (có trong updateMask nhưng không có trong body — như FieldValue.delete() của SDK).
+  update: (path, data, del = []) =>
+    call(uid, 'PATCH', `${path}?${[...Object.keys(data), ...del].map((k) => `updateMask.fieldPaths=${k}`).join('&')}&currentDocument.exists=true`, {
       fields: fields(data),
     }),
   delete: (path) => call(uid, 'DELETE', path),
@@ -668,6 +669,18 @@ describe('communityPosts (+ likes) — chỉ người đã đăng nhập', () =>
     await ok(as('bob').update('communityPosts/p1', { likeCount: 0 }));
     await ok(as('bob').delete('communityPosts/p1/likes/bob'));
     await ok(as('alice').update('communityPosts/p1', { deletedAt: 5 }));
+  });
+  test('ảnh tuyến đường: đăng kèm ảnh ≤ 256K ký tự; quá lớn hoặc sai kiểu bị chặn', async () => {
+    await ok(as('bob').set('communityPosts/pi1', post({ authorId: 'bob', image: 'A'.repeat(262144) })));
+    await denied(as('bob').set('communityPosts/pi2', post({ authorId: 'bob', image: 'A'.repeat(262145) })));
+    await denied(as('bob').set('communityPosts/pi3', post({ authorId: 'bob', image: 123 })));
+  });
+  test('ngừng chia sẻ: tác giả đặt deletedAt và xóa image; người khác không xóa/sửa ảnh', async () => {
+    await seed('communityPosts/pi4', post({ image: 'AAAA' }));
+    await denied(as('bob').update('communityPosts/pi4', { image: 'BBBB' }));
+    await denied(as('bob').update('communityPosts/pi4', { deletedAt: 5 }, ['image']));
+    await denied(as('alice').update('communityPosts/pi4', { text: 'x' }, ['image']));
+    await ok(as('alice').update('communityPosts/pi4', { deletedAt: 5 }, ['image']));
   });
   test('chưa đăng nhập không đọc, không đăng, không thả tim', async () => {
     await denied(as(null).get('communityPosts/p1'));

@@ -1967,8 +1967,8 @@
     <string name="community_deleted">Đã xóa bài viết</string>
     <string name="community_share_button">Chia sẻ lên cộng đồng</string>
     <string name="community_share_title">Chia sẻ buổi chạy này?</string>
-    <string name="community_share_message">Thành viên đã đăng nhập sẽ thấy tên, loại hoạt động, quãng đường và thời gian của bạn. Không chia sẻ bản đồ hay vị trí.</string>
-    <string name="community_share_login_message">Chia sẻ cần tài khoản. Hãy đăng nhập Google, sau đó tên, loại hoạt động, quãng đường và thời gian của bạn sẽ được đăng. Không chia sẻ bản đồ hay vị trí.</string>
+    <string name="community_share_message">Thành viên đã đăng nhập sẽ thấy tên, loại hoạt động, quãng đường và thời gian của bạn. Không chia sẻ vị trí chính xác.</string>
+    <string name="community_share_login_message">Chia sẻ cần tài khoản. Hãy đăng nhập Google, sau đó tên, loại hoạt động, quãng đường và thời gian của bạn sẽ được đăng. Không chia sẻ vị trí chính xác.</string>
     <string name="community_share_confirm">Chia sẻ</string>
     <string name="community_share_login_confirm">Đăng nhập và chia sẻ</string>
     <string name="community_shared">Đã chia sẻ lên cộng đồng</string>
@@ -1983,4 +1983,34 @@
     <string name="community_block_message">Hai bên sẽ không thấy bài của nhau trong cộng đồng và câu lạc bộ.</string>
     <string name="community_caption_label">Chú thích (tùy chọn)</string>
     <string name="community_caption_hint">Nói đôi lời về buổi chạy này</string>
+    <!-- tour -->
+    <string name="tour_back">Quay lại</string>
+    <string name="tour_done">Đã hiểu</string>
+    <string name="tour_next">Tiếp</string>
+    <string name="tour_skip">Bỏ qua</string>
+    <string name="tour_home_t">Số bước hôm nay</string>
+    <string name="tour_home">Xem số bước hôm nay và mục tiêu của bạn ở đây. Bước chân được đếm cả ngày, không cần GPS.</string>
+    <string name="tour_progress_t">Tuần, tháng, năm</string>
+    <string name="tour_progress">Đổi kỳ để xem số bước và các buổi chạy cộng dồn theo thời gian.</string>
+    <string name="tour_run_t">Bắt đầu buổi chạy</string>
+    <string name="tour_run">Chạm Run để ghi một buổi đi bộ hoặc chạy bằng GPS. GPS chỉ bật khi bạn bắt đầu.</string>
+    <string name="tour_profile_t">Hồ sơ và cài đặt</string>
+    <string name="tour_profile">Đặt mục tiêu, đơn vị, nhắc nhở và ngôn ngữ ở đây.</string>
+    <!-- ongoing notifications -->
+    <string name="ongoing_channel_steps">Số bước hôm nay</string>
+    <string name="ongoing_channel_run">Buổi tập đang diễn ra</string>
+    <string name="ongoing_steps_goal">Mục tiêu của bạn là %1$s bước.</string>
+    <string name="ongoing_steps_no_goal">Đang đếm bước cả ngày, không dùng GPS.</string>
+    <string name="ongoing_steps_waiting">Đang đếm bước chân của bạn</string>
+    <string name="ongoing_run_title">Đang ghi</string>
+    <string name="ongoing_run_time">Thời gian</string>
+    <!-- community route image + stop sharing -->
+    <string name="community_share_route">Kèm ảnh tuyến đường</string>
+    <string name="community_share_route_hint">Hiện hình dạng tuyến đường và số liệu của bạn. 200 m đầu và cuối được ẩn; không chia sẻ vị trí chính xác.</string>
+    <string name="community_stop_button">Ngừng chia sẻ lên cộng đồng</string>
+    <string name="community_stop_title">Ngừng chia sẻ buổi này?</string>
+    <string name="community_stop_message">Bài đăng và ảnh tuyến đường sẽ bị gỡ khỏi cộng đồng. Buổi chạy vẫn nằm trên máy của bạn.</string>
+    <string name="community_stop_confirm">Ngừng chia sẻ</string>
+    <string name="community_stopped">Đã ngừng chia sẻ</string>
+    <string name="community_route_image_semantic">Ảnh tuyến đường của buổi này</string>
 </resources>

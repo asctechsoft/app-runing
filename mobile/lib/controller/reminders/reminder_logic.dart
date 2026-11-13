@@ -19,9 +19,9 @@ class Reminder {
   final Set<int> weekdays;
   final int updatedAt;
 
-  /// Mặc định khi chưa từng cấu hình (tắt — không tự bật nhắc).
+  /// Mặc định khi chưa từng cấu hình: nhắc bước chân mỗi ngày lúc 16:00 BẬT sẵn (chỉ chạy khi có quyền thông báo, tắt được ở màn Nhắc nhở); nhắc chạy và giữ chuỗi tắt.
   factory Reminder.defaults(ReminderKind kind) => switch (kind) {
-    ReminderKind.dailySteps => const Reminder(kind: ReminderKind.dailySteps, enabled: false, minuteOfDay: 18 * 60 + 30, weekdays: {1, 2, 3, 4, 5}),
+    ReminderKind.dailySteps => const Reminder(kind: ReminderKind.dailySteps, enabled: true, minuteOfDay: 16 * 60, weekdays: {1, 2, 3, 4, 5, 6, 7}),
     ReminderKind.run => const Reminder(kind: ReminderKind.run, enabled: false, minuteOfDay: 7 * 60, weekdays: {2, 4, 6}),
     ReminderKind.streak => const Reminder(kind: ReminderKind.streak, enabled: false, minuteOfDay: 20 * 60, weekdays: {1, 2, 3, 4, 5, 6, 7}),
   };

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -217,6 +219,7 @@ class PostCard extends ConsumerWidget {
             ],
           ),
           if (post.text.isNotEmpty) ...[const SizedBox(height: StrideSpace.s12), Text(post.text, style: StrideText.body)],
+          if (post.image != null) ...[const SizedBox(height: StrideSpace.s12), _RouteImage(bytes: post.image!)],
           const SizedBox(height: StrideSpace.s12),
           Row(
             children: [
@@ -254,6 +257,42 @@ class PostCard extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Ảnh tuyến đường kèm bài (tỉ lệ 4:5 như thẻ chia sẻ); chạm để xem lớn.
+class _RouteImage extends StatelessWidget {
+  const _RouteImage({required this.bytes});
+  final Uint8List bytes;
+
+  @override
+  Widget build(BuildContext context) {
+    final image = Image.memory(bytes, fit: BoxFit.cover, gaplessPlayback: true, errorBuilder: (_, _, _) => const SizedBox.shrink());
+    return Semantics(
+      image: true,
+      button: true,
+      label: 'community_route_image_semantic'.tr,
+      excludeSemantics: true,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 320),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(StrideRadius.card),
+            onTap: () => showDialog<void>(
+              context: context,
+              builder: (ctx) => Dialog(
+                insetPadding: const EdgeInsets.all(StrideSpace.s16),
+                child: InteractiveViewer(child: Image.memory(bytes)),
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(StrideRadius.card),
+              child: AspectRatio(aspectRatio: 360 / 450, child: image),
+            ),
+          ),
+        ),
       ),
     );
   }

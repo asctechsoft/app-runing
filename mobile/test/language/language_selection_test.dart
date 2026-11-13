@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stride/configs/pref_const.dart';
 import 'package:stride/controller/language/language_controller.dart';
+import 'package:stride/controller/ongoing/ongoing_notification_controller.dart';
 import 'package:stride/controller/providers.dart';
 import 'package:stride/main.dart';
 import 'package:stride/presentation/screen_language/components/language_tile.dart';
@@ -166,7 +167,13 @@ void main() {
     );
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [sharedPrefsProvider.overrideWithValue(p), routerProvider.overrideWithValue(router), remindersSyncProvider.overrideWithValue(() async {})],
+        overrides: [
+          sharedPrefsProvider.overrideWithValue(p),
+          routerProvider.overrideWithValue(router),
+          remindersSyncProvider.overrideWithValue(() async {}),
+          // Thông báo native cần DB và timer nền: không thuộc phạm vi test đổi ngôn ngữ.
+          ongoingNotificationsProvider.overrideWith((ref) {}),
+        ],
         child: const StrideApp(),
       ),
     );

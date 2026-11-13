@@ -2,7 +2,7 @@
 
 ## Flavor
 `alpha` (không quảng cáo), `dev`, `product`, `claude` — khai ở `mobile/android/app/build.gradle.kts`, đọc trong code qua `AppFigs` (`lib/configs/app_figs.dart`).
-Cùng `applicationId` (`com.asc.app_runing`) nên chỉ cần một `android/app/google-services.json` (đã commit trong repo, CI không cần secret).
+Flavor `product` dùng `applicationId` `com.asc.app_runing`; `alpha`/`dev`/`claude` dùng `com.asc.app_runing.dev` (cài song song được). Cả hai là hai app trong CÙNG project Firebase `app-runing-667b3` nên chỉ cần một `android/app/google-services.json` chứa cả hai (đã commit trong repo, CI không cần secret); Firestore/Auth vẫn dùng chung. Thêm vân tay SHA cho từng app trong Firebase Console.
 
 ```bash
 cd mobile

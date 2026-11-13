@@ -57,6 +57,7 @@ class RunMap extends ConsumerStatefulWidget {
     this.interactive = true,
     this.showRecenter = true,
     this.initialZoom = 16,
+    this.showWaiting = true,
   });
 
   final List<List<TrackPoint>> segments;
@@ -70,6 +71,9 @@ class RunMap extends ConsumerStatefulWidget {
   final bool interactive;
   final bool showRecenter;
   final double initialZoom;
+
+  /// false: chưa có vị trí thì để nền trống, không hiện biểu tượng + chữ "Đang chờ vị trí" (vd. nền màn đếm ngược).
+  final bool showWaiting;
 
   @override
   ConsumerState<RunMap> createState() => _RunMapState();
@@ -125,6 +129,7 @@ class _RunMapState extends ConsumerState<RunMap> {
     final pts = _allPoints;
     final center = _currentLatLng ?? (pts.isEmpty ? null : pts.last);
     if (center == null) {
+      if (!widget.showWaiting) return const ColoredBox(color: StrideColors.subtle);
       return Container(
         color: StrideColors.subtle,
         alignment: Alignment.center,

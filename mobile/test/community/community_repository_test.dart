@@ -1,6 +1,10 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stride/models/data_models/activity.dart';
+import 'package:stride/models/ui_models/community_models.dart';
 import 'package:stride/repository/community_repository.dart';
 import 'package:stride/repository/explore_repository.dart';
 
@@ -44,6 +48,30 @@ void main() {
       'movingMs': 1800000,
       'avgPaceSecPerKm': 360.0,
     });
+  });
+
+  test('publish kèm ảnh tuyến đường: lưu base64, đọc lại ra đúng byte; quá lớn thì từ chối', () async {
+    final png = Uint8List.fromList(List.generate(64, (i) => i));
+    final p = await as('alice').publish(act(), image: png);
+    expect(p.image, png);
+    final d = (await db.doc('communityPosts/${p.id}').get()).data()!;
+    expect(d['image'], base64Encode(png));
+    expect(CommunityPost.fromDoc(p.id, d).image, png);
+    await expectLater(as('alice').publish(act(), image: Uint8List(maxCommunityImageBytes + 1)), throwsA(isA<ExploreFailure>()));
+  });
+
+  test('ảnh hỏng (không phải base64) coi như bài không có ảnh', () {
+    expect(CommunityPost.decodeImage('***'), isNull);
+    expect(CommunityPost.decodeImage(null), isNull);
+    expect(CommunityPost.decodeImage(''), isNull);
+  });
+
+  test('ngừng chia sẻ (delete) đặt deletedAt và xóa ảnh khỏi document', () async {
+    final p = await as('alice').publish(act(), image: Uint8List.fromList([1, 2, 3]));
+    await as('alice').delete(p.id);
+    final d = (await db.doc('communityPosts/${p.id}').get()).data()!;
+    expect(d['deletedAt'], now);
+    expect(d.containsKey('image'), isFalse);
   });
 
   test('buổi đạp xe được đăng với type bike', () async {
